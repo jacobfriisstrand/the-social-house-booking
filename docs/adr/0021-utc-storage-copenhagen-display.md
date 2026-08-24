@@ -1,0 +1,3 @@
+# Timestamps stored as timestamptz in UTC, displayed in Europe/Copenhagen
+
+Every point in time (`booking_start_at`, `booking_end_at`, `booking_cancelled_at`, `booking_hold_expires_at`, `outbound_email_sent_at`, …) is a `timestamptz` column, written and compared in UTC. Opening hours are stored as local wall-clock `time` values and interpreted in `Europe/Copenhagen`; the check that a booking fits opening hours converts the booking's instants to Copenhagen local time first. All display, email copy, and the 24-hour reminder window use `Europe/Copenhagen`. Never store a naive `timestamp`, never parse a date string without a zone, and never assume the server runs in Danish local time (Netlify functions run in UTC).

@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Social House — booking platform
 
-## Getting Started
+Meeting-room booking for The Social House's member and external companies. Companies book rooms, bookers verify by email code, admin manages rooms, add-ons, House Events, and invoicing basis; invoices are raised manually in e-conomic.
 
-First, run the development server:
+Spec: `docs/spec/`. Glossary: `CONTEXT.md`. Decisions: `docs/adr/`. Conventions for humans and agents: `AGENTS.md`.
+
+## Stack
+
+Next.js 16 · React 19 · TypeScript · Tailwind v4 · shadcn (Base UI) · Supabase · Resend · Netlify · Sentry · Ultracite · Vitest + pgTAP
+
+## Prerequisites
+
+- Node 24 (`nvm use` reads `.nvmrc`), npm
+- Docker (for local Supabase)
+- CLIs: `brew install gh supabase/tap/supabase netlify-cli`
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local        # fill in from `supabase start` output; leave Sentry empty
+supabase start                    # local Postgres, Auth, Studio
+supabase db reset                 # apply migrations + seed (admin, rooms, companies)
+npm run dev                       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Local admin and company logins are in `supabase/seed.sql`. All email in development is redirected to `EMAIL_REDIRECT_TO`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Everyday commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| | |
+|---|---|
+| `npm run check` / `npm run fix` | lint + format (Ultracite) |
+| `npm test` | Vitest |
+| `supabase test db` | pgTAP database tests |
+| `supabase db diff -f <name>` | schema change → migration (see `docs/agents/supabase.md`) |
+| `npm run db:types` | regenerate `lib/supabase/database.types.ts` |
 
-## Learn More
+## Environments and deploys
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`develop` → development deploy (`develop--<site>.netlify.app`, development Supabase project). `main` → production. Deploy previews on PRs use the development environment. Migrations, auth config, the Edge Function, and email templates are pushed by GitHub Actions on merge — never from a laptop. Details in `docs/agents/deploy.md`.

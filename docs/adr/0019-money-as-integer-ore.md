@@ -1,0 +1,3 @@
+# Money stored and computed as integer øre
+
+Every amount in the database and in domain code is an integer number of øre (1 kr = 100 øre), never a float and never a decimal kroner value. Columns are named with an `_ore` suffix (e.g. `room_price_ore`, `booking_cancellation_fee_ore`). Formatting to "1.200,00 kr" happens only at the presentation edge (`messages/da.ts` formatters, email template variables). Percentages (discount, cancellation fee) are stored as integers of whole percent and applied with integer arithmetic rounding half up to the nearest øre. Chosen because the invoicing basis must match e-conomic to the øre, and floating-point kroner drifts.
