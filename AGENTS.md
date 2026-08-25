@@ -50,6 +50,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 - **Env** is read only in `lib/env.ts`. Every new variable is added to `.env.example`.
 - **Copy**: Danish strings live in `messages/da.ts` (UI) or `emails/templates/` (email); none in components. Code, comments, commits, docs in English.
 - **Lint/format**: Ultracite only. No ESLint, no Prettier. `npm run fix` before committing.
+- **Output**: user-facing text goes through `unslop` (plain language, ISO 24495-1). Applies to what the agent sends, never to its reasoning.
 - **Scheduling**: one Netlify scheduled function → `POST /api/jobs/send-reminders`. No croner, no pg_cron, no Resend `scheduledAt`.
 - **Sentry** never receives booker or contact data; correlate on `company_id` and `booking_number`.
 - **Layout**: `app/`, `components/`, `lib/`, `emails/`, `messages/`, `scripts/`, `netlify/`, `supabase/`, `docs/` at the root. No `src/`.
@@ -184,3 +185,11 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `npm exec -- ultracite fix` before committing to ensure compliance.
+
+## Ponytail
+
+Ponytail is active: write only what the task needs; never cut validation, error
+handling, security, or accessibility. Ladder: YAGNI → reuse → stdlib → native
+→ installed dependency → one line → minimum that works. Claude Code:
+`/ponytail [lite|full|ultra|off]`.
+

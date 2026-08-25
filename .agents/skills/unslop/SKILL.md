@@ -7,12 +7,26 @@ description: Cut AI tells from any writing. Must always apply.
 
 Edit text to remove AI patterns and add human voice.
 
+Applies only to what the agent sends back: responses, messages, PR descriptions, commit text. Never to internal reasoning or thinking. Thinking stays as free and unfiltered as it needs to be. Run this skill at the moment of output, on the output.
+
+## Plain language: ISO 24495-1:2023
+
+The patterns below serve one goal: plain language. ISO 24495-1:2023, Plain language, part 1: governing principles and guidelines, defines it as wording, structure, and design clear enough that the intended readers can easily find what they need, understand what they find, and use that information. Four principles govern the standard. Check work against all four, not just the pattern list.
+
+**Readers get what they need.** Know who the reader is and what they need before writing. Then cut anything they don't need. A sentence that exists to sound thorough instead of to inform gets deleted.
+
+**Readers can find what they need.** Structure leads. Answer first, then explain. Use headings, short paragraphs, and lists so a reader can skip what they already know.
+
+**Readers can understand what they find.** This is most of the pattern list: plain words, short sentences, one idea per sentence, active voice.
+
+**Readers can use what they find.** End with the next step: the action, the number, the decision. Text a reader cannot act on is not finished.
+
 ## Process
 
 1. Scan for the patterns below.
 2. Rewrite. Preserve meaning, match intended tone.
 3. Add soul (see next section).
-4. Self-audit: "What makes this obviously AI generated?" Fix remaining tells.
+4. Self-audit. Pass one: "What makes this obviously AI generated?" Pass two: the four ISO checks above. Fix what fails.
 
 ## Adding soul
 
