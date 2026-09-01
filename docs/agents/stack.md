@@ -50,8 +50,6 @@ Every variable is declared once in `.env.example` and read exactly once, in `lib
 
 Ultracite (a Biome preset) is the only linter and formatter. `biome.jsonc` extends `ultracite/biome/core`, `react`, `next`, `vitest`. ESLint and Prettier are removed by `npx ultracite init`; never add them back or add rules that conflict with the preset. Run `npm run fix` before committing; the pre-commit hook does it on staged files. Docs: `docs/vendor/ultracite/`.
 
-Until `ultracite init` has been run, `npm run lint` (ESLint) still exists. Do not invest in ESLint config.
-
 ## Observability: Sentry
 
 - `@sentry/nextjs` on all three runtimes: `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts` (`register()` + `onRequestError`), `app/global-error.tsx`. `next.config.ts` wrapped in `withSentryConfig`.
