@@ -7,7 +7,7 @@ import "./globals.css";
 const fontSans = Poppins({
   subsets: ["latin"],
   variable: "--font-sans",
-  weights: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 const fontMono = Geist_Mono({
