@@ -57,7 +57,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 
 ## Workflow
 
-Branch from `develop` → PR into `develop` (squash) → release PR `develop` → `main`. Conventional commits. CI must be green: `check`, `tsc`, `vitest`, `supabase test db`, types up to date, `next build`. Agents open PRs; humans merge. Skills in `.agents/skills/`: load `supabase-postgres-best-practices` before SQL, `shadcn` before components, `vercel-react-best-practices` before React.
+Branch from `develop` → PR into `develop` (squash) → release PR `develop` → `main`. Conventional commits. CI must be green: `check`, `tsc`, `vitest`, `supabase test db`, types up to date, `next build`. Agents open PRs; humans merge. Skills in `.agents/skills/`: load `supabase-postgres-best-practices` before SQL, `supabase` before any Supabase work (edge functions, auth hooks, clients), `shadcn` before components, `vercel-react-best-practices` before React, and `tdd` when building a behaviour test-first.
 
 Out of scope until their milestone: Microsoft Graph / Outlook sync, English UI, payments.
 
