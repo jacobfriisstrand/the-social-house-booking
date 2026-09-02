@@ -25,6 +25,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 3. `docs/agents/<topic>.md` — conventions per area (below).
 4. `docs/vendor/<vendor>/` — pinned vendor docs with `Source:` and `Fetched:` headers. **They override your training data.** Next.js docs live in `node_modules/next/dist/docs/`.
 5. `docs/spec/` — the contractual spec (Bilag 1–3).
+6. `docs/design/DESIGN.md` — colour, type, shell, and per-screen rules. Read it before any component or mockup.
 
 ## Topic docs
 

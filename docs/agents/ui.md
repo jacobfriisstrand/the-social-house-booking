@@ -10,7 +10,7 @@ Read `docs/vendor/shadcn/installation-next.md` and `forms-react-hook-form.md`, a
 - Base UI composition uses `render={<Button />}`, **not** `asChild`. `Select` needs an `items` prop; `Accordion`/`ToggleGroup` take `multiple` and array `defaultValue`s; `Slider` takes a scalar. The skill's `base-vs-radix.md` lists every difference — follow it.
 - `components/ui/` is owned code: edit freely, never re-run `shadcn add` over an edited component. Feature components live in `components/<feature>/`; page-only pieces sit next to their route.
 - Icons: `lucide-react`. Class merging: `cn()` from `lib/utils.ts`. Biome sorts Tailwind classes in `className` and `cn()`; don't fight the order.
-- Style: the default `new-york` preset; theme tokens in `app/globals.css` only.
+- Style: the default `new-york` preset; theme tokens in `app/globals.css` only. Visual rules (palette, type scale, shell, screens) are in `docs/design/DESIGN.md`; that file and globals.css change together.
 
 ## Forms
 

@@ -4,21 +4,27 @@
 
 :root {
   --background: oklch(1 0 0);
-  --foreground: oklch(0.457 0 0);
+  --foreground: oklch(0.27 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.457 0 0);
+  --card-foreground: oklch(0.27 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.457 0 0);
+  --popover-foreground: oklch(0.27 0 0);
   --primary: oklch(0.718 0.103 67.3);
-  --primary-foreground: oklch(1 0 0);
+  --primary-foreground: oklch(0.27 0 0);
   --secondary: oklch(0.869 0.008 98.9);
-  --secondary-foreground: oklch(0.457 0 0);
+  --secondary-foreground: oklch(0.27 0 0);
   --muted: oklch(0.9791 0.008 93.9);
   --muted-foreground: oklch(0.457 0 0);
   --accent: oklch(0.869 0.008 98.9);
-  --accent-foreground: oklch(0.457 0 0);
+  --accent-foreground: oklch(0.27 0 0);
   --destructive: oklch(0.488 0.2 28.2);
   --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.6 0.1 150);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.75 0.15 90);
+  --warning-foreground: oklch(0.27 0 0);
+  --info: oklch(0.55 0.06 240);
+  --info-foreground: oklch(1 0 0);
   --border: oklch(0.959 0.009 84.6);
   --input: oklch(0.959 0.009 84.6);
   --ring: oklch(0.959 0.009 84.6);
@@ -28,11 +34,11 @@
   --chart-4: oklch(0.49 0.15 67.3);
   --chart-5: oklch(0.42 0.12 67.3);
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.457 0 0);
+  --sidebar-foreground: oklch(0.27 0 0);
   --sidebar-primary: oklch(0.718 0.103 67.3);
-  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0.27 0 0);
   --sidebar-accent: oklch(0.869 0.008 98.9);
-  --sidebar-accent-foreground: oklch(0.457 0 0);
+  --sidebar-accent-foreground: oklch(0.27 0 0);
   --sidebar-border: oklch(0.959 0.008 93.9);
   --sidebar-ring: oklch(0.959 0.008 93.9);
   --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
@@ -62,6 +68,7 @@
   --spacing: 0.22rem;
 }
 
+/* Dark mode is not designed or supported in v1.0 (docs/design/DESIGN.md). Kept so shadcn components compile; do not tune. */
 .dark {
   --background: oklch(0.205 0 0);
   --foreground: oklch(1 0 0);
@@ -79,6 +86,12 @@
   --accent-foreground: oklch(0.869 0.008 98.9);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.6 0.1 150);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.75 0.15 90);
+  --warning-foreground: oklch(0.205 0 0);
+  --info: oklch(0.55 0.06 240);
+  --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.275 0 0);
   --input: oklch(0.325 0 0);
   --ring: oklch(0.556 0 0);
@@ -89,7 +102,7 @@
   --chart-5: oklch(0.42 0.12 67.3);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.718 0.103 67.3);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -137,6 +150,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

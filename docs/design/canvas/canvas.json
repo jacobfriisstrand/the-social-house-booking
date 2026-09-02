@@ -1,0 +1,31 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Hjem",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1760
+    },
+    {
+      "file": "Bookinger.dc.html",
+      "title": "Bookinger (admin)",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 980
+    },
+    {
+      "file": "Statistik.dc.html",
+      "title": "Statistik",
+      "x": 1560,
+      "y": 1120,
+      "w": 1440,
+      "h": 1080
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
