@@ -58,19 +58,9 @@ max_client_conn = 100
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.
 enabled = true
-# Specifies an ordered list of schema files, directories, or glob patterns that describe your database.
-schema_paths = [
-  "./schemas/companies.sql",
-  "./schemas/admins.sql",
-  "./schemas/rooms.sql",
-  "./schemas/addons.sql",
-  "./schemas/bookings.sql",
-  "./schemas/house_events.sql",
-  "./schemas/verification_codes.sql",
-  "./schemas/outbound_emails.sql",
-  "./schemas/functions/*.sql",
-  "./schemas/policies/*.sql",
-]
+# Declarative schema files under ./schemas are discovered by default; the
+# migration emits tables alphabetically with FKs as trailing ALTER TABLEs,
+# so no ordering config is needed (schema_paths is a no-op since CLI 2.116).
 
 [db.seed]
 enabled = true
@@ -163,6 +153,7 @@ max_indexes = 5
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
+# in emails.
 site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
@@ -293,14 +284,12 @@ enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Auth emails (invite, password reset) go through the send-email Edge Function →
-# Resend (#26). Built-in email templates and SMTP are unused; the secret for the
-# hook signature is set with `supabase secrets set SEND_EMAIL_HOOK_SECRET=…`.
+# Resend (#26). Built-in email templates and SMTP are unused.
 [auth.hook.send_email]
-enabled = true
-# Dummy local secret so `supabase start` passes; cloud registers the real
-# secret in the dashboard at first-time setup (docs/agents/deploy.md).
-secrets = "v1,whsec_PAJ12pHp/Ovn+wk70KdXwbKWpiO8aZeu/3p3ZAGzoFk="
-uri = "http://localhost:54321/functions/v1/send-email"
+# Disabled here on purpose: this file is what `supabase config push` ships to the
+# cloud projects, and no deployed function URL exists yet (#26). #26 flips this on
+# with the deployed URL + real secret (`supabase secrets set SEND_EMAIL_HOOK_SECRET=…`).
+enabled = false
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
