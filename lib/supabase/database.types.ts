@@ -692,7 +692,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_entries: {
+        Row: {
+          calendar_entry_end_at: string | null
+          calendar_entry_id: string | null
+          calendar_entry_kind: string | null
+          calendar_entry_start_at: string | null
+          company_display_name: string | null
+          house_event_title: string | null
+          room_id: string | null
+          room_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
