@@ -30,7 +30,7 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |
 | `supabase start` / `stop` | Local Postgres + Auth + Studio in Docker. |
-| `supabase db diff -f <name>` | Turn `supabase/schemas/` changes into a migration. |
+| `supabase db schema declarative sync --name <name>` | Turn `supabase/schemas/` changes into a migration (CLI ≥ 2.116; add `--no-apply` to review first). |
 | `supabase db reset` | Rebuild local DB from migrations + `seed.sql`. |
 | `supabase test db` | Run pgTAP tests in `supabase/tests/`. |
 
