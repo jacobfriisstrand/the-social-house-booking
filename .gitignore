@@ -42,3 +42,4 @@ next-env.d.ts
 
 # keep the variable template (the .env* rule above would hide it)
 !.env.example
+
