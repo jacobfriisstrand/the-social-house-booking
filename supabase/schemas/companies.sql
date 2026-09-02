@@ -25,6 +25,8 @@ create table public.companies (
   company_department text,
   company_reference text,
   company_billing_notes text,
+  -- ponytail: text because v1.0 (Bilag 1) knows only 'monthly'; becomes an
+  -- enum the day a second interval appears.
   company_billing_interval text not null default 'monthly',
   company_economic_customer_number text,
   company_internal_note text,

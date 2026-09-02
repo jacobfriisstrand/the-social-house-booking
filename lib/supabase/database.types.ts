@@ -382,6 +382,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notices: {
+        Row: {
+          notice_body: string
+          notice_created_at: string
+          notice_ends_at: string | null
+          notice_id: string
+          notice_is_active: boolean
+          notice_starts_at: string | null
+          notice_updated_at: string
+        }
+        Insert: {
+          notice_body: string
+          notice_created_at?: string
+          notice_ends_at?: string | null
+          notice_id?: string
+          notice_is_active?: boolean
+          notice_starts_at?: string | null
+          notice_updated_at?: string
+        }
+        Update: {
+          notice_body?: string
+          notice_created_at?: string
+          notice_ends_at?: string | null
+          notice_id?: string
+          notice_is_active?: boolean
+          notice_starts_at?: string | null
+          notice_updated_at?: string
+        }
+        Relationships: []
+      }
       outbound_emails: {
         Row: {
           outbound_email_booking_id: string | null
@@ -543,6 +573,79 @@ export type Database = {
           room_practical_info?: string | null
           room_price_ore?: number
           room_updated_at?: string
+        }
+        Relationships: []
+      }
+      terms_acceptances: {
+        Row: {
+          terms_acceptance_accepted_at: string
+          terms_acceptance_booking_id: string | null
+          terms_acceptance_company_id: string
+          terms_acceptance_id: string
+          terms_acceptance_terms_version_id: string
+        }
+        Insert: {
+          terms_acceptance_accepted_at?: string
+          terms_acceptance_booking_id?: string | null
+          terms_acceptance_company_id: string
+          terms_acceptance_id?: string
+          terms_acceptance_terms_version_id: string
+        }
+        Update: {
+          terms_acceptance_accepted_at?: string
+          terms_acceptance_booking_id?: string | null
+          terms_acceptance_company_id?: string
+          terms_acceptance_id?: string
+          terms_acceptance_terms_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_booking_id_fkey"
+            columns: ["terms_acceptance_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_company_id_fkey"
+            columns: ["terms_acceptance_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_terms_version_id_fkey"
+            columns: ["terms_acceptance_terms_version_id"]
+            isOneToOne: false
+            referencedRelation: "terms_versions"
+            referencedColumns: ["terms_version_id"]
+          },
+        ]
+      }
+      terms_versions: {
+        Row: {
+          terms_version_content: string
+          terms_version_created_at: string
+          terms_version_id: string
+          terms_version_name: string
+          terms_version_published_at: string | null
+          terms_version_version: string
+        }
+        Insert: {
+          terms_version_content: string
+          terms_version_created_at?: string
+          terms_version_id?: string
+          terms_version_name: string
+          terms_version_published_at?: string | null
+          terms_version_version: string
+        }
+        Update: {
+          terms_version_content?: string
+          terms_version_created_at?: string
+          terms_version_id?: string
+          terms_version_name?: string
+          terms_version_published_at?: string | null
+          terms_version_version?: string
         }
         Relationships: []
       }
