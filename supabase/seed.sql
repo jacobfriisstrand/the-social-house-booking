@@ -7,10 +7,11 @@
 --   nordicevents  booking@nordicevents.dk      external company, 0% discount
 
 begin;
-
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change, email_change_token_new,
+  phone, phone_change, phone_change_token,
   created_at, updated_at
 ) values
   (
@@ -22,6 +23,8 @@ insert into auth.users (
     now(),
     '{"app_role": "admin"}',
     '{}',
+    '', '', '', '',
+    '+4500000001', '', '',
     now(), now()
   ),
   (
@@ -33,6 +36,8 @@ insert into auth.users (
     now(),
     '{}',
     '{}',
+    '', '', '', '',
+    '+4500000002', '', '',
     now(), now()
   ),
   (
@@ -44,6 +49,8 @@ insert into auth.users (
     now(),
     '{}',
     '{}',
+    '', '', '', '',
+    '+4500000003', '', '',
     now(), now()
   );
 

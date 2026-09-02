@@ -224,8 +224,9 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Email signup likewise disabled (ADR-0008); accounts are created by admin invite.
-enable_signup = false
+# Email identities must stay usable for password login; public signup is
+# blocked by [auth] enable_signup above (ADR-0008).
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -285,6 +286,8 @@ inactivity_timeout = "168h"
 # enabled = true
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
+# Copies app_role from raw_app_meta_data into the JWT claims (docs/agents/auth.md);
+# function in supabase/schemas/functions/custom_access_token_hook.sql.
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
@@ -298,6 +301,7 @@ enabled = true
 # secret in the dashboard at first-time setup (docs/agents/deploy.md).
 secrets = "v1,whsec_PAJ12pHp/Ovn+wk70KdXwbKWpiO8aZeu/3p3ZAGzoFk="
 uri = "http://localhost:54321/functions/v1/send-email"
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false
