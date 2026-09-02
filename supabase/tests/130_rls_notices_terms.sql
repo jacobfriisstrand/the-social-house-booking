@@ -3,7 +3,7 @@
 -- admin-only, and acceptances are own-insert immutable records (#15).
 
 begin;
-select plan(12);
+select plan(14);
 
 -- Fixtures: one admin, one company, one foreign company, a published and a
 -- draft terms version, one acceptance by the foreign company, one notice.
@@ -55,8 +55,14 @@ select lives_ok(
   'update public.terms_versions set terms_version_published_at = now() where terms_version_version = ''1.0-draft''',
   'admin publishes a terms version');
 select lives_ok(
+  'update public.notices set notice_body = ''Køkkenet er lukket i uge 43''',
+  'admin edits a notice');
+select lives_ok(
   'delete from public.notices',
-  'admin curates notices');
+  'admin removes a notice');
+select lives_ok(
+  'delete from public.terms_versions where terms_version_version = ''1.0-draft''',
+  'admin deletes an unreferenced draft version');
 
 select * from finish();
 rollback;

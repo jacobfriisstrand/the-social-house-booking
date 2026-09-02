@@ -4,7 +4,7 @@
 -- hand-set request.jwt.claims (what GoTrue sets in production).
 
 begin;
-select plan(15);
+select plan(17);
 
 -- Fixtures: one admin auth user, two companies with their own auth users.
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
@@ -52,6 +52,12 @@ select is((select count(*) from public.companies), 1::bigint, 'other company see
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
 select is((select count(*) from public.companies), 4::bigint, 'admin sees all companies (2 fixture + 2 seed)');
 select is((select count(*) from public.admins), 2::bigint, 'admin reads the admins registry (fixture + seed)');
+select lives_ok(
+  'insert into public.companies (company_auth_user_id, company_username, company_email, company_display_name) values (''11111111-1111-1111-1111-111111111001'', ''tsh-hq'', ''hq@tsh.test'', ''TSH HQ'')',
+  'admin creates a company');
+select lives_ok(
+  'delete from public.companies where company_username = ''tsh-hq''',
+  'admin deletes a company');
 select lives_ok(
   'update public.companies set company_membership_status = ''member'' where company_username = ''test-nordic''',
   'admin changes membership status');

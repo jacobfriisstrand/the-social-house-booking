@@ -3,7 +3,7 @@
 -- bookings.
 
 begin;
-select plan(16);
+select plan(17);
 
 -- Fixtures: two companies, one room, one booking each, one add-on on the
 -- first booking, three send-log rows (own, foreign, system).
@@ -42,6 +42,9 @@ select is((select count(*) from public.bookings), 1::bigint, 'company sees only 
 select is((select booking_number from public.bookings), 'B-TEST-0001', 'company reads its own booking');
 select is((select count(*) from public.booking_addons), 1::bigint, 'company reads its own booking add-ons');
 select is((select count(*) from public.outbound_emails), 1::bigint, 'company reads only its own send-log rows');
+select lives_ok(
+  'update public.booking_addons set booking_addon_price_ore = 190000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001''',
+  'company updates its own booking add-on');
 select is((select outbound_email_kind from public.outbound_emails), 'booking-confirmation', 'company send-log row is its own');
 select lives_ok(
   'update public.bookings set booking_status = ''cancelled'', booking_cancelled_at = now() where booking_number = ''B-TEST-0001''',

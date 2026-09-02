@@ -3,7 +3,7 @@
 -- until its feature ticket specifies otherwise.
 
 begin;
-select plan(15);
+select plan(22);
 
 -- Fixtures: one admin, one company, two rooms (one image), one add-on with
 -- a room link, one house event with a room link, one verification code.
@@ -70,8 +70,29 @@ select lives_ok(
   'insert into public.addons (addon_name, addon_price_ore, addon_pricing_model) values (''Extra skærm'', 50000, ''fixed'')',
   'admin creates an add-on');
 select lives_ok(
+  'insert into public.verification_codes (verification_code_id, verification_code_booking_id, verification_code_hash, verification_code_expires_at) values (''AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAB'', ''66666666-6666-6666-6666-666666666001'', ''hash2'', now() + interval ''10 minutes'')',
+  'admin inserts a verification code');
+select lives_ok(
   'delete from public.verification_codes',
-  'admin manages verification codes');
+  'admin deletes verification codes');
+select lives_ok(
+  'insert into public.house_events (house_event_id, house_event_description, house_event_start_at, house_event_end_at) values (''99999999-9999-9999-9999-999999999002'', ''Second event'', timestamptz ''2026-10-06 09:00+02'', timestamptz ''2026-10-06 16:00+02'')',
+  'admin creates a house event');
+select lives_ok(
+  'insert into public.house_event_rooms (house_event_room_event_id, house_event_room_room_id) values (''99999999-9999-9999-9999-999999999002'', ''44444444-4444-4444-4444-444444444002'')',
+  'admin links a house event to a room');
+select lives_ok(
+  'insert into public.room_images (room_image_id, room_image_room_id, room_image_url) values (''88888888-8888-8888-8888-888888888002'', ''44444444-4444-4444-4444-444444444002'', ''https://example.test/art.jpg'')',
+  'admin uploads a room image');
+select lives_ok(
+  'update public.room_images set room_image_sort_order = 1 where room_image_id = ''88888888-8888-8888-8888-888888888002''',
+  'admin reorders a room image');
+select lives_ok(
+  'delete from public.room_images where room_image_id = ''88888888-8888-8888-8888-888888888002''',
+  'admin deletes a room image');
+select lives_ok(
+  'delete from public.rooms where room_id = ''44444444-4444-4444-4444-444444444002''',
+  'admin deletes a room');
 
 select * from finish();
 rollback;
