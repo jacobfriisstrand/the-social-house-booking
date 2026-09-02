@@ -16,7 +16,7 @@ Migrations reach cloud projects **only** through GitHub Actions on merge (`supab
 
 ## Schema workflow (declarative)
 
-1. Edit `supabase/schemas/*.sql` — one file per table or concern (`companies.sql`, `rooms.sql`, `bookings.sql`, `outbound_emails.sql`, `policies/*.sql`, `functions/*.sql`). Files run in lexicographic order; control ordering with `[db.migrations] schema_paths` in `supabase/config.toml`.
+1. Edit `supabase/schemas/*.sql` — one file per table or concern (`companies.sql`, `rooms.sql`, `bookings.sql`, `outbound_emails.sql`, `policies/*.sql`, `functions/*.sql`). `./schemas` is discovered by default; ordering needs no config (the generated migration lists tables alphabetically with FKs as trailing `ALTER TABLE … ADD CONSTRAINT`).
 2. `supabase db schema declarative sync --name <short_name> --no-apply` → a migration in `supabase/migrations/`. Read the generated SQL before committing. (Since CLI 2.116, `db diff` no longer reads `supabase/schemas/`; it only compares migrations with a database.)
 3. `supabase db reset` locally, then `npm run db:types`, then `supabase test db`.
 4. Commit schema file, migration, and regenerated types together.
