@@ -7,5 +7,27 @@
   ],
   "files": {
     "includes": ["!.agents", "!.claude"]
-  }
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "noProcessEnv": "error"
+      }
+    }
+  },
+  // noProcessEnv exemptions live here. When the Sentry milestone lands, add
+  // next.config.ts, instrumentation.ts and sentry.*.config.ts — they read
+  // process.env by design (docs/agents/stack.md).
+  "overrides": [
+    {
+      "includes": ["lib/env.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    }
+  ]
 }
