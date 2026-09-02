@@ -416,6 +416,8 @@ All user-facing emails are addressed to the company's display name, e.g. "Dear R
 The final wording is described in Bilag 2 — Email texts, booking platform version 1.0.
 
 > **Implementation note (email foundation split).** The send mechanism — Resend integration, the `outbound_emails` send log, and a shared `sendMail()` helper that enforces the common rules (sender, one CTA, no-payment wording, hidden empty sections, savings conditional, sensitive-data flag) — is delivered first, in milestone M1, so early features (invite, confirmation code) can send real mail. The 10 email templates' exact Danish copy, the 24h reminder, and the in-app platform message are delivered later, in milestone M5. See GitHub issues #17 (email foundation) and #11 (templates + reminder).
+>
+> **Implementation note (reminder mechanism).** The 24h reminder is sent by exactly one scheduled job: a Netlify scheduled function (`@hourly`) that POSTs to `/api/jobs/send-reminders`. No Resend `scheduledAt` (30-day max vs 12-month bookings), no croner, no pg_cron, no Vercel cron. See `docs/agents/email.md`.
 
 ## Calendar and notice board
 
