@@ -74,7 +74,6 @@ export type Database = {
           admin_display_name: string
           admin_id: string
           admin_updated_at: string
-          admin_username: string
         }
         Insert: {
           admin_auth_user_id: string
@@ -82,7 +81,6 @@ export type Database = {
           admin_display_name: string
           admin_id?: string
           admin_updated_at?: string
-          admin_username: string
         }
         Update: {
           admin_auth_user_id?: string
@@ -90,7 +88,6 @@ export type Database = {
           admin_display_name?: string
           admin_id?: string
           admin_updated_at?: string
-          admin_username?: string
         }
         Relationships: []
       }
@@ -264,7 +261,6 @@ export type Database = {
           company_membership_status: Database["public"]["Enums"]["company_membership_status"]
           company_reference: string | null
           company_updated_at: string
-          company_username: string
         }
         Insert: {
           company_attention?: string | null
@@ -291,7 +287,6 @@ export type Database = {
           company_membership_status?: Database["public"]["Enums"]["company_membership_status"]
           company_reference?: string | null
           company_updated_at?: string
-          company_username: string
         }
         Update: {
           company_attention?: string | null
@@ -318,7 +313,6 @@ export type Database = {
           company_membership_status?: Database["public"]["Enums"]["company_membership_status"]
           company_reference?: string | null
           company_updated_at?: string
-          company_username?: string
         }
         Relationships: []
       }
