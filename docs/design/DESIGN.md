@@ -104,7 +104,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - Content column: `max-w-[1400px]`, padding `px-8 py-6` on desktop, `px-4 py-4` on phone.
 - Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button at the top left of the content.
 
-Login is outside the shell: a centred white card on the background with the logo, username, password and one primary button.
+Login is outside the shell: a centred white card on the background with the logo, email, password and one primary button.
 
 ## Page patterns
 
