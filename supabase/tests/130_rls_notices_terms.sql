@@ -12,9 +12,9 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, e
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111002', 'authenticated', 'authenticated', 'rituals@tsh.test', 'x', now(), '{}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111003', 'authenticated', 'authenticated', 'nordic@tsh.test', 'x', now(), '{}', '{}', now(), now());
 
-insert into public.companies (company_id, company_auth_user_id, company_username, company_email, company_display_name) values
-  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'test-rituals', 'rituals@tsh.test', 'Rituals'),
-  ('22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111003', 'test-nordic', 'nordic@tsh.test', 'Nordic Events');
+insert into public.companies (company_id, company_auth_user_id, company_email, company_display_name) values
+  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals'),
+  ('22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111003', 'nordic@tsh.test', 'Nordic Events');
 
 insert into public.terms_versions (terms_version_id, terms_version_name, terms_version_version, terms_version_content, terms_version_published_at) values
   ('BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01', 'Booking terms', '1.0', '…', now()),

@@ -7,7 +7,7 @@ A meeting-room booking platform where member companies book rooms and The Social
 ### Companies and accounts
 
 **Company** (virksomhed):
-The organisation that holds an account and books rooms. One account per company, with one shared username and password.
+The organisation that holds an account and books rooms. One account per company, with one shared email and password.
 _Avoid_: business, customer, client, account, organisation
 
 **Member company** (medlemsvirksomhed):

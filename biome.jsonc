@@ -20,12 +20,15 @@
       }
     }
   },
-  // noProcessEnv exemptions live here. When the Sentry milestone lands, add
-  // next.config.ts, instrumentation.ts and sentry.*.config.ts — they read
-  // process.env by design (docs/agents/stack.md).
+  // noProcessEnv exemptions live here: lib/env.ts is the validating reader;
+  // proxy.ts runs in Next's sandbox before .env.local is injected, so it must
+  // read process.env itself (and skips the session refresh when unset); and
+  // scripts/create-admin.ts runs under plain Node outside Next. When the
+  // Sentry milestone lands, add next.config.ts, instrumentation.ts and
+  // sentry.*.config.ts — they read process.env by design (docs/agents/stack.md).
   "overrides": [
     {
-      "includes": ["lib/env.ts"],
+      "includes": ["lib/env.ts", "scripts/create-admin.ts"],
       "linter": {
         "rules": {
           "style": {
