@@ -33,6 +33,29 @@
           }
         }
       }
+    },
+    // components/ui/ is generated shadcn source (owned per docs/agents/ui.md). Registry
+    // updates would clobber hand-patches, so its known lint noise is suppressed here
+    // instead of edited away. Feature code keeps full strictness.
+    {
+      "includes": ["components/ui/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "useSemanticElements": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noDoubleEquals": "off",
+            "noLeakedRender": "off",
+            "noUnnecessaryConditions": "off"
+          },
+          "style": {
+            "useDestructuring": "off"
+          }
+        }
+      }
     }
   ]
 }
