@@ -1,7 +1,7 @@
 -- Local seed: runs on `supabase db reset` only, never against cloud projects
 -- (docs/agents/supabase.md). Cloud admins come from scripts/create-admin.ts.
 --
--- Demo logins (all with password "social-house-demo"; email is the login):
+-- Demo logins (all with password "password"; email is the login):
 --   admin@thesocialhouse.dk      app_role = admin
 --   kontakt@rituals.dk           member company, 50% discount
 --   booking@nordicevents.dk      external company, 0% discount
@@ -19,7 +19,7 @@ insert into auth.users (
     '00000000-0000-0000-0000-000000000001',
     'authenticated', 'authenticated',
     'admin@thesocialhouse.dk',
-    extensions.crypt('social-house-demo', extensions.gen_salt('bf')),
+    extensions.crypt('password', extensions.gen_salt('bf')),
     now(),
     '{"app_role": "admin"}',
     '{}',
@@ -32,7 +32,7 @@ insert into auth.users (
     '00000000-0000-0000-0000-000000000002',
     'authenticated', 'authenticated',
     'kontakt@rituals.dk',
-    extensions.crypt('social-house-demo', extensions.gen_salt('bf')),
+    extensions.crypt('password', extensions.gen_salt('bf')),
     now(),
     '{}',
     '{}',
@@ -45,7 +45,7 @@ insert into auth.users (
     '00000000-0000-0000-0000-000000000003',
     'authenticated', 'authenticated',
     'booking@nordicevents.dk',
-    extensions.crypt('social-house-demo', extensions.gen_salt('bf')),
+    extensions.crypt('password', extensions.gen_salt('bf')),
     now(),
     '{}',
     '{}',
