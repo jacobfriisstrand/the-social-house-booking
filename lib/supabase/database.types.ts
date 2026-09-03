@@ -707,7 +707,23 @@ export type Database = {
       }
     }
     Functions: {
+      assert_booking_room_free: {
+        Args: { p_end_at: string; p_room_id: string; p_start_at: string }
+        Returns: undefined
+      }
+      assert_event_room_free: {
+        Args: {
+          p_end_at: string
+          p_exclude_event_id?: string
+          p_room_id: string
+          p_start_at: string
+        }
+        Returns: undefined
+      }
+      booking_blocked_until: { Args: { p_end_at: string }; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      expire_stale_holds: { Args: never; Returns: number }
+      next_booking_number: { Args: never; Returns: string }
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"
