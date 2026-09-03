@@ -24,7 +24,17 @@ supabase db reset                 # apply migrations + seed (admin, rooms, compa
 npm run dev                       # http://localhost:3000
 ```
 
-Local admin and company logins are in `supabase/seed.sql`. All email in development is redirected to `EMAIL_REDIRECT_TO`.
+### Demo logins (local seed)
+
+Password for all: `password`
+
+| Role | Email |
+|---|---|
+| Admin | `admin@thesocialhouse.dk` |
+| Member company — Rituals, 50% discount | `kontakt@rituals.dk` |
+| External company — Nordic Events, 0% discount | `booking@nordicevents.dk` |
+
+These come from `supabase/seed.sql` (`supabase db reset` reapplies them). All email in development is redirected to `EMAIL_REDIRECT_TO`.
 
 ## Everyday commands
 
