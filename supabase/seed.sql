@@ -1,10 +1,10 @@
 -- Local seed: runs on `supabase db reset` only, never against cloud projects
 -- (docs/agents/supabase.md). Cloud admins come from scripts/create-admin.ts.
 --
--- Demo logins (all with password "social-house-demo"):
---   admin         admin@thesocialhouse.dk      app_role = admin
---   rituals       kontakt@rituals.dk           member company, 50% discount
---   nordicevents  booking@nordicevents.dk      external company, 0% discount
+-- Demo logins (all with password "social-house-demo"; email is the login):
+--   admin@thesocialhouse.dk      app_role = admin
+--   kontakt@rituals.dk           member company, 50% discount
+--   booking@nordicevents.dk      external company, 0% discount
 
 begin;
 insert into auth.users (
@@ -70,15 +70,15 @@ where u.id in (
 );
 
 insert into public.admins (
-  admin_id, admin_auth_user_id, admin_username, admin_display_name
+  admin_id, admin_auth_user_id, admin_display_name
 ) values (
   '00000000-0000-0000-0000-0000000000a1',
   '00000000-0000-0000-0000-000000000001',
-  'admin', 'The Social House'
+  'The Social House'
 );
 
 insert into public.companies (
-  company_id, company_auth_user_id, company_username, company_email,
+  company_id, company_auth_user_id, company_email,
   company_display_name, company_legal_name, company_membership_status,
   company_discount_percent, company_cvr_number, company_contact_name,
   company_billing_address, company_billing_postal_code, company_billing_city,
@@ -88,7 +88,7 @@ insert into public.companies (
   (
     '00000000-0000-0000-0000-0000000000b2',
     '00000000-0000-0000-0000-000000000002',
-    'rituals', 'kontakt@rituals.dk',
+    'kontakt@rituals.dk',
     'Rituals', 'Rituals ApS', 'member',
     50, '12345678', 'Peter Pedersen',
     'Strøget 1', '1160', 'København K', 'Danmark',
@@ -98,7 +98,7 @@ insert into public.companies (
   (
     '00000000-0000-0000-0000-0000000000b3',
     '00000000-0000-0000-0000-000000000003',
-    'nordicevents', 'booking@nordicevents.dk',
+    'booking@nordicevents.dk',
     'Nordic Events', 'Nordic Events ApS', 'external',
     0, '87654321', 'Ali Hassan',
     'Havnegade 12', '1058', 'København K', 'Danmark',
