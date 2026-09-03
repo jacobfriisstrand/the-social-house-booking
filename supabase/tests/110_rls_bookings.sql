@@ -39,7 +39,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 
 select is((select count(*) from public.bookings), 1::bigint, 'company sees only its own bookings');
-select is((select booking_number from public.bookings), 'B-TEST-0001', 'company reads its own booking');
+select is((select booking_number ~ '^B-[0-9]{4}-[0-9]{4}$' from public.bookings), true, 'company reads its own database-assigned booking number');
 select is((select count(*) from public.booking_addons), 1::bigint, 'company reads its own booking add-ons');
 select is((select count(*) from public.outbound_emails), 1::bigint, 'company reads only its own send-log rows');
 select lives_ok(
@@ -47,7 +47,7 @@ select lives_ok(
   'company updates its own booking add-on');
 select is((select outbound_email_kind from public.outbound_emails), 'booking-confirmation', 'company send-log row is its own');
 select lives_ok(
-  'update public.bookings set booking_status = ''cancelled'', booking_cancelled_at = now() where booking_number = ''B-TEST-0001''',
+  'update public.bookings set booking_status = ''cancelled'', booking_cancelled_at = now() where booking_id = ''66666666-6666-6666-6666-666666666001''',
   'company cancels its own booking');
 select throws_ok(
   'insert into public.bookings (booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values (''B-TEST-0003'', ''22222222-2222-2222-2222-222222222002'', ''44444444-4444-4444-4444-444444444001'', now(), now() + interval ''1 hour'', 2::bigint, ''X'', ''x@x.dk'', ''+45'', 1)',
@@ -64,13 +64,13 @@ select is((select count(*) from public.bookings), 1::bigint, 'nobody deletes boo
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111003","role":"authenticated"}';
 select is((select count(*) from public.booking_addons), 0::bigint, 'foreign booking add-ons are invisible');
 select lives_ok(
-  'update public.bookings set booking_booker_name = ''HACKED'' where booking_number = ''B-TEST-0001''',
+  'update public.bookings set booking_booker_name = ''HACKED'' where booking_id = ''66666666-6666-6666-6666-666666666001''',
   'foreign booking update is silently scoped to zero rows');
 
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
 select is((select count(*) from public.bookings), 2::bigint, 'admin sees all bookings');
-select is((select booking_booker_name from public.bookings where booking_number = 'B-TEST-0001'), 'Peter', 'foreign booking was not modified');
+select is((select booking_booker_name from public.bookings where booking_id = '66666666-6666-6666-6666-666666666001'), 'Peter', 'foreign booking was not modified');
 select is((select count(*) from public.booking_addons), 1::bigint, 'admin sees all booking add-ons');
 select is((select count(*) from public.outbound_emails), 3::bigint, 'admin sees the whole send log incl. system mail');
 select lives_ok(

@@ -28,7 +28,8 @@ create policy bookings_update_own_or_admin on public.bookings
   );
 
 -- Add-ons on a booking follow the booking's ownership; the unit price is a
--- snapshot (ADR-0005) whose immutability after confirmation is #24's trigger.
+-- snapshot (ADR-0005), frozen after confirmation by the
+-- booking_addons_snapshot_immutable trigger (#24).
 create policy booking_addons_select_own_or_admin on public.booking_addons
   for select to authenticated
   using (

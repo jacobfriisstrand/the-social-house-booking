@@ -70,7 +70,7 @@ Everything else uses the user's session and RLS.
 
 ## Database tests (pgTAP)
 
-`supabase/tests/*.sql`, run with `supabase test db` (locally and in CI). Every RLS policy and every constraint/trigger listed under "What lives in Postgres" has a test. Pattern: `begin; select plan(n); ... select * from finish(); rollback;`, simulate users with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>';` and admins by also setting the `app_role` claim. Create files with `supabase test new <name>`. See `docs/vendor/supabase/testing-overview.md` and `testing-pgtap-extended.md`.
+`supabase/tests/*.sql`, run with `supabase test db` (locally and in CI). Every RLS policy and every constraint/trigger listed under "What lives in Postgres" has a test. Pattern: `begin; select plan(n); ... select * from finish(); rollback;`, simulate users with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>';` and admins by also setting the `app_role` claim. Name files `NNN_<rule>.sql` grouped by suite number (`100` RLS, `200` integrity); each file owns its fixtures inline. See `docs/vendor/supabase/testing-overview.md` and `testing-pgtap-extended.md`.
 
 ## Seed
 

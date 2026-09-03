@@ -19,8 +19,8 @@ No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fi
 
 ## pgTAP
 
-- Files in `supabase/tests/`, created with `supabase test new <name>`, run alphabetically; `000-setup.sql` creates fixture companies, rooms, and users.
-- One file per table's policies (`companies_rls.test.sql`, …) and one per integrity rule (`bookings_no_overlap.test.sql`, `bookings_snapshot_immutable.test.sql`).
+- Files in `supabase/tests/`, run alphabetically; prefix each file with a suite number (`100` RLS, `200` integrity). Each file creates its own fixtures inline after `begin; select plan(n);` and ends with `select * from finish(); rollback;`.
+- One file per table's policies (`100_rls_companies.sql`, …) and one per integrity rule (`200_bookings_no_overlap.sql`, `210_booking_snapshot_immutable.sql`, `220_booking_number.sql`, `230_booking_holds.sql`).
 - Simulate roles with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>'; set local request.jwt.claims = '{"app_role":"admin", ...}'` as shown in `docs/vendor/supabase/testing-overview.md`. Assert both directions: the owning company sees its rows, another company sees none, admin sees all.
 - Runs on every PR in CI against a fresh `supabase start`.
 

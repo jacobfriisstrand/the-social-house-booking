@@ -9,6 +9,9 @@
 -- sessions (no JWT) get zero rows; any authenticated user (admin or
 -- company) gets the projection. Service-role sessions have no user id and
 -- read the base tables directly.
+-- A 'pending_verification' row is always a live hold: bookings_live_hold
+-- flips expired holds on any write and expire_stale_holds() sweeps the rest
+-- (#24), so the view needs no expiry predicate of its own.
 
 create view public.calendar_entries as
 select
