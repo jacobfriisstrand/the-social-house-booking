@@ -1,6 +1,15 @@
-// All user-visible copy in Danish, keyed by feature (ADR-0016, docs/agents/ui.md).
+// Danish UI copy (ADR-0016), keyed by feature (docs/agents/ui.md).
 // Components import from here; no Danish string literals in components.
 export const messages = {
+  admin: {
+    homeTitle: "Administration",
+  },
+  common: {
+    signOut: "Log ud",
+  },
+  company: {
+    bookingsTitle: "Bookinger",
+  },
   demo: {
     description:
       "Baseline for formularer: react-hook-form, zod og en Server Action. Bookingformularen tager udgangspunkt i denne opbygning.",
@@ -25,6 +34,14 @@ export const messages = {
   },
   format: {
     exclVat: "ekskl. moms",
+  },
+  login: {
+    email: "Email",
+    failed: "Forkert email eller adgangskode",
+    invalidEmail: "Indtast en gyldig email",
+    missingPassword: "Indtast adgangskoden",
+    password: "Adgangskode",
+    submit: "Log ind",
   },
   manifest: {
     name: "The Social House",

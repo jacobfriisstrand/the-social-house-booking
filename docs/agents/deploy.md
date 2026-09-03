@@ -64,5 +64,5 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 1. Create the Supabase project; note ref and DB password → GitHub Environment secrets.
 2. Run the release workflow once (or `workflow_dispatch`) to push schema, config, function, and templates.
 3. `supabase secrets set RESEND_API_KEY=… SEND_EMAIL_HOOK_SECRET=…` for the Edge Function; register the hook URL and the access token hook in the dashboard (the only dashboard actions allowed, because hooks need the deployed function URL).
-4. `APP_ENV=<env> npx tsx scripts/create-admin.ts` with that environment's secret key.
+4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
 5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.

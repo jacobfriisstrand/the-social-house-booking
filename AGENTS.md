@@ -32,8 +32,9 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 | Doc | Covers |
 |---|---|
 | `docs/agents/stack.md` | versions, commands, env vars, Ultracite, Sentry |
+| `docs/agents/typescript.md` | discriminated unions for state, type modeling |
 | `docs/agents/supabase.md` | declarative schemas, migrations, generated types, RLS, pgTAP, service-role allowlist |
-| `docs/agents/auth.md` | username login, admin role in JWT, booker verification, holds |
+| `docs/agents/auth.md` | email login, admin role in JWT, booker verification, holds |
 | `docs/agents/email.md` | `sendMail()`, Resend templates, webhook, the one hourly job |
 | `docs/agents/deploy.md` | environments, branches, CI, Netlify |
 | `docs/agents/ui.md` | shadcn/Base UI, forms, `messages/da.ts` |
@@ -44,7 +45,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 ## Hard rules
 
 - **Money** is integer øre, excl. VAT, everywhere (ADR-0019, ADR-0020). **Time** is `timestamptz` UTC; display in `Europe/Copenhagen` (ADR-0021). **Columns** carry the singular table-name prefix (ADR-0018).
-- **Data access**: user session + RLS by default, admins included. The service-role client is allowed only in the five places listed in `docs/agents/supabase.md`.
+- **Data access**: user session + RLS by default, admins included. The service-role client is allowed only in the four places listed in `docs/agents/supabase.md` (plus `scripts/create-admin.ts`, which builds its own in a standalone process).
 - **Mutations** are Server Actions validated with zod. The only `route.ts` files are `app/api/webhooks/resend/` and `app/api/jobs/*`.
 - **Email** goes through `lib/email/sendMail.ts` (app) or `supabase/functions/send-email` (auth). Nothing else imports Resend. Development redirects all mail to `EMAIL_REDIRECT_TO`.
 - **Schema** changes are edits to `supabase/schemas/` + `supabase db diff` + regenerated `lib/supabase/database.types.ts` + a pgTAP test, in one PR. Never `db push` from a laptop; never change anything in the Supabase dashboard.
