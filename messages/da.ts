@@ -54,6 +54,7 @@ export const messages = {
     seedMemberEmail: "kontakt@rituals.dk",
     seedMemberLabel: "Medlemsvirksomhed",
     submit: "Log ind",
+    submitting: "Logger ind …",
   },
   manifest: {
     name: "The Social House",

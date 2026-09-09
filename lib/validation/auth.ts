@@ -7,3 +7,5 @@ export const loginSchema = z.object({
   email: z.email(messages.login.invalidEmail),
   password: z.string().min(1, messages.login.missingPassword),
 });
+
+export type LoginValues = z.infer<typeof loginSchema>;

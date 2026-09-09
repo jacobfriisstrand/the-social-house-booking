@@ -6,29 +6,29 @@
 // every failure so the form never discloses whether an email exists.
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { loginSchema } from "@/lib/validation/auth";
+import { type LoginValues, loginSchema } from "@/lib/validation/auth";
 import { messages } from "@/messages/da";
 
-export interface LoginState {
-  error?: string;
-}
+export type LoginState =
+  | { status: "idle" }
+  | { status: "error"; error: string };
 
 export async function logIn(
   _prevState: LoginState,
-  formData: FormData
+  values: LoginValues
 ): Promise<LoginState> {
-  const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
+  const parsed = loginSchema.safeParse(values);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? messages.login.failed };
+    return {
+      error: parsed.error.issues[0]?.message ?? messages.login.failed,
+      status: "error",
+    };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
-    return { error: messages.login.failed };
+    return { error: messages.login.failed, status: "error" };
   }
 
   redirect("/");
