@@ -3,7 +3,8 @@
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",
-    "ultracite/biome/next"
+    "ultracite/biome/next",
+    "ultracite/biome/vitest"
   ],
   "files": {
     "includes": [
@@ -28,11 +29,27 @@
   // sentry.*.config.ts — they read process.env by design (docs/agents/stack.md).
   "overrides": [
     {
-      "includes": ["lib/env.ts", "netlify/functions/*.mts", "scripts/create-admin.ts"],
+      "includes": [
+        "lib/env.ts",
+        "netlify/functions/*.mts",
+        "scripts/create-admin.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
             "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    // env.selfcheck.ts is a standalone boot self-check (run manually), not a
+    // vitest suite; its top-level node:assert calls are intentional.
+    {
+      "includes": ["lib/env.selfcheck.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noMisplacedAssertion": "off"
           }
         }
       }
