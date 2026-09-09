@@ -267,10 +267,9 @@ max_frequency = "5s"
 # [auth.sms.test_otp]
 # 4152127777 = "123456"
 
-# Session lifetimes: 1h access JWT + refresh rotation; signed-out after 7 days of
-# inactivity (companies book occasionally and must not re-sign-in every session).
-[auth.sessions]
-inactivity_timeout = "168h"
+# Session lifetimes: 1h access JWT + refresh rotation. The 7-day inactivity
+# sign-out is a Pro-plan feature, so it lives under [remotes.production] at the
+# end of this file; the free development project keeps the default (no timeout).
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -418,3 +417,13 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Per-project overrides. `supabase config push` applies the block whose
+# project_id matches the linked project; everything else comes from the base.
+[remotes.production]
+project_id = "rukxjslnbhsqdzmeenbn"
+
+# Signed out after 7 days of inactivity (companies book occasionally and must
+# not re-sign-in every session). Pro-plan only, hence production only.
+[remotes.production.auth.sessions]
+inactivity_timeout = "168h"
