@@ -46,7 +46,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 
 - **Money** is integer øre, excl. VAT, everywhere (ADR-0019, ADR-0020). **Time** is `timestamptz` UTC; display in `Europe/Copenhagen` (ADR-0021). **Columns** carry the singular table-name prefix (ADR-0018).
 - **Data access**: user session + RLS by default, admins included. The service-role client is allowed only in the four places listed in `docs/agents/supabase.md` (plus `scripts/create-admin.ts`, which builds its own in a standalone process).
-- **Mutations** are Server Actions validated with zod. The only `route.ts` files are `app/api/webhooks/resend/` and `app/api/jobs/*`.
+- **Mutations** are Server Actions validated with zod. The only `route.ts` files are `app/api/webhooks/resend/`, `app/api/webhooks/sentry/` and `app/api/jobs/*`.
 - **Email** goes through `lib/email/sendMail.ts` (app) or `supabase/functions/send-email` (auth). Nothing else imports Resend. Development redirects all mail to `EMAIL_REDIRECT_TO`.
 - **Schema** changes are edits to `supabase/schemas/` + `supabase db diff` + regenerated `lib/supabase/database.types.ts` + a pgTAP test, in one PR. Never `db push` from a laptop; never change anything in the Supabase dashboard.
 - **Env** is read only in `lib/env.ts`. Every new variable is added to `.env.example`.

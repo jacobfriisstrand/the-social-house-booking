@@ -357,6 +357,14 @@ step "and org:read → Create. Copy it now; it is shown once."
 ask_secret SENTRY_AUTH_TOKEN "Sentry auth token (hidden):"
 netlify_env NEXT_PUBLIC_SENTRY_DSN "$SENTRY_DSN" public "${ALL_CONTEXTS[@]}"
 netlify_env SENTRY_AUTH_TOKEN "$SENTRY_AUTH_TOKEN" secret "${ALL_CONTEXTS[@]}"
+open_url "https://$SENTRY_ORG.sentry.io/settings/developer-settings/"
+step "Internal integration 'TSH Booking GitHub issues' -> copy the Client Secret."
+ask_secret SENTRY_WEBHOOK_SECRET "Sentry webhook client secret (hidden):"
+open_url "https://github.com/settings/personal-access-tokens/new"
+step "Fine-grained token, repository the-social-house-booking only, permission Issues: read and write."
+ask_secret GITHUB_ISSUES_TOKEN "GitHub issues token (hidden):"
+netlify_env SENTRY_WEBHOOK_SECRET "$SENTRY_WEBHOOK_SECRET" secret production
+netlify_env GITHUB_ISSUES_TOKEN "$GITHUB_ISSUES_TOKEN" secret production
 pause "Sentry values written."
 
 # ── Done ──────────────────────────────────────────────────────────────────
