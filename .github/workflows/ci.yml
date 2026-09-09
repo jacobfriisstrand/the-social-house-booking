@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+      - run: npx tsc --noEmit
+
+      - run: npm test
+
+  supabase:
+    name: Supabase tests
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+        env:
+          DOCKER_TLS_CERTDIR: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v3
+
+      - run: supabase start
+
+      - run: supabase test db
+
+      - name: Check generated types are up to date
+        run: |
+          supabase gen types typescript --local > /tmp/database.types.ts
+          diff lib/supabase/database.types.ts /tmp/database.types.ts
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [check]
+    env:
+      APP_ENV: production
+      NEXT_PUBLIC_SITE_URL: https://thesocialhouse.dk
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
+      RESEND_FROM: The Social House <booking@thesocialhouse.dk>
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
