@@ -25,7 +25,7 @@
   // process.env by design (docs/agents/stack.md).
   "overrides": [
     {
-      "includes": ["lib/env.ts"],
+      "includes": ["lib/env.ts", "netlify/functions/*.mts"],
       "linter": {
         "rules": {
           "style": {
