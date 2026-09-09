@@ -26,14 +26,12 @@ export async function logIn(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
     return { error: messages.login.failed };
   }
 
-  redirect(
-    data.user.app_metadata.app_role === "admin" ? "/admin" : "/bookings"
-  );
+  redirect("/");
 }
 
 export async function signOut(): Promise<void> {

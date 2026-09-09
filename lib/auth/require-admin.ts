@@ -7,7 +7,7 @@ import { requireSession } from "./require-session";
 export async function requireAdmin() {
   const session = await requireSession();
   if (session.appRole !== "admin") {
-    redirect("/bookings");
+    redirect("/?unauthorized=1");
   }
   return session;
 }
