@@ -45,8 +45,8 @@ On push to `develop` (GitHub Environment `development`) and `main` (GitHub Envir
 1. `supabase link --project-ref $SUPABASE_PROJECT_REF`
 2. `supabase db push`
 3. `supabase config push`
-4. `supabase functions deploy send-email --no-verify-jwt`
-5. `npm run email:sync` with that environment's `RESEND_API_KEY`
+4. `supabase functions deploy send-email --no-verify-jwt` (commented out until #26 adds the function)
+5. `npm run email:sync` with that environment's `RESEND_API_KEY` (commented out until #11 adds the sync script)
 
 Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`. Netlify then builds the site from the same commit.
 

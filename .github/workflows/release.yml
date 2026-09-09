@@ -30,10 +30,11 @@ jobs:
 
       - run: supabase config push
 
-      - run: supabase functions deploy send-email --no-verify-jwt
-
-      - name: Sync Resend email templates
-        if: hashFiles('scripts/sync-email-templates.ts') != ''
-        run: npm run email:sync
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      # Disabled until the Send Email Hook function (#26) and the Resend
+      # template sync (#11) exist. Uncomment both steps in those PRs.
+      # - run: supabase functions deploy send-email --no-verify-jwt
+      #
+      # - name: Sync Resend email templates
+      #   run: npm run email:sync
+      #   env:
+      #     RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
