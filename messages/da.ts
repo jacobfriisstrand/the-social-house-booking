@@ -38,6 +38,11 @@ export const messages = {
     toastError: "Der opstod en fejl. Prøv igen.",
     toastSuccess: "Beskeden er sendt",
   },
+  error: {
+    description: "Prøv igen. Fortsætter fejlen, så kontakt The Social House.",
+    retry: "Prøv igen",
+    title: "Der skete en fejl",
+  },
   format: {
     exclVat: "ekskl. moms",
   },

@@ -54,7 +54,7 @@ Ultracite (a Biome preset) is the only linter and formatter. `biome.jsonc` exten
 
 - `@sentry/nextjs` on all three runtimes: `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts` (`register()` + `onRequestError`), `app/global-error.tsx`. `next.config.ts` wrapped in `withSentryConfig`.
 - `environment` = `APP_ENV`. Sentry is **off locally**: no `NEXT_PUBLIC_SENTRY_DSN` in `.env.local`.
-- `sendDefaultPii: false`. A `beforeSend` scrubber drops request bodies and any field named like `email`, `phone`, `name`, `practical_notes`, `internal_note`.
+- `dataCollection` turns off user info, cookies, headers and bodies (the SDK's replacement for `sendDefaultPii`, which is deprecated in v10 and removed in v11). On top of that, `beforeSend` (`lib/sentry/scrub.ts`) drops the user object, request body and cookies, and any field named like `email`, `phone`, `name`, `practical_notes`, `internal_note`. Shared options live in `lib/sentry/options.ts`.
 - **Never** put booker or company-contact data into `Sentry.setUser`, tags, breadcrumbs, or messages. Correlate with `company_id` and `booking_number` only.
 - Source maps upload during `next build` on Netlify using `SENTRY_AUTH_TOKEN`. Not needed locally.
 - The Supabase Edge Function and the Netlify scheduled function are **not** instrumented in v1.0.
