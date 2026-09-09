@@ -1,0 +1,27 @@
+# Netlify configuration. Read docs/agents/deploy.md and docs/vendor/netlify/
+# before changing this file. Non-secret, per-context values only; secrets are
+# set on the site with `netlify env:set`, never here.
+
+[build]
+  command = "npm run build"
+  # The Next.js adapter (OpenNext) is provisioned automatically; no plugin and
+  # no publish override. Node comes from .nvmrc.
+
+[functions]
+  directory = "netlify/functions"
+
+# main
+[context.production.environment]
+  APP_ENV = "production"
+  NEXT_PUBLIC_SITE_URL = "https://the-social-house-booking.netlify.app"
+
+# develop (the branch deploy itself is enabled in the Netlify UI under
+# Branches and deploy contexts; this file cannot enable it)
+[context.branch-deploy.environment]
+  APP_ENV = "development"
+  NEXT_PUBLIC_SITE_URL = "https://develop--the-social-house-booking.netlify.app"
+
+# pull requests: one URL per PR, so NEXT_PUBLIC_SITE_URL is not fixed here and
+# lib/env.ts falls back to Netlify's DEPLOY_PRIME_URL
+[context.deploy-preview.environment]
+  APP_ENV = "development"

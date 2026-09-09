@@ -15,7 +15,7 @@ Read `docs/vendor/netlify/` before changing `netlify.toml`.
 
 Deploy previews are part of the development environment: same database, same email redirect. There is no staging and no third value of `APP_ENV`.
 
-Environment variables are set per context in Netlify; `netlify.toml` declares the contexts (`[context.production.environment]`, `[context.branch-deploy.environment]`, `[context.deploy-preview.environment]`) and enables the `develop` branch deploy. Secrets never go in `netlify.toml`.
+`netlify.toml` carries the non-secret per-context values (`APP_ENV`, `NEXT_PUBLIC_SITE_URL`) under `[context.<name>.environment]`. Deploy previews get no fixed `NEXT_PUBLIC_SITE_URL`; `lib/env.ts` falls back to Netlify's `DEPLOY_PRIME_URL`. Everything else, secrets included, is set on the site per context with `netlify env:set` (see `scripts/setup-netlify-env.sh`); `RESEND_FROM` stays there too because it changes with the Resend account at go-live. The `develop` branch deploy is enabled in the Netlify UI, not in the toml. Secrets never go in `netlify.toml`.
 
 ## Branching and PRs
 
@@ -65,4 +65,4 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 2. Run the release workflow once (or `workflow_dispatch`) to push schema, config, function, and templates.
 3. `supabase secrets set RESEND_API_KEY=… SEND_EMAIL_HOOK_SECRET=…` for the Edge Function; register the hook URL and the access token hook in the dashboard (the only dashboard actions allowed, because hooks need the deployed function URL).
 4. `APP_ENV=<env> npx tsx scripts/create-admin.ts` with that environment's secret key.
-5. Set Netlify context variables from `.env.example`.
+5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.
