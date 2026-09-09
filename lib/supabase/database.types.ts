@@ -74,7 +74,6 @@ export type Database = {
           admin_display_name: string
           admin_id: string
           admin_updated_at: string
-          admin_username: string
         }
         Insert: {
           admin_auth_user_id: string
@@ -82,7 +81,6 @@ export type Database = {
           admin_display_name: string
           admin_id?: string
           admin_updated_at?: string
-          admin_username: string
         }
         Update: {
           admin_auth_user_id?: string
@@ -90,7 +88,6 @@ export type Database = {
           admin_display_name?: string
           admin_id?: string
           admin_updated_at?: string
-          admin_username?: string
         }
         Relationships: []
       }
@@ -264,7 +261,6 @@ export type Database = {
           company_membership_status: Database["public"]["Enums"]["company_membership_status"]
           company_reference: string | null
           company_updated_at: string
-          company_username: string
         }
         Insert: {
           company_attention?: string | null
@@ -291,7 +287,6 @@ export type Database = {
           company_membership_status?: Database["public"]["Enums"]["company_membership_status"]
           company_reference?: string | null
           company_updated_at?: string
-          company_username: string
         }
         Update: {
           company_attention?: string | null
@@ -318,7 +313,6 @@ export type Database = {
           company_membership_status?: Database["public"]["Enums"]["company_membership_status"]
           company_reference?: string | null
           company_updated_at?: string
-          company_username?: string
         }
         Relationships: []
       }
@@ -379,6 +373,36 @@ export type Database = {
           house_event_start_at?: string
           house_event_title?: string | null
           house_event_updated_at?: string
+        }
+        Relationships: []
+      }
+      notices: {
+        Row: {
+          notice_body: string
+          notice_created_at: string
+          notice_ends_at: string | null
+          notice_id: string
+          notice_is_active: boolean
+          notice_starts_at: string | null
+          notice_updated_at: string
+        }
+        Insert: {
+          notice_body: string
+          notice_created_at?: string
+          notice_ends_at?: string | null
+          notice_id?: string
+          notice_is_active?: boolean
+          notice_starts_at?: string | null
+          notice_updated_at?: string
+        }
+        Update: {
+          notice_body?: string
+          notice_created_at?: string
+          notice_ends_at?: string | null
+          notice_id?: string
+          notice_is_active?: boolean
+          notice_starts_at?: string | null
+          notice_updated_at?: string
         }
         Relationships: []
       }
@@ -546,6 +570,79 @@ export type Database = {
         }
         Relationships: []
       }
+      terms_acceptances: {
+        Row: {
+          terms_acceptance_accepted_at: string
+          terms_acceptance_booking_id: string | null
+          terms_acceptance_company_id: string
+          terms_acceptance_id: string
+          terms_acceptance_terms_version_id: string
+        }
+        Insert: {
+          terms_acceptance_accepted_at?: string
+          terms_acceptance_booking_id?: string | null
+          terms_acceptance_company_id: string
+          terms_acceptance_id?: string
+          terms_acceptance_terms_version_id: string
+        }
+        Update: {
+          terms_acceptance_accepted_at?: string
+          terms_acceptance_booking_id?: string | null
+          terms_acceptance_company_id?: string
+          terms_acceptance_id?: string
+          terms_acceptance_terms_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_booking_id_fkey"
+            columns: ["terms_acceptance_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_company_id_fkey"
+            columns: ["terms_acceptance_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "terms_acceptances_terms_acceptance_terms_version_id_fkey"
+            columns: ["terms_acceptance_terms_version_id"]
+            isOneToOne: false
+            referencedRelation: "terms_versions"
+            referencedColumns: ["terms_version_id"]
+          },
+        ]
+      }
+      terms_versions: {
+        Row: {
+          terms_version_content: string
+          terms_version_created_at: string
+          terms_version_id: string
+          terms_version_name: string
+          terms_version_published_at: string | null
+          terms_version_version: string
+        }
+        Insert: {
+          terms_version_content: string
+          terms_version_created_at?: string
+          terms_version_id?: string
+          terms_version_name: string
+          terms_version_published_at?: string | null
+          terms_version_version: string
+        }
+        Update: {
+          terms_version_content?: string
+          terms_version_created_at?: string
+          terms_version_id?: string
+          terms_version_name?: string
+          terms_version_published_at?: string | null
+          terms_version_version?: string
+        }
+        Relationships: []
+      }
       verification_codes: {
         Row: {
           verification_code_attempts: number
@@ -589,10 +686,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_entries: {
+        Row: {
+          calendar_entry_end_at: string | null
+          calendar_entry_id: string | null
+          calendar_entry_kind: string | null
+          calendar_entry_start_at: string | null
+          company_display_name: string | null
+          house_event_title: string | null
+          room_id: string | null
+          room_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      assert_booking_room_free: {
+        Args: { p_end_at: string; p_room_id: string; p_start_at: string }
+        Returns: undefined
+      }
+      assert_event_room_free: {
+        Args: {
+          p_end_at: string
+          p_exclude_event_id?: string
+          p_room_id: string
+          p_start_at: string
+        }
+        Returns: undefined
+      }
+      booking_blocked_until: { Args: { p_end_at: string }; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      expire_stale_holds: { Args: never; Returns: number }
+      next_booking_number: { Args: never; Returns: string }
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"
@@ -637,12 +762,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -666,11 +791,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -691,11 +816,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -716,11 +841,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -733,11 +858,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

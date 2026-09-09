@@ -15,7 +15,7 @@ Read `docs/vendor/netlify/` before changing `netlify.toml`.
 
 Deploy previews are part of the development environment: same database, same email redirect. There is no staging and no third value of `APP_ENV`.
 
-Environment variables are set per context in Netlify; `netlify.toml` declares the contexts (`[context.production.environment]`, `[context.branch-deploy.environment]`, `[context.deploy-preview.environment]`) and enables the `develop` branch deploy. Secrets never go in `netlify.toml`.
+`netlify.toml` carries the non-secret per-context values (`APP_ENV`, `NEXT_PUBLIC_SITE_URL`) under `[context.<name>.environment]`. Deploy previews get no fixed `NEXT_PUBLIC_SITE_URL`; `lib/env.ts` falls back to Netlify's `DEPLOY_PRIME_URL`. Everything else, secrets included, is set on the site per context with `netlify env:set` (see `scripts/setup-netlify-env.sh`); `RESEND_FROM` stays there too because it changes with the Resend account at go-live. The `develop` branch deploy is enabled in the Netlify UI, not in the toml. Secrets never go in `netlify.toml`.
 
 ## Branching and PRs
 
@@ -45,8 +45,8 @@ On push to `develop` (GitHub Environment `development`) and `main` (GitHub Envir
 1. `supabase link --project-ref $SUPABASE_PROJECT_REF`
 2. `supabase db push`
 3. `supabase config push`
-4. `supabase functions deploy send-email --no-verify-jwt`
-5. `npm run email:sync` with that environment's `RESEND_API_KEY`
+4. `supabase functions deploy send-email --no-verify-jwt` (commented out until #26 adds the function)
+5. `npm run email:sync` with that environment's `RESEND_API_KEY` (commented out until #11 adds the sync script)
 
 Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`. Netlify then builds the site from the same commit.
 
@@ -57,12 +57,12 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 - Next.js runs through Netlify's Next runtime; no `output: 'export'`, no custom server.
 - `.nvmrc` pins Node 24 for build and functions.
 - The only custom function is `netlify/functions/send-reminders.mts` (scheduled, production only). Everything else is Next.
-- `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload.
+- `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload. `SENTRY_WEBHOOK_SECRET` and `GITHUB_ISSUES_TOKEN` are production context only: the Sentry webhook points at the production URL (`stack.md`).
 
 ## First-time setup of a cloud environment (once, by a human)
 
 1. Create the Supabase project; note ref and DB password → GitHub Environment secrets.
 2. Run the release workflow once (or `workflow_dispatch`) to push schema, config, function, and templates.
 3. `supabase secrets set RESEND_API_KEY=… SEND_EMAIL_HOOK_SECRET=…` for the Edge Function; register the hook URL and the access token hook in the dashboard (the only dashboard actions allowed, because hooks need the deployed function URL).
-4. `APP_ENV=<env> npx tsx scripts/create-admin.ts` with that environment's secret key.
-5. Set Netlify context variables from `.env.example`.
+4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
+5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.

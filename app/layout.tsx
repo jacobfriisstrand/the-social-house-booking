@@ -1,7 +1,7 @@
-// For adding custom fonts with other frameworks, see:
-// https://tailwindcss.com/docs/font-family
 import type { Metadata } from "next";
 import { Geist_Mono, Poppins } from "next/font/google";
+import { Toaster } from "@/components/ui/toast";
+import { messages } from "@/messages/da";
 import "./globals.css";
 
 const fontSans = Poppins({
@@ -16,8 +16,9 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  description: "Booking af mødelokaler i The Social House",
-  title: "The Social House",
+  description: messages.metadata.description,
+  icons: [{ type: "image/svg+xml", url: "/icon.svg" }],
+  title: messages.metadata.title,
 };
 
 export default function RootLayout({
@@ -26,9 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${fontSans.variable} ${fontMono.variable} antialiased`}>
+    // Font variables live on <html> so the base-layer `html { @apply font-sans }` resolves.
+    <html className={`${fontSans.variable} ${fontMono.variable}`} lang="da">
+      <body className="antialiased">
         {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -23,16 +23,16 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Next dev server on http://localhost:3000 (requires `supabase start` first). |
+| `npm run dev` | Next dev server on http://localhost:3000 (requires `npm run db:start` first). |
 | `npm run build` / `npm start` | Production build / serve. |
 | `npm run check` / `npm run fix` | Ultracite lint + format check / apply safe fixes. (Written by `npx ultracite init`.) |
 | `npm test` | `vitest run`. |
+| `npm run db:start` / `npm run db:stop` | Start / stop local Postgres + Auth + Studio in Docker (`supabase start` / `stop`). |
+| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`). This is where the demo logins come from. |
+| `npm run db:test` | Run pgTAP tests in `supabase/tests/` (`supabase test db`). |
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |
-| `supabase start` / `stop` | Local Postgres + Auth + Studio in Docker. |
 | `supabase db schema declarative sync --name <name>` | Turn `supabase/schemas/` changes into a migration (CLI ≥ 2.116; add `--no-apply` to review first). |
-| `supabase db reset` | Rebuild local DB from migrations + `seed.sql`. |
-| `supabase test db` | Run pgTAP tests in `supabase/tests/`. |
 
 Scripts not yet present in `package.json` are added when the tool they call is installed (Ultracite, Vitest, the sync script). Do not add a substitute in the meantime.
 
@@ -54,8 +54,9 @@ Ultracite (a Biome preset) is the only linter and formatter. `biome.jsonc` exten
 
 - `@sentry/nextjs` on all three runtimes: `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts` (`register()` + `onRequestError`), `app/global-error.tsx`. `next.config.ts` wrapped in `withSentryConfig`.
 - `environment` = `APP_ENV`. Sentry is **off locally**: no `NEXT_PUBLIC_SENTRY_DSN` in `.env.local`.
-- `sendDefaultPii: false`. A `beforeSend` scrubber drops request bodies and any field named like `email`, `phone`, `name`, `practical_notes`, `internal_note`.
+- `dataCollection` turns off user info, cookies, headers and bodies (the SDK's replacement for `sendDefaultPii`, which is deprecated in v10 and removed in v11). On top of that, `beforeSend` (`lib/sentry/scrub.ts`) drops the user object, request body and cookies, and any field named like `email`, `phone`, `name`, `practical_notes`, `internal_note`. Shared options live in `lib/sentry/options.ts`.
 - **Never** put booker or company-contact data into `Sentry.setUser`, tags, breadcrumbs, or messages. Correlate with `company_id` and `booking_number` only.
 - Source maps upload during `next build` on Netlify using `SENTRY_AUTH_TOKEN`. Not needed locally.
 - The Supabase Edge Function and the Netlify scheduled function are **not** instrumented in v1.0.
+- **Sentry → GitHub.** The internal integration "TSH Booking GitHub issues" posts every issue webhook to `app/api/webhooks/sentry/route.ts` on the production site. On `issue.created` the route verifies `SENTRY_WEBHOOK_SECRET`, answers 202 at once (Sentry's 1 s timeout), then `lib/github/issues.ts` opens a GitHub issue with `GITHUB_ISSUES_TOKEN`: labels `bug` + `source:sentry`, no assignee, no milestone. A human triages: close as noise, or add an `area:` label and a milestone. Both secrets live in the Netlify production context only. Docs: `docs/vendor/sentry/webhooks.md`.
 - Docs: `docs/vendor/sentry/`.

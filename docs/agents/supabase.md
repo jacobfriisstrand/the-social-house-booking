@@ -16,7 +16,7 @@ Migrations reach cloud projects **only** through GitHub Actions on merge (`supab
 
 ## Schema workflow (declarative)
 
-1. Edit `supabase/schemas/*.sql` — one file per table or concern (`companies.sql`, `rooms.sql`, `bookings.sql`, `outbound_emails.sql`, `policies/*.sql`, `functions/*.sql`). Files run in lexicographic order; control ordering with `[db.migrations] schema_paths` in `supabase/config.toml`.
+1. Edit `supabase/schemas/*.sql` — one file per table or concern (`companies.sql`, `rooms.sql`, `bookings.sql`, `outbound_emails.sql`, `policies/*.sql`, `functions/*.sql`). `./schemas` is discovered by default; ordering needs no config (the generated migration lists tables alphabetically with FKs as trailing `ALTER TABLE … ADD CONSTRAINT`).
 2. `supabase db schema declarative sync --name <short_name> --no-apply` → a migration in `supabase/migrations/`. Read the generated SQL before committing. (Since CLI 2.116, `db diff` no longer reads `supabase/schemas/`; it only compares migrations with a database.)
 3. `supabase db reset` locally, then `npm run db:types`, then `supabase test db`.
 4. Commit schema file, migration, and regenerated types together.
@@ -58,19 +58,20 @@ RLS is the security boundary. Admins are ordinary authenticated users whose JWT 
 
 ## Service-role allowlist
 
-The service-role client may be imported in exactly these places. Adding a sixth requires updating this list in the same PR.
+The service-role client (`lib/supabase/admin.ts`) may be imported in exactly these places. Adding a fifth requires updating this list in the same PR.
 
-1. The `/login` server action — resolve `company_username` → auth email before `signInWithPassword`.
-2. Verification-code flow and booker-facing booking pages — the booker is not an auth user (ADR-0004).
-3. Cancellation via secure link — unauthenticated.
-4. `lib/email/sendMail.ts` and the Resend webhook — `outbound_emails` writes.
-5. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
+1. Verification-code flow and booker-facing booking pages — the booker is not an auth user (ADR-0004).
+2. Cancellation via secure link — unauthenticated.
+3. `lib/email/sendMail.ts` and the Resend webhook — `outbound_emails` writes.
+4. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
+
+One further consumer of the service-role key exists outside this list: `scripts/create-admin.ts` builds its own client in a standalone process (`lib/supabase/admin.ts` is `server-only`, unusable there).
 
 Everything else uses the user's session and RLS.
 
 ## Database tests (pgTAP)
 
-`supabase/tests/*.sql`, run with `supabase test db` (locally and in CI). Every RLS policy and every constraint/trigger listed under "What lives in Postgres" has a test. Pattern: `begin; select plan(n); ... select * from finish(); rollback;`, simulate users with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>';` and admins by also setting the `app_role` claim. Create files with `supabase test new <name>`. See `docs/vendor/supabase/testing-overview.md` and `testing-pgtap-extended.md`.
+`supabase/tests/*.sql`, run with `supabase test db` (locally and in CI). Every RLS policy and every constraint/trigger listed under "What lives in Postgres" has a test. Pattern: `begin; select plan(n); ... select * from finish(); rollback;`, simulate users with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>';` and admins by also setting the `app_role` claim. Name files `NNN_<rule>.sql` grouped by suite number (`100` RLS, `200` integrity); each file owns its fixtures inline. See `docs/vendor/supabase/testing-overview.md` and `testing-pgtap-extended.md`.
 
 ## Seed
 
@@ -78,4 +79,4 @@ Everything else uses the user's session and RLS.
 
 ## Auth config as code
 
-`supabase/config.toml` is the source of truth for Auth: `enable_signup = false` (ADR-0008), Send Email Hook and Custom Access Token Hook enabled, built-in email templates unused, OTP and session lifetimes. Pushed by CI with `supabase config push`. Dashboard changes are forbidden.
+`supabase/config.toml` is the source of truth for Auth: `enable_signup = false` (ADR-0008), Send Email Hook and Custom Access Token Hook enabled, built-in email templates unused, OTP and session lifetimes. Pushed by CI with `supabase config push`. Settings that only Pro projects accept (the session inactivity timeout) live under `[remotes.production]`, which the CLI applies only when the linked project is production. Dashboard changes are forbidden.

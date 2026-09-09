@@ -9,7 +9,7 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
 `lib/email/sendMail.ts` is the only code in the Next app that calls Resend. Never import `resend` elsewhere. `sendMail({ template, to, variables, bookingId?, companyId?, kind, sensitive? })`:
 
 1. Enforces the spec's common rules: fixed `RESEND_FROM`, greeting addressed to the company display name ("Kære Rituals"), exactly one call-to-action, no payment wording, empty sections hidden, savings line only when a discount applies, `sensitive` flag respected.
-2. On `APP_ENV = development`, **replaces every recipient with `EMAIL_REDIRECT_TO`** and prefixes the subject with `[development]`. This is not optional and not configurable per call.
+2. On `APP_ENV = development`, **replaces every recipient with the comma-separated addresses in `EMAIL_REDIRECT_TO`** and prefixes the subject with `[development]`. This is not optional and not configurable per call.
 3. Inserts an `outbound_emails` row (`outbound_email_kind`, `outbound_email_booking_id`, `outbound_email_to`, `outbound_email_resend_id`, `outbound_email_status = 'queued'`), then sends with `template: { id: alias, variables }`.
 4. On a Resend error, sets `outbound_email_status = 'failed'` with the error and throws; callers decide whether the user flow continues.
 
@@ -55,4 +55,4 @@ There is exactly one scheduled job.
   1. Selects `confirmed` bookings with `booking_start_at` in `(now() + 23h, now() + 24h]` that have no `reminder` row in `outbound_emails`, and sends `reminder` for each. Cancelled bookings never match. The unique index makes double runs harmless.
   2. Releases stale holds: `pending_verification` bookings past `booking_hold_expires_at` → `expired`.
 - Must finish well inside Netlify's 30 s function limit; batch by 100 and log counts.
-- No croner, no `pg_cron`, no Resend `scheduledAt`. The `route.ts` allowlist is: this route, any future `app/api/jobs/*`, and the Resend webhook. All user-triggered mutations are Server Actions.
+- No croner, no `pg_cron`, no Resend `scheduledAt`. The `route.ts` allowlist is: this route, any future `app/api/jobs/*`, the Resend webhook, and the Sentry webhook (`stack.md`). All user-triggered mutations are Server Actions.

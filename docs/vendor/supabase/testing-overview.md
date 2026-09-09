@@ -266,7 +266,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
 
       - name: Start Supabase
         run: supabase start

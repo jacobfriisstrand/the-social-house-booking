@@ -17,6 +17,7 @@ const emptyToUndefined = <S extends z.ZodType>(schema: S) =>
 export const envSchema = z.object({
   APP_ENV: z.enum(["development", "production"]),
   EMAIL_REDIRECT_TO: emptyToUndefined(z.string().min(1)),
+  GITHUB_ISSUES_TOKEN: emptyToUndefined(z.string().min(1)),
   JOB_SECRET: emptyToUndefined(z.string().min(1)),
   NEXT_PUBLIC_SENTRY_DSN: emptyToUndefined(z.url()),
   NEXT_PUBLIC_SITE_URL: z.url(),
@@ -26,5 +27,6 @@ export const envSchema = z.object({
   RESEND_FROM: z.string().min(1),
   RESEND_WEBHOOK_SECRET: emptyToUndefined(z.string().min(1)),
   SENTRY_AUTH_TOKEN: emptyToUndefined(z.string().min(1)),
+  SENTRY_WEBHOOK_SECRET: emptyToUndefined(z.string().min(1)),
   SUPABASE_SECRET_KEY: emptyToUndefined(z.string().min(1)),
 });

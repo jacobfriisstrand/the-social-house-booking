@@ -15,12 +15,13 @@ No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fi
 - Rule: **every exported function in `lib/domain/` has a test file**, and every branch the spec describes gets a case. Pricing, discount (room rental only, ADR-0007), cancellation fee tiers (72h/24h boundaries inclusive as the spec states, on member price — ADR-0006), buffer window (ADR-0002), opening-hours fit, add-on totals (fixed vs per participant — ADR-0011), snapshot construction (ADR-0005).
 - Money assertions are on integer øre. Time inputs are ISO strings with explicit offsets; tests include a DST-crossing date.
 - `lib/email/sendMail.test.ts` covers the common rules and the development redirect with a mocked Resend client.
-- Config: `vitest.config.ts` at root, `environment: node`. No DOM.
+- Config: `vitest.config.mts` at root, `environment: node`. No DOM.
+- **Enforcement rule (review gate):** every file in `lib/domain/` that exports a function or type must have a co-located `*.test.ts` file. PRs that add or rename exports without a matching test file must not be merged.
 
 ## pgTAP
 
-- Files in `supabase/tests/`, created with `supabase test new <name>`, run alphabetically; `000-setup.sql` creates fixture companies, rooms, and users.
-- One file per table's policies (`companies_rls.test.sql`, …) and one per integrity rule (`bookings_no_overlap.test.sql`, `bookings_snapshot_immutable.test.sql`).
+- Files in `supabase/tests/`, run alphabetically; prefix each file with a suite number (`100` RLS, `200` integrity). Each file creates its own fixtures inline after `begin; select plan(n);` and ends with `select * from finish(); rollback;`.
+- One file per table's policies (`100_rls_companies.sql`, …) and one per integrity rule (`200_bookings_no_overlap.sql`, `210_booking_snapshot_immutable.sql`, `220_booking_number.sql`, `230_booking_holds.sql`).
 - Simulate roles with `set local role authenticated; set local request.jwt.claim.sub = '<uuid>'; set local request.jwt.claims = '{"app_role":"admin", ...}'` as shown in `docs/vendor/supabase/testing-overview.md`. Assert both directions: the owning company sees its rows, another company sees none, admin sees all.
 - Runs on every PR in CI against a fresh `supabase start`.
 

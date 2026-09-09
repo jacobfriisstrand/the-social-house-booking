@@ -8,22 +8,19 @@ Read `docs/vendor/supabase/auth-custom-access-token-hook.md` and `auth-send-emai
 
 | Who | Auth user? | How they get in |
 |---|---|---|
-| Company (member or external) | Yes — one `auth.users` row per company | Username + password on `/login` |
+| Company (member or external) | Yes — one `auth.users` row per company | Email + password on `/login` |
 | Admin | Yes — rows in `admins`, JWT claim `app_role = 'admin'` | Same `/login` form |
 | Booker | **No** | Six-digit verification code sent to their work email on every booking (ADR-0004) |
 
 No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which sends the "invitation to the company's creation" email; the company sets its password from that invite.
 
-## Username login
+## Email login
 
-Supabase Auth has no username concept. Mapping:
+Email is the only login credential (decided 2026-09-03, revising #25's username agreement; there is no unique username).
 
-- The auth user's email **is** the company's real contact email (`companies.company_email`), so password reset works unchanged.
-- `companies.company_username` is unique and is what the login form asks for.
-- The login server action resolves username → email with the service-role client (allowlisted, see `supabase.md`), then calls `signInWithPassword({ email, password })` with the normal server client. On a miss, return the same generic error as a wrong password.
-- Admins have a username too (`admins.admin_username`); the same lookup checks both tables.
-
-Never expose the resolved email to the client and never accept an email in the login form.
+- The auth user's email **is** the company's real contact email (`companies.company_email`), so password reset works unchanged. Same for admins.
+- The `/login` server action calls `signInWithPassword({ email, password })` with the normal server client — no service-role lookup step. On any failure (unknown email or wrong password), return the same generic error so the form never discloses whether an email exists.
+- `company_display_name` / `admin_display_name` are for showing people, never for signing in.
 
 ## Roles in the JWT
 
@@ -33,7 +30,7 @@ The Custom Access Token Hook is a Postgres function `public.custom_access_token_
 - Server code checks the role with `lib/auth/getSession()` → `session.appRole`. Do not decode the JWT by hand in components.
 - RLS policies read `(auth.jwt() ->> 'app_role') = 'admin'`.
 
-## Route protection
+- Server code checks the role with `getSession()` from `lib/auth/get-session.ts` → `session.appRole`. Do not decode the JWT by hand in components.
 
 - `app/(company)/*`: requires a session. `app/(admin)/*`: requires `app_role = 'admin'`. Both enforced in the route-group layout via `lib/auth/requireSession()` / `requireAdmin()`, and again inside every server action (layouts are not a security boundary).
 - `app/(public)/*`: notice board, booker verification pages, cancellation link pages. No session.
