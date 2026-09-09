@@ -5,6 +5,7 @@ export const messages = {
     homeTitle: "Administration",
   },
   common: {
+    loading: "Indlæser …",
     signOut: "Log ud",
     unauthorized: "Du har ikke adgang til at se den side du forsøgte at tilgå.",
     unauthorizedTitle: "Ikke autoriseret",
