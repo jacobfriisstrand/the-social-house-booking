@@ -6,9 +6,14 @@ export const messages = {
   },
   common: {
     signOut: "Log ud",
+    unauthorized: "Du har ikke adgang til at se den side du forsøgte at tilgå.",
+    unauthorizedTitle: "Ikke autoriseret",
   },
   company: {
     bookingsTitle: "Bookinger",
+  },
+  dashboard: {
+    title: "Dashboard",
   },
   demo: {
     description:
@@ -41,6 +46,13 @@ export const messages = {
     invalidEmail: "Indtast en gyldig email",
     missingPassword: "Indtast adgangskoden",
     password: "Adgangskode",
+    seedAdminEmail: "admin@thesocialhouse.dk",
+    seedAdminLabel: "Administrator",
+    seedExternalEmail: "booking@nordicevents.dk",
+    seedExternalLabel: "Ekstern virksomhed",
+    seedHint: "Demo-logins (adgangskode: password)",
+    seedMemberEmail: "kontakt@rituals.dk",
+    seedMemberLabel: "Medlemsvirksomhed",
     submit: "Log ind",
   },
   manifest: {

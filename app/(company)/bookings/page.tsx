@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/auth/actions";
 import { messages } from "@/messages/da";
 
@@ -8,12 +9,9 @@ export default function CompanyBookingsPage() {
         {messages.company.bookingsTitle}
       </h1>
       <form action={signOut} className="mt-4">
-        <button
-          className="h-9 rounded-lg border border-border px-4 text-sm"
-          type="submit"
-        >
+        <Button type="submit" variant="outline">
           {messages.common.signOut}
-        </button>
+        </Button>
       </form>
     </main>
   );
