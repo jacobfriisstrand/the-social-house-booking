@@ -18,3 +18,6 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+export const isDevelopment = env.APP_ENV === "development";
+export const isProduction = env.APP_ENV === "production";

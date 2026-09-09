@@ -1,6 +1,6 @@
-import { env } from "@/lib/env";
+import { isDevelopment } from "@/lib/env";
 import { LoginForm } from "../../../components/login-form";
 
 export default function LoginPage() {
-  return <LoginForm isDevelopment={env.APP_ENV === "development"} />;
+  return <LoginForm isDevelopment={isDevelopment} />;
 }

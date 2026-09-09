@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { env } from "@/lib/env";
+import { isDevelopment } from "@/lib/env";
 import { messages } from "@/messages/da";
 import { DemoForm } from "./form";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 // Server Action with useActionState. The booking form replaces this as its pattern source.
 // Only available in development — agents use it as a reference, not end users.
 export default function DemoFormsPage() {
-  if (env.APP_ENV !== "development") {
+  if (!isDevelopment) {
     redirect("/");
   }
 
