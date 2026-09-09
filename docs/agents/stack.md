@@ -58,4 +58,5 @@ Ultracite (a Biome preset) is the only linter and formatter. `biome.jsonc` exten
 - **Never** put booker or company-contact data into `Sentry.setUser`, tags, breadcrumbs, or messages. Correlate with `company_id` and `booking_number` only.
 - Source maps upload during `next build` on Netlify using `SENTRY_AUTH_TOKEN`. Not needed locally.
 - The Supabase Edge Function and the Netlify scheduled function are **not** instrumented in v1.0.
+- **Sentry → GitHub.** The internal integration "TSH Booking GitHub issues" posts every issue webhook to `app/api/webhooks/sentry/route.ts` on the production site. On `issue.created` the route verifies `SENTRY_WEBHOOK_SECRET`, answers 202 at once (Sentry's 1 s timeout), then `lib/github/issues.ts` opens a GitHub issue with `GITHUB_ISSUES_TOKEN`: labels `bug` + `source:sentry`, no assignee, no milestone. A human triages: close as noise, or add an `area:` label and a milestone. Both secrets live in the Netlify production context only. Docs: `docs/vendor/sentry/webhooks.md`.
 - Docs: `docs/vendor/sentry/`.

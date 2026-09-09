@@ -57,7 +57,7 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 - Next.js runs through Netlify's Next runtime; no `output: 'export'`, no custom server.
 - `.nvmrc` pins Node 24 for build and functions.
 - The only custom function is `netlify/functions/send-reminders.mts` (scheduled, production only). Everything else is Next.
-- `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload.
+- `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload. `SENTRY_WEBHOOK_SECRET` and `GITHUB_ISSUES_TOKEN` are production context only: the Sentry webhook points at the production URL (`stack.md`).
 
 ## First-time setup of a cloud environment (once, by a human)
 

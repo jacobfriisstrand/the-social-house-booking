@@ -55,4 +55,4 @@ There is exactly one scheduled job.
   1. Selects `confirmed` bookings with `booking_start_at` in `(now() + 23h, now() + 24h]` that have no `reminder` row in `outbound_emails`, and sends `reminder` for each. Cancelled bookings never match. The unique index makes double runs harmless.
   2. Releases stale holds: `pending_verification` bookings past `booking_hold_expires_at` → `expired`.
 - Must finish well inside Netlify's 30 s function limit; batch by 100 and log counts.
-- No croner, no `pg_cron`, no Resend `scheduledAt`. The `route.ts` allowlist is: this route, any future `app/api/jobs/*`, and the Resend webhook. All user-triggered mutations are Server Actions.
+- No croner, no `pg_cron`, no Resend `scheduledAt`. The `route.ts` allowlist is: this route, any future `app/api/jobs/*`, the Resend webhook, and the Sentry webhook (`stack.md`). All user-triggered mutations are Server Actions.
