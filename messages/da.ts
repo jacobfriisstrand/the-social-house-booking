@@ -1,6 +1,21 @@
-// All user-visible copy in Danish, keyed by feature (ADR-0016, docs/agents/ui.md).
+// Danish UI copy (ADR-0016), keyed by feature (docs/agents/ui.md).
 // Components import from here; no Danish string literals in components.
 export const messages = {
+  admin: {
+    homeTitle: "Administration",
+  },
+  common: {
+    loading: "Indlæser …",
+    signOut: "Log ud",
+    unauthorized: "Du har ikke adgang til at se den side du forsøgte at tilgå.",
+    unauthorizedTitle: "Ikke autoriseret",
+  },
+  company: {
+    bookingsTitle: "Bookinger",
+  },
+  dashboard: {
+    title: "Dashboard",
+  },
   demo: {
     description:
       "Baseline for formularer: react-hook-form, zod og en Server Action. Bookingformularen tager udgangspunkt i denne opbygning.",
@@ -25,6 +40,22 @@ export const messages = {
   },
   format: {
     exclVat: "ekskl. moms",
+  },
+  login: {
+    email: "Email",
+    failed: "Forkert email eller adgangskode",
+    invalidEmail: "Indtast en gyldig email",
+    missingPassword: "Indtast adgangskoden",
+    password: "Adgangskode",
+    seedAdminEmail: "admin@thesocialhouse.dk",
+    seedAdminLabel: "Administrator",
+    seedExternalEmail: "booking@nordicevents.dk",
+    seedExternalLabel: "Ekstern virksomhed",
+    seedHint: "Demo-logins (adgangskode: password)",
+    seedMemberEmail: "kontakt@rituals.dk",
+    seedMemberLabel: "Medlemsvirksomhed",
+    submit: "Log ind",
+    submitting: "Logger ind …",
   },
   manifest: {
     name: "The Social House",

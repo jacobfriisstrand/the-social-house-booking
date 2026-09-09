@@ -24,7 +24,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import type { DemoFormValues } from "@/lib/validation/demo";
@@ -155,8 +154,7 @@ export function DemoForm() {
       </CardContent>
       {state.status === "success" ? null : (
         <CardFooter>
-          <Button disabled={pending} form="demo-form" type="submit">
-            {pending ? <Spinner data-icon="inline-start" /> : null}
+          <Button form="demo-form" pending={pending} type="submit">
             {pending ? messages.demo.submitting : messages.demo.submit}
           </Button>
         </CardFooter>

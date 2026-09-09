@@ -58,13 +58,14 @@ RLS is the security boundary. Admins are ordinary authenticated users whose JWT 
 
 ## Service-role allowlist
 
-The service-role client may be imported in exactly these places. Adding a sixth requires updating this list in the same PR.
+The service-role client (`lib/supabase/admin.ts`) may be imported in exactly these places. Adding a fifth requires updating this list in the same PR.
 
-1. The `/login` server action — resolve `company_username` → auth email before `signInWithPassword`.
-2. Verification-code flow and booker-facing booking pages — the booker is not an auth user (ADR-0004).
-3. Cancellation via secure link — unauthenticated.
-4. `lib/email/sendMail.ts` and the Resend webhook — `outbound_emails` writes.
-5. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
+1. Verification-code flow and booker-facing booking pages — the booker is not an auth user (ADR-0004).
+2. Cancellation via secure link — unauthenticated.
+3. `lib/email/sendMail.ts` and the Resend webhook — `outbound_emails` writes.
+4. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
+
+One further consumer of the service-role key exists outside this list: `scripts/create-admin.ts` builds its own client in a standalone process (`lib/supabase/admin.ts` is `server-only`, unusable there).
 
 Everything else uses the user's session and RLS.
 
