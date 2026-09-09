@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
 
       - run: supabase start
 
@@ -55,6 +55,7 @@ jobs:
       APP_ENV: production
       NEXT_PUBLIC_SITE_URL: https://thesocialhouse.dk
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
       RESEND_FROM: The Social House <booking@thesocialhouse.dk>
     steps:
       - uses: actions/checkout@v4
