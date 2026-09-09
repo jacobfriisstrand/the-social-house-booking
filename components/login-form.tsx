@@ -92,9 +92,6 @@ export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="flex w-full max-w-sm flex-col gap-4">
         <Card className="w-full">
-          <CardHeader>
-            <CardTitle>The Social House</CardTitle>
-          </CardHeader>
           <CardContent>
             <form id="login-form" onSubmit={handleSubmit}>
               <FieldGroup>
