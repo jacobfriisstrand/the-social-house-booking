@@ -79,4 +79,4 @@ Everything else uses the user's session and RLS.
 
 ## Auth config as code
 
-`supabase/config.toml` is the source of truth for Auth: `enable_signup = false` (ADR-0008), Send Email Hook and Custom Access Token Hook enabled, built-in email templates unused, OTP and session lifetimes. Pushed by CI with `supabase config push`. Dashboard changes are forbidden.
+`supabase/config.toml` is the source of truth for Auth: `enable_signup = false` (ADR-0008), Send Email Hook and Custom Access Token Hook enabled, built-in email templates unused, OTP and session lifetimes. Pushed by CI with `supabase config push`. Settings that only Pro projects accept (the session inactivity timeout) live under `[remotes.production]`, which the CLI applies only when the linked project is production. Dashboard changes are forbidden.
