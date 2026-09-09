@@ -3,7 +3,8 @@
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",
-    "ultracite/biome/next"
+    "ultracite/biome/next",
+    "ultracite/biome/vitest"
   ],
   "files": {
     "includes": [
@@ -41,6 +42,18 @@
         "rules": {
           "style": {
             "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    // env.selfcheck.ts is a standalone boot self-check (run manually), not a
+    // vitest suite; its top-level node:assert calls are intentional.
+    {
+      "includes": ["lib/env.selfcheck.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noMisplacedAssertion": "off"
           }
         }
       }

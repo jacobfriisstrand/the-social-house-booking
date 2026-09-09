@@ -15,7 +15,8 @@ No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fi
 - Rule: **every exported function in `lib/domain/` has a test file**, and every branch the spec describes gets a case. Pricing, discount (room rental only, ADR-0007), cancellation fee tiers (72h/24h boundaries inclusive as the spec states, on member price — ADR-0006), buffer window (ADR-0002), opening-hours fit, add-on totals (fixed vs per participant — ADR-0011), snapshot construction (ADR-0005).
 - Money assertions are on integer øre. Time inputs are ISO strings with explicit offsets; tests include a DST-crossing date.
 - `lib/email/sendMail.test.ts` covers the common rules and the development redirect with a mocked Resend client.
-- Config: `vitest.config.ts` at root, `environment: node`. No DOM.
+- Config: `vitest.config.mts` at root, `environment: node`. No DOM.
+- **Enforcement rule (review gate):** every file in `lib/domain/` that exports a function or type must have a co-located `*.test.ts` file. PRs that add or rename exports without a matching test file must not be merged.
 
 ## pgTAP
 

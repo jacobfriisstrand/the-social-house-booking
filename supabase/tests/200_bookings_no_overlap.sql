@@ -10,8 +10,8 @@ select plan(14);
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111002', 'authenticated', 'authenticated', 'rituals@tsh.test', 'x', now(), '{}', '{}', now(), now());
 
-insert into public.companies (company_id, company_auth_user_id, company_username, company_email, company_display_name) values
-  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'test-rituals', 'rituals@tsh.test', 'Rituals');
+insert into public.companies (company_id, company_auth_user_id, company_email, company_display_name) values
+  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals');
 
 insert into public.rooms (room_id, room_name, room_capacity, room_price_ore, room_opens_at, room_closes_at) values
   ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000, '08:00', '18:00'),

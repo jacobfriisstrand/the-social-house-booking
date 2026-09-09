@@ -23,16 +23,16 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Next dev server on http://localhost:3000 (requires `supabase start` first). |
+| `npm run dev` | Next dev server on http://localhost:3000 (requires `npm run db:start` first). |
 | `npm run build` / `npm start` | Production build / serve. |
 | `npm run check` / `npm run fix` | Ultracite lint + format check / apply safe fixes. (Written by `npx ultracite init`.) |
 | `npm test` | `vitest run`. |
+| `npm run db:start` / `npm run db:stop` | Start / stop local Postgres + Auth + Studio in Docker (`supabase start` / `stop`). |
+| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`). This is where the demo logins come from. |
+| `npm run db:test` | Run pgTAP tests in `supabase/tests/` (`supabase test db`). |
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |
-| `supabase start` / `stop` | Local Postgres + Auth + Studio in Docker. |
 | `supabase db schema declarative sync --name <name>` | Turn `supabase/schemas/` changes into a migration (CLI ≥ 2.116; add `--no-apply` to review first). |
-| `supabase db reset` | Rebuild local DB from migrations + `seed.sql`. |
-| `supabase test db` | Run pgTAP tests in `supabase/tests/`. |
 
 Scripts not yet present in `package.json` are added when the tool they call is installed (Ultracite, Vitest, the sync script). Do not add a substitute in the meantime.
 
