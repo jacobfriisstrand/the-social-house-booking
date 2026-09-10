@@ -285,9 +285,11 @@ uri = "pg-functions://postgres/public/custom_access_token_hook"
 # Auth emails (invite, password reset) go through the send-email Edge Function →
 # Resend (#26). Built-in email templates and SMTP are unused.
 [auth.hook.send_email]
-# Disabled here on purpose: this file is what `supabase config push` ships to the
-# cloud projects, and no deployed function URL exists yet (#26). #26 flips this on
-# with the deployed URL + real secret (`supabase secrets set SEND_EMAIL_HOOK_SECRET=…`).
+# Disabled in the base so local `supabase start` keeps delivering invites to the
+# mail catcher (http://127.0.0.1:54324). Each cloud project enables it under its
+# [remotes.<name>.auth.hook.send_email] block at the end of this file, with the
+# deployed function URL and the secret read from SEND_EMAIL_HOOK_SECRET at
+# `supabase config push` time (docs/agents/deploy.md).
 enabled = false
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
@@ -390,6 +392,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Auth calls the Send Email Hook before any JWT exists, so the function cannot
+# verify one; the Standard Webhooks signature is the security boundary
+# (supabase/functions/send-email/index.ts).
+[functions.send-email]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
@@ -427,3 +435,21 @@ project_id = "rukxjslnbhsqdzmeenbn"
 # not re-sign-in every session). Pro-plan only, hence production only.
 [remotes.production.auth.sessions]
 inactivity_timeout = "168h"
+
+# Invite links are built from site_url (supabase/functions/send-email/handler.ts),
+# so each cloud project carries its own site here, not localhost.
+[remotes.production.auth]
+site_url = "https://the-social-house-booking.netlify.app"
+additional_redirect_urls = ["https://the-social-house-booking.netlify.app"]
+
+# Auth emails go through the deployed send-email function -> Resend (#26).
+# SEND_EMAIL_HOOK_SECRET ("v1,whsec_…") is a GitHub Environment secret for
+# config push and an Edge Function secret set by a human (docs/agents/deploy.md).
+[remotes.production.auth.hook.send_email]
+enabled = true
+uri = "https://rukxjslnbhsqdzmeenbn.supabase.co/functions/v1/send-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+
+# TODO(#26): add the same two blocks for the development project under
+# [remotes.development] once its project ref is known; until then the base
+# config (hook disabled) is what `supabase config push` ships to it.

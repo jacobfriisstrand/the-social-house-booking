@@ -42,13 +42,14 @@ Netlify builds the deploy preview in parallel; it is not a required check.
 
 On push to `develop` (GitHub Environment `development`) and `main` (GitHub Environment `production`):
 
-1. `supabase link --project-ref $SUPABASE_PROJECT_REF`
-2. `supabase db push`
-3. `supabase config push`
-4. `supabase functions deploy send-email --no-verify-jwt` (commented out until #26 adds the function)
-5. `npm run email:sync` with that environment's `RESEND_API_KEY` (commented out until #11 adds the sync script)
+1. `npm ci`
+2. `supabase link --project-ref $SUPABASE_PROJECT_REF`
+3. `supabase db push`
+4. `supabase config push` — includes the Send Email Hook for that project from `[remotes.<name>.auth.hook.send_email]`, reading `SEND_EMAIL_HOOK_SECRET` through `env()`
+5. `supabase functions deploy send-email --no-verify-jwt`
+6. `npm run email:sync` with that environment's `RESEND_API_KEY`
 
-Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`. Netlify then builds the site from the same commit.
+Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `SEND_EMAIL_HOOK_SECRET`, `RESEND_API_KEY`. Netlify then builds the site from the same commit.
 
 **Never** run steps 2–5 from a laptop against a cloud project.
 
@@ -63,6 +64,6 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 
 1. Create the Supabase project; note ref and DB password → GitHub Environment secrets.
 2. Run the release workflow once (or `workflow_dispatch`) to push schema, config, function, and templates.
-3. `supabase secrets set RESEND_API_KEY=… SEND_EMAIL_HOOK_SECRET=…` for the Edge Function; register the hook URL and the access token hook in the dashboard (the only dashboard actions allowed, because hooks need the deployed function URL).
+3. Generate the hook secret once, `v1,whsec_$(openssl rand -base64 32)`, and store it twice: as the GitHub Environment secret `SEND_EMAIL_HOOK_SECRET` (config push registers the hook with it) and as an Edge Function secret: `supabase secrets set SEND_EMAIL_HOOK_SECRET=… RESEND_API_KEY=… RESEND_FROM=… APP_ENV=… EMAIL_REDIRECT_TO=…` (`APP_ENV=production` only on the production project; `EMAIL_REDIRECT_TO` only on development). Both hooks are registered by `config push`; nothing is done in the dashboard.
 4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
 5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.

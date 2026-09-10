@@ -24,7 +24,7 @@
   // noProcessEnv exemptions live here: lib/env.ts is the validating reader;
   // proxy.ts runs in Next's sandbox before .env.local is injected, so it must
   // read process.env itself (and skips the session refresh when unset); and
-  // scripts/create-admin.ts runs under plain Node outside Next; and the Sentry
+  // scripts/*.ts run under plain Node outside Next; and the Sentry
   // files (next.config.ts, instrumentation*.ts, sentry.*.config.ts) run before
   // lib/env.ts can, so they read process.env by design (docs/agents/stack.md).
   "overrides": [
@@ -32,7 +32,7 @@
       "includes": [
         "lib/env.ts",
         "netlify/functions/*.mts",
-        "scripts/create-admin.ts",
+        "scripts/*.ts",
         "next.config.ts",
         "instrumentation.ts",
         "instrumentation-client.ts",
@@ -57,6 +57,11 @@
           }
         }
       }
+    },
+    // supabase/functions/ runs on Deno: the Deno global is real there.
+    {
+      "includes": ["supabase/functions/**"],
+      "javascript": { "globals": ["Deno"] }
     },
     // components/ui/ is generated shadcn source (owned per docs/agents/ui.md). Registry
     // updates would clobber hand-patches, so its known lint noise is suppressed here
