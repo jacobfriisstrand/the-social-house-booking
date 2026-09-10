@@ -36,7 +36,7 @@ const resendClient = () => {
 // "The Social House <booking@tsh-dev.jacobfri.is>" -> the bare address, for
 // reply-to.
 const ANGLE_BRACKET = /<([^>]+)>/;
-export const senderAddress = (from: string): string =>
+const senderAddress = (from: string): string =>
   ANGLE_BRACKET.exec(from)?.[1] ?? from.trim();
 
 // In development every mail goes to EMAIL_REDIRECT_TO instead of the real

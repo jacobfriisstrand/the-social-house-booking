@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   isStatusProgression,
   isValidResendSignature,
+  parseResendEvent,
   resendEventStatus,
 } from "./webhook";
 
@@ -41,6 +42,24 @@ describe("resendEventStatus", () => {
   it("returns undefined for events we do not track", () => {
     expect(resendEventStatus("email.opened")).toBeUndefined();
     expect(resendEventStatus("contact.created")).toBeUndefined();
+  });
+});
+
+describe("parseResendEvent", () => {
+  it("parses a valid delivery event", () => {
+    expect(parseResendEvent(payload)).toEqual({
+      created_at: "2026-09-10T10:00:00.000Z",
+      data: { email_id: "resend-1" },
+      type: "email.delivered",
+    });
+  });
+
+  it("returns null for invalid JSON", () => {
+    expect(parseResendEvent("not json")).toBeNull();
+  });
+
+  it("returns null when the payload does not match the schema", () => {
+    expect(parseResendEvent(JSON.stringify({ type: "email.sent" }))).toBeNull();
   });
 });
 

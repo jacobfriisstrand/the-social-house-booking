@@ -172,6 +172,40 @@ function FieldSeparator({
   );
 }
 
+type FieldErrorValue = { message?: string } | undefined;
+
+// Deduplicate by message so repeated server errors render once; the list
+// variant only prints messages that exist.
+const errorMessages = (errors?: FieldErrorValue[]): string[] =>
+  [...new Map((errors ?? []).map((error) => [error?.message, error])).values()]
+    .map((error) => error?.message)
+    .filter((message): message is string => Boolean(message));
+
+const resolveFieldError = (
+  children: React.ReactNode,
+  errors?: FieldErrorValue[]
+): React.ReactNode => {
+  if (children) {
+    return children;
+  }
+
+  const messages = errorMessages(errors);
+  if (messages.length === 0) {
+    return null;
+  }
+  if (messages.length === 1) {
+    return messages[0];
+  }
+
+  return (
+    <ul className="ml-4 flex list-disc flex-col gap-1">
+      {messages.map((message) => (
+        <li key={message}>{message}</li>
+      ))}
+    </ul>
+  );
+};
+
 function FieldError({
   className,
   children,
@@ -180,32 +214,10 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>;
 }) {
-  const content = useMemo(() => {
-    if (children) {
-      return children;
-    }
-
-    if (!errors?.length) {
-      return null;
-    }
-
-    const uniqueErrors = [
-      ...new Map(errors.map((error) => [error?.message, error])).values(),
-    ];
-
-    if (uniqueErrors?.length == 1) {
-      return uniqueErrors[0]?.message;
-    }
-
-    return (
-      <ul className="ml-4 flex list-disc flex-col gap-1">
-        {uniqueErrors.map(
-          (error, index) =>
-            error?.message && <li key={index}>{error.message}</li>
-        )}
-      </ul>
-    );
-  }, [children, errors]);
+  const content = useMemo(
+    () => resolveFieldError(children, errors),
+    [children, errors]
+  );
 
   if (!content) {
     return null;

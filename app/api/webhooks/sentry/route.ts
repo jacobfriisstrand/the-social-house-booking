@@ -19,20 +19,42 @@ const parseJson = (raw: string): unknown => {
   }
 };
 
-export async function POST(request: Request) {
+// The verification gate: a response to reject the request, or the raw body
+// once the signature and resource type check out.
+type VerifiedIssue =
+  | { ok: true; rawBody: string }
+  | { ok: false; response: Response };
+
+const verifyIssue = async (request: Request): Promise<VerifiedIssue> => {
   const secret = env.SENTRY_WEBHOOK_SECRET;
   if (!secret) {
-    return new Response("Sentry webhook is not configured", { status: 503 });
+    return {
+      ok: false,
+      response: new Response("Sentry webhook is not configured", {
+        status: 503,
+      }),
+    };
   }
   const rawBody = await request.text();
   const signature = request.headers.get("sentry-hook-signature");
   if (!isValidSentrySignature(rawBody, signature, secret)) {
-    return new Response("Invalid signature", { status: 401 });
+    return {
+      ok: false,
+      response: new Response("Invalid signature", { status: 401 }),
+    };
   }
   if (request.headers.get("sentry-hook-resource") !== "issue") {
-    return new Response(null, { status: 204 });
+    return { ok: false, response: new Response(null, { status: 204 }) };
   }
-  const parsed = sentryIssueWebhook.safeParse(parseJson(rawBody));
+  return { ok: true, rawBody };
+};
+
+export async function POST(request: Request): Promise<Response> {
+  const verified = await verifyIssue(request);
+  if (!verified.ok) {
+    return verified.response;
+  }
+  const parsed = sentryIssueWebhook.safeParse(parseJson(verified.rawBody));
   if (!parsed.success) {
     return new Response("Unexpected payload", { status: 400 });
   }

@@ -9,11 +9,28 @@ import type { Database } from "@/lib/supabase/database.types";
 
 type OutboundEmailStatus = Database["public"]["Enums"]["outbound_email_status"];
 
+export type ResendEventStatus = OutboundEmailStatus;
+
 export const resendWebhookEvent = z.object({
   created_at: z.string(),
   data: z.object({ email_id: z.string() }),
   type: z.string(),
 });
+
+export type ResendWebhookEvent = z.infer<typeof resendWebhookEvent>;
+
+// Parses the raw request body, or null when the payload is not valid JSON or
+// does not match the schema.
+export const parseResendEvent = (
+  rawBody: string
+): ResendWebhookEvent | null => {
+  try {
+    const parsed = resendWebhookEvent.safeParse(JSON.parse(rawBody) as unknown);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
 
 const statusByEventType = {
   "email.bounced": "bounced",
@@ -23,7 +40,7 @@ const statusByEventType = {
   "email.sent": "sent",
 } as const satisfies Record<string, OutboundEmailStatus>;
 
-export type ResendEventType = keyof typeof statusByEventType;
+type ResendEventType = keyof typeof statusByEventType;
 
 export const resendEventStatus = (
   type: string
