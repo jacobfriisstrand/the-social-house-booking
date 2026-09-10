@@ -17,7 +17,7 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
 
 ## Templates
 
-- Source of truth: `emails/templates/<alias>.tsx`, React Email, one per email in Bilag 2 (`docs/spec/bilag-2-mailtekster.md`). Danish copy lives **here**, not in `messages/da.ts`.
+- Source of truth: `emails/templates/<alias>.ts`, one per email in Bilag 2 (`docs/spec/bilag-2-mailtekster.md`), registered in `emails/templates/registry.ts`. A template is a plain module: `html` with Resend placeholders (`{{{KEY}}}`), `subject`, and a zod object `variables`. Resend renders it and derives the plain-text part; there is no React Email. Danish copy lives **here**, not in `messages/da.ts`.
 - Alias = filename, kebab-case, one per Bilag 2 mail:
 
   | Bilag 2 | Alias | Sent by |
@@ -34,8 +34,8 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
   | Mail 10 – advisering om færdig virksomhedsoprettelse | `admin-company-completed` | app |
 
   Platformbesked 1 (confirmation before cancellation) is an in-app screen, not an email; its copy lives in `messages/da.ts`.
-- Variables are declared next to the template as a zod schema (`emails/templates/<alias>.variables.ts`); `sendMail` is typed by alias. Resend rejects a send with a missing variable and no fallback, so every variable either is required in the schema or declares a `fallback_value`.
-- `scripts/sync-email-templates.ts` (`npm run email:sync`) renders each template, then creates or updates the Resend template by alias and publishes it. CI runs it on merge to `develop` with the development API key and on merge to `main` with the production key. Both keys belong to the same Resend account; templates are the same content in both.
+- Every variable is required: the sync script publishes them without fallbacks, so Resend rejects a send with a missing variable instead of sending a half-rendered mail. Values are inserted unescaped by `{{{KEY}}}`, so the sender HTML-escapes them (`sendMail()` callers pass plain text; the Send Email Hook escapes in `handler.ts`).
+- `scripts/sync-email-templates.ts` (`npm run email:sync`) reads the registry, creates or updates each Resend template by alias and publishes it. CI runs it on merge to `develop` with the development API key and on merge to `main` with the production key. Both keys belong to the same Resend account; templates are the same content in both. Locally it reads `.env` and `.env.local`.
 - Never edit a template in the Resend dashboard; the next sync overwrites it.
 
 ## Delivery status
@@ -44,7 +44,14 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
 
 ## Auth emails
 
-The Supabase Send Email Hook is the Edge Function `supabase/functions/send-email/` (Deno). It verifies the hook signature (`standardwebhooks`, `SEND_EMAIL_HOOK_SECRET`), picks the alias from `email_data.email_action_type` (`invite` → `company-invitation`, `recovery` → `password-reset`, …), calls Resend with the template, and inserts an `outbound_emails` row. It is the only other place that talks to Resend. Its secrets are set with `supabase secrets set`, per project.
+The Supabase Send Email Hook is the Edge Function `supabase/functions/send-email/` (Deno). It verifies the hook signature (`standardwebhooks`, `SEND_EMAIL_HOOK_SECRET`), picks the alias from `email_data.email_action_type`, calls Resend with the template, and inserts an `outbound_emails` row. It is the only other place that talks to Resend.
+
+- `index.ts` is the Deno wiring (excluded from `tsc`; imports pinned in `deno.json`). `handler.ts` is pure and covered by Vitest.
+- Mapped action types: `invite` → `company-invitation` (#26). `recovery` → `password-reset` arrives with #11. Every other action type, and any alias without a registry entry, is answered with a 4xx, which makes Auth fail the call instead of sending a blank mail. `email_change` never fires: admin changes a company's email with `email_confirm: true` (#1).
+- The link is `<site_url>/set-password?token_hash=<hash>&type=<action>`, where `site_url` is Auth's per-project value from `config.toml` (`[remotes.<name>.auth]`). The page verifies the token with `verifyOtp` (#1).
+- The greeting and `outbound_email_company_id` come from one lookup of `companies` by `company_auth_user_id` with the function's service-role client (allowlist entry 4). An invite for an auth user without a company row is a 400.
+- The development redirect applies here too, fail-safe: only `APP_ENV=production` sends to the real recipient; anything else sends to `EMAIL_REDIRECT_TO` and a missing target is an error. The subject is the template's; the function does not prefix it.
+- Locally the hook is disabled in the base `config.toml`, so `supabase start` delivers invites to the mail catcher on port 54324. To exercise the function itself, put `APP_ENV`, `EMAIL_REDIRECT_TO`, `RESEND_API_KEY`, `RESEND_FROM` and `SEND_EMAIL_HOOK_SECRET` in `supabase/functions/.env` (gitignored) and run `supabase functions serve send-email`. In the cloud the same five are Edge Function secrets (`docs/agents/deploy.md`); `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected.
 
 ## The hourly job
 

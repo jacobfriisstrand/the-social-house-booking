@@ -11,6 +11,7 @@
     "db:test": "supabase test db",
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
     "dev": "next dev",
+    "email:sync": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/sync-email-templates.ts",
     "fallow": "fallow",
     "fix": "ultracite fix",
     "prepare": "husky",

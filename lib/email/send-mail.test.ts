@@ -46,6 +46,7 @@ vi.mock("@/emails/templates/registry", async (importOriginal) => {
     ...actual,
     emailTemplates: {
       "verification-code": {
+        html: "<p>{{{CODE}}}</p>",
         subject: "Din bekræftelseskode",
         variables: z.object({ CODE: z.string() }),
       } satisfies EmailTemplate,

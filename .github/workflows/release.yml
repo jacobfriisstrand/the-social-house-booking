@@ -17,11 +17,22 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # Read by `supabase config push` through env() in config.toml
+      # ([remotes.<env>.auth.hook.send_email]); the same value is set as an
+      # Edge Function secret by a human (docs/agents/deploy.md).
+      SEND_EMAIL_HOOK_SECRET: ${{ secrets.SEND_EMAIL_HOOK_SECRET }}
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: supabase/setup-cli@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
 
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
@@ -30,11 +41,7 @@ jobs:
 
       - run: supabase config push
 
-      # Disabled until the Send Email Hook function (#26) and the Resend
-      # template sync (#11) exist. Uncomment both steps in those PRs.
-      # - run: supabase functions deploy send-email --no-verify-jwt
-      #
-      # - name: Sync Resend email templates
-      #   run: npm run email:sync
-      #   env:
-      #     RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      - run: supabase functions deploy send-email --no-verify-jwt
+
+      - name: Sync Resend email templates
+        run: npm run email:sync
