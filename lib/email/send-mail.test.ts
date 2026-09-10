@@ -45,6 +45,11 @@ vi.mock("@/emails/templates/registry", async (importOriginal) => {
   return {
     ...actual,
     emailTemplates: {
+      "admin-company-completed": {
+        html: "<p>{{{COMPANY_DISPLAY_NAME}}}</p>",
+        subject: "{{{COMPANY_DISPLAY_NAME}}} har færdiggjort sin oprettelse",
+        variables: z.object({ COMPANY_DISPLAY_NAME: z.string() }),
+      } satisfies EmailTemplate,
       "verification-code": {
         html: "<p>{{{CODE}}}</p>",
         subject: "Din bekræftelseskode",
@@ -111,6 +116,22 @@ describe("sendMail", () => {
       expect.objectContaining({
         subject: "Din bekræftelseskode",
         to: ["booker@rituals.dk"],
+      })
+    );
+  });
+
+  it("substitutes {{{KEY}}} placeholders in the subject", async () => {
+    mocks.env.APP_ENV = "production";
+    await sendMail({
+      companyId: "company-1",
+      kind: "admin-company-completed",
+      to: "admin@thesocialhouse.dk",
+      variables: { COMPANY_DISPLAY_NAME: "Rituals" },
+    });
+
+    expect(mocks.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "Rituals har færdiggjort sin oprettelse",
       })
     );
   });

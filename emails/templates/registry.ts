@@ -6,6 +6,7 @@
 // these entries to create or update the Resend template by alias.
 import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
+import { adminCompanyCompleted } from "./admin-company-completed.ts";
 import { companyInvitation } from "./company-invitation.ts";
 
 export type OutboundEmailKind =
@@ -15,9 +16,14 @@ export interface EmailTemplate {
   // Resend template body with {{{KEY}}} placeholders; the sync script
   // derives the variable list from `variables`.
   html: string;
+  // May carry {{{KEY}}} placeholders too; sendMail() substitutes them before
+  // the send, since it passes the subject explicitly.
   subject: string;
   variables: z.ZodObject<Record<string, z.ZodString | z.ZodNumber>>;
 }
 
 export const emailTemplates: Partial<Record<OutboundEmailKind, EmailTemplate>> =
-  { "company-invitation": companyInvitation };
+  {
+    "admin-company-completed": adminCompanyCompleted,
+    "company-invitation": companyInvitation,
+  };

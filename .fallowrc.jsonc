@@ -31,7 +31,16 @@
       ]
     },
     { "file": "components/ui/alert.tsx", "exports": ["AlertAction"] },
-    { "file": "components/ui/card.tsx", "exports": ["CardAction"] }
+    { "file": "components/ui/card.tsx", "exports": ["CardAction"] },
+    { "file": "components/ui/dialog.tsx", "exports": ["DialogClose"] },
+    {
+      "file": "components/ui/select.tsx",
+      "exports": ["SelectLabel", "SelectSeparator"]
+    },
+    {
+      "file": "components/ui/table.tsx",
+      "exports": ["TableCaption", "TableFooter"]
+    }
   ],
   // Kept intentionally before first use, not dead code:
   // - lib/format.ts: formatOre/formatDateTime land with the booking UI (ui.md)
