@@ -7,7 +7,7 @@
 
 const jobPath = "/api/jobs/send-reminders";
 
-export default async (): Promise<void> => {
+const jobTarget = (): { secret: string; siteUrl: string } => {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.URL;
   const secret = process.env.JOB_SECRET;
   if (!(siteUrl && secret)) {
@@ -15,14 +15,21 @@ export default async (): Promise<void> => {
       "send-reminders: NEXT_PUBLIC_SITE_URL and JOB_SECRET must be set"
     );
   }
+  return { secret, siteUrl };
+};
 
-  const response = await fetch(`${siteUrl}${jobPath}`, {
-    headers: { authorization: `Bearer ${secret}` },
+const callJob = async (target: { secret: string; siteUrl: string }) => {
+  const response = await fetch(`${target.siteUrl}${jobPath}`, {
+    headers: { authorization: `Bearer ${target.secret}` },
     method: "POST",
   });
   if (!response.ok) {
     throw new Error(`send-reminders: ${jobPath} responded ${response.status}`);
   }
+};
+
+export default async (): Promise<void> => {
+  await callJob(jobTarget());
 };
 
 export const config = { schedule: "@hourly" };

@@ -41,7 +41,7 @@ export const isValidSentrySignature = (
 };
 
 const GITHUB_TITLE_MAX = 256;
-export const githubIssueLabels = ["bug", "source:sentry"];
+const githubIssueLabels = ["bug", "source:sentry"];
 
 export const buildGithubIssue = (issue: SentryIssue) => ({
   body: [
