@@ -27,7 +27,7 @@ The company's full registered name, used only for invoicing.
 _Avoid_: registered name, official name
 
 **Membership status** (medlemsstatus):
-Whether a company is an active member, and on what terms. Managed by admin.
+Whether a company is a member or external. Managed by admin.
 
 **Discount** (rabat):
 The percentage off room rental a member receives. Applies to room rental only — never add-ons, catering, or services.

@@ -2,6 +2,7 @@
 // Components import from here; no Danish string literals in components.
 export const messages = {
   admin: {
+    companiesLink: "Virksomheder",
     homeTitle: "Administration",
   },
   common: {
@@ -10,8 +11,83 @@ export const messages = {
     unauthorized: "Du har ikke adgang til at se den side du forsøgte at tilgå.",
     unauthorizedTitle: "Ikke autoriseret",
   },
+  companies: {
+    back: "Tilbage til virksomheder",
+    columns: {
+      discount: "Rabat",
+      displayName: "Visningsnavn",
+      email: "Email",
+      masterData: "Stamdata",
+      status: "Medlemsstatus",
+    },
+    create: "Opret virksomhed",
+    createDescription:
+      "Virksomheden får en invitation på mail og vælger selv sin adgangskode.",
+    createSubmit: "Opret og send invitation",
+    createSubmitting: "Opretter …",
+    emptyDescription: "Opret den første virksomhed for at sende en invitation.",
+    emptyTitle: "Ingen virksomheder endnu",
+    errors: {
+      createFailed: "Virksomheden kunne ikke oprettes. Prøv igen.",
+      emailChangeFailed: "Emailen kunne ikke ændres. Prøv igen.",
+      emailTaken: "Emailen bruges allerede af en anden virksomhed.",
+      inviteFailed:
+        "Virksomheden er oprettet, men invitationen kunne ikke sendes. Send den igen herfra.",
+      notFound: "Virksomheden findes ikke.",
+      resendFailed:
+        "Invitationen kunne ikke sendes. Har virksomheden allerede valgt adgangskode, skal den bruge Glemt adgangskode i stedet.",
+      saveFailed: "Ændringerne kunne ikke gemmes. Prøv igen.",
+    },
+    invitationSent: "Invitationen er sendt",
+    masterDataComplete: "Udfyldt",
+    masterDataMissing: "Mangler",
+    membership: {
+      external: "Ekstern",
+      member: "Medlem",
+    },
+    resendInvitation: "Send invitation igen",
+    resending: "Sender …",
+    save: "Gem",
+    saved: "Ændringerne er gemt",
+    saving: "Gemmer …",
+    sections: {
+      account: "Konto",
+      internal: "Interne oplysninger",
+      masterData: "Stam- og faktureringsoplysninger",
+    },
+    title: "Virksomheder",
+  },
   company: {
     bookingsTitle: "Bookinger",
+    masterDataLink: "Virksomhedens oplysninger",
+  },
+  companyFields: {
+    attention: "Att. (valgfrit)",
+    billingAddress: "Faktureringsadresse",
+    billingCity: "By",
+    billingCountry: "Land",
+    billingNotes: "Bemærkninger til fakturering, fx EAN (valgfrit)",
+    billingPostalCode: "Postnummer",
+    contactName: "Primær kontaktperson",
+    contactPhone: "Kontaktpersonens mobilnummer",
+    cvrNumber: "CVR- eller VAT-nummer",
+    defaultCountry: "Danmark",
+    department: "Afdeling (valgfrit)",
+    discountPercent: "Rabat i procent",
+    displayName: "Visningsnavn",
+    economicCustomerNumber: "Kundenummer i e-conomic (valgfrit)",
+    email: "Email (login og kontakt)",
+    errors: {
+      discountInvalid: "Rabatten skal være et helt tal mellem 0 og 100.",
+      emailInvalid: "Indtast en gyldig email.",
+      required: "Feltet skal udfyldes.",
+      tooLong: "Teksten er for lang.",
+    },
+    internalNote: "Intern note (valgfrit)",
+    invoiceEmail: "Faktura-email",
+    legalName: "Juridisk virksomhedsnavn",
+    membershipStatus: "Medlemsstatus",
+    reference: "PO-nummer, reference eller omkostningssted (valgfrit)",
   },
   dashboard: {
     title: "Dashboard",
@@ -66,8 +142,35 @@ export const messages = {
     name: "The Social House",
     shortName: "Social House",
   },
+  masterData: {
+    description:
+      "Udfyld virksomhedens stam- og faktureringsoplysninger. Derefter kan I booke lokaler.",
+    emailHint: "Kontakt The Social House for at ændre emailen.",
+    errors: {
+      saveFailed: "Oplysningerne kunne ikke gemmes. Prøv igen.",
+    },
+    saved: "Oplysningerne er gemt",
+    submit: "Gem oplysninger",
+    submitting: "Gemmer …",
+    title: "Virksomhedens oplysninger",
+  },
   metadata: {
     description: "Booking af mødelokaler i The Social House",
     title: "The Social House",
+  },
+  setPassword: {
+    description: "Vælg den adgangskode, virksomheden logger ind med.",
+    errors: {
+      linkInvalid:
+        "Linket er ugyldigt eller udløbet. Bed The Social House om en ny invitation.",
+      mismatch: "De to adgangskoder er ikke ens.",
+      passwordMin: "Adgangskoden skal være mindst 8 tegn.",
+      saveFailed: "Adgangskoden kunne ikke gemmes. Prøv igen.",
+    },
+    password: "Adgangskode",
+    passwordConfirm: "Gentag adgangskode",
+    submit: "Gem adgangskode",
+    submitting: "Gemmer …",
+    title: "Vælg adgangskode",
   },
 } as const;

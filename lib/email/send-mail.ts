@@ -58,6 +58,17 @@ const developmentRecipients = (): string[] => {
 const redactRecipient = (text: string, recipient: string): string =>
   recipient ? text.replaceAll(recipient, "[recipient]") : text;
 
+// Resend renders {{{KEY}}} in the body, but the subject is passed
+// explicitly per send, so placeholders there are substituted here.
+const PLACEHOLDER = /\{\{\{(\w+)\}\}\}/g;
+const renderSubject = (
+  subject: string,
+  variables: Record<string, string | number>
+): string =>
+  subject.replace(PLACEHOLDER, (match, key: string) =>
+    key in variables ? String(variables[key]) : match
+  );
+
 export const sendMail = async ({
   bookingId,
   companyId,
@@ -73,10 +84,11 @@ export const sendMail = async ({
   const resend = resendClient();
   const recipients =
     env.APP_ENV === "development" ? developmentRecipients() : [to];
+  const renderedSubject = renderSubject(template.subject, parsedVariables);
   const subject =
     env.APP_ENV === "development"
-      ? `[development] ${template.subject}`
-      : template.subject;
+      ? `[development] ${renderedSubject}`
+      : renderedSubject;
 
   // The log row goes in before the send: the once-only index
   // (reminder, booking-confirmation) aborts a double send before Resend is

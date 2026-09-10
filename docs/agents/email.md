@@ -34,6 +34,7 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
   | Mail 10 – advisering om færdig virksomhedsoprettelse | `admin-company-completed` | app |
 
   Platformbesked 1 (confirmation before cancellation) is an in-app screen, not an email; its copy lives in `messages/da.ts`.
+- A `subject` may carry `{{{KEY}}}` placeholders too (Mail 10 names the company); `sendMail()` substitutes them from the same variables before the send, since it passes the subject explicitly.
 - Every variable is required: the sync script publishes them without fallbacks, so Resend rejects a send with a missing variable instead of sending a half-rendered mail. Values are inserted unescaped by `{{{KEY}}}`, so the sender HTML-escapes them (`sendMail()` callers pass plain text; the Send Email Hook escapes in `handler.ts`).
 - `scripts/sync-email-templates.ts` (`npm run email:sync`) reads the registry, creates or updates each Resend template by alias and publishes it. CI runs it on merge to `develop` with the development API key and on merge to `main` with the production key. Both keys belong to the same Resend account; templates are the same content in both. Locally it reads `.env` and `.env.local`.
 - Never edit a template in the Resend dashboard; the next sync overwrites it.
