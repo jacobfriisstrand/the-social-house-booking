@@ -4,7 +4,7 @@ Two test suites, each owning what it is best at. Nothing else is mandated.
 
 | Suite | Runs | Owns |
 |---|---|---|
-| Vitest | `npm test` | Everything in `lib/domain/`, `lib/email/sendMail.ts` rules, `lib/env.ts` parsing, `scripts/` pure helpers |
+| Vitest | `npm test` | Everything in `lib/domain/`, `lib/email/send-mail.ts` rules, `lib/env.ts` parsing, `scripts/` pure helpers |
 | pgTAP (`supabase test db`) | `supabase test db` | Every RLS policy, every constraint and trigger, the booking-number function, the access token hook |
 
 No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fix's test goes into whichever suite owns the logic that was wrong; if the logic was in a component, move it to `lib/domain/` first.
@@ -14,7 +14,7 @@ No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fi
 - Files are co-located: `lib/domain/pricing.ts` ↔ `lib/domain/pricing.test.ts`.
 - Rule: **every exported function in `lib/domain/` has a test file**, and every branch the spec describes gets a case. Pricing, discount (room rental only, ADR-0007), cancellation fee tiers (72h/24h boundaries inclusive as the spec states, on member price — ADR-0006), buffer window (ADR-0002), opening-hours fit, add-on totals (fixed vs per participant — ADR-0011), snapshot construction (ADR-0005).
 - Money assertions are on integer øre. Time inputs are ISO strings with explicit offsets; tests include a DST-crossing date.
-- `lib/email/sendMail.test.ts` covers the common rules and the development redirect with a mocked Resend client.
+- `lib/email/send-mail.test.ts` covers the common rules and the development redirect with a mocked Resend client.
 - Config: `vitest.config.mts` at root, `environment: node`. No DOM.
 - **Enforcement rule (review gate):** every file in `lib/domain/` that exports a function or type must have a co-located `*.test.ts` file. PRs that add or rename exports without a matching test file must not be merged.
 
