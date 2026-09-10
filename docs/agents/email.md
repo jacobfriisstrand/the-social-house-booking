@@ -6,7 +6,7 @@ Read `docs/vendor/resend/templates-introduction.md`, `templates-create.md`, `web
 
 ## One sender
 
-`lib/email/sendMail.ts` is the only code in the Next app that calls Resend. Never import `resend` elsewhere. `sendMail({ template, to, variables, bookingId?, companyId?, kind, sensitive? })`:
+`lib/email/send-mail.ts` is the only code in the Next app that calls Resend. Never import `resend` elsewhere. `sendMail({ kind, to, variables, bookingId?, companyId? })` — `kind` is the `outbound_email_kind` value and doubles as the Resend template alias (the two are 1:1). The per-kind variables schema is registered in `emails/templates/registry.ts` by the template that owns the alias. (`sensitive` mail handling is enforced in the template layer when the shared layout lands with #11.)
 
 1. Enforces the spec's common rules: fixed `RESEND_FROM`, greeting addressed to the company display name ("Kære Rituals"), exactly one call-to-action, no payment wording, empty sections hidden, savings line only when a discount applies, `sensitive` flag respected.
 2. On `APP_ENV = development`, **replaces every recipient with the comma-separated addresses in `EMAIL_REDIRECT_TO`** and prefixes the subject with `[development]`. This is not optional and not configurable per call.
