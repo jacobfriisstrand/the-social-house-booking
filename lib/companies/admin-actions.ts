@@ -50,9 +50,8 @@ const createAuthUser = async (email: string): Promise<Step<string>> => {
   return { ok: true, value: created.data.user.id };
 };
 
-// 2. The companies row under the admin's session, always as a member (no
-// external companies until #14). On failure the auth user is removed again
-// so the email is free for a retry.
+// 2. The companies row under the admin's session. On failure the auth user
+// is removed again so the email is free for a retry.
 const insertCompany = async (
   values: CreateCompanyValues,
   authUserId: string
@@ -66,7 +65,7 @@ const insertCompany = async (
       company_display_name: values.displayName,
       company_email: values.email,
       company_legal_name: values.legalName,
-      company_membership_status: "member",
+      company_membership_status: values.membershipStatus,
     })
     .select("company_id")
     .single();
@@ -81,10 +80,16 @@ const insertCompany = async (
   return { ok: true, value: inserted.data.company_id };
 };
 
-// 3. The invite. On failure the company exists and admin re-sends from its
-// page, which shows the failure.
-const inviteQuery = async (email: string): Promise<string> => {
-  const invited = await createAdminClient().auth.admin.inviteUserByEmail(email);
+// 3. The invite, members only: an external company is admin's to fill in
+// (#14, ADR-0008) and Mail 1 speaks to members. On failure the company
+// exists and admin re-sends from its page, which shows the failure.
+const inviteQuery = async (values: CreateCompanyValues): Promise<string> => {
+  if (values.membershipStatus === "external") {
+    return "";
+  }
+  const invited = await createAdminClient().auth.admin.inviteUserByEmail(
+    values.email
+  );
   return invited.error ? "?invite=failed" : "";
 };
 
@@ -108,7 +113,7 @@ export async function createCompany(
   if (!inserted.ok) {
     return { error: inserted.error, status: "error" };
   }
-  const query = await inviteQuery(parsed.data.email);
+  const query = await inviteQuery(parsed.data);
   redirect(`/admin/companies/${inserted.value}${query}`);
 }
 

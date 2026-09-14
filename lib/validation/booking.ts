@@ -26,23 +26,34 @@ export const bookerFields = {
   bookerPhone: required,
 };
 
+// Room, period and headcount: what any booking needs besides the booker.
+const slotFields = {
+  endAt: instant,
+  participantCount: z
+    .number(errors.participantsInvalid)
+    .int(errors.participantsInvalid)
+    .min(1, errors.participantsInvalid),
+  roomId: z.guid(),
+  startAt: instant,
+};
+
+const endAfterStart = (values: { endAt: string; startAt: string }) =>
+  new Date(values.endAt) > new Date(values.startAt);
+const endAfterStartError = { message: errors.endBeforeStart, path: ["endAt"] };
+
 export const createHoldSchema = z
-  .object({
-    ...bookerFields,
-    endAt: instant,
-    participantCount: z
-      .number(errors.participantsInvalid)
-      .int(errors.participantsInvalid)
-      .min(1, errors.participantsInvalid),
-    roomId: z.guid(),
-    startAt: instant,
-  })
-  .refine((values) => new Date(values.endAt) > new Date(values.startAt), {
-    message: errors.endBeforeStart,
-    path: ["endAt"],
-  });
+  .object({ ...bookerFields, ...slotFields })
+  .refine(endAfterStart, endAfterStartError);
 
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
+
+// Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
+// which company, and confirmed at once without a verification code.
+export const adminBookingSchema = z
+  .object({ ...bookerFields, ...slotFields, companyId: z.guid() })
+  .refine(endAfterStart, endAfterStartError);
+
+export type AdminBookingValues = z.infer<typeof adminBookingSchema>;
 
 export const verifyCodeSchema = z.object({
   bookingId: z.guid(),

@@ -40,3 +40,8 @@ create table public.companies (
 
 -- Deny-by-default; policy content belongs to #19.
 alter table public.companies enable row level security;
+-- External companies pay full room price (Bilag 1 "External customers",
+-- ADR-0008, #14): a discount is only ever agreed with a member. Enforced
+-- here so every write path obeys, like the escalation guard in policies/.
+alter table public.companies add constraint companies_external_no_discount
+  check (company_membership_status = 'member' or company_discount_percent = 0);

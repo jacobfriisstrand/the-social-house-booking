@@ -64,7 +64,7 @@ The specific person who makes a booking (full name, work email, mobile), distinc
 _Avoid_: user, contact, member
 
 **Verification code** (bekræftelseskode):
-A six-digit, time-limited code sent to the booker's work email; the booking is final only once the code is entered. The room is held temporarily while the code is entered.
+A six-digit, time-limited code sent to the booker's work email; the booking is final only once the code is entered. The room is held temporarily while the code is entered. Bookings admin enters on a company's behalf skip it and are confirmed at once (ADR-0023).
 _Avoid_: OTP, confirmation code, token
 
 **Participant count** (deltagerantal):

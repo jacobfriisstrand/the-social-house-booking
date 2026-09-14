@@ -19,9 +19,10 @@ const optionalLong = z.string().trim().max(LONG_MAX, errors.tooLong);
 const email = z.email(errors.emailInvalid);
 
 // What admin sets at creation and may change later; the trigger
-// companies_guard_self_escalation keeps companies away from the discount.
-// Membership status is not a form field: every company is created as
-// `member` (decided 2026-09-14; external companies wait for #14).
+// companies_guard_self_escalation keeps companies away from both. Member
+// is listed first: it is the common case.
+export const membershipStatuses = ["member", "external"] as const;
+
 const accountFields = {
   discountPercent: z
     .number(errors.discountInvalid)
@@ -30,7 +31,20 @@ const accountFields = {
     .max(100, errors.discountInvalid),
   displayName: required,
   email,
+  membershipStatus: z.enum(membershipStatuses, errors.membershipInvalid),
 };
+
+// External companies pay full room price (#14); the database's
+// companies_external_no_discount check is the last line.
+const externalHasNoDiscount = {
+  message: errors.externalDiscount,
+  path: ["discountPercent"],
+};
+const noDiscountUnlessMember = (values: {
+  discountPercent: number;
+  membershipStatus: MembershipStatus;
+}): boolean =>
+  values.membershipStatus === "member" || values.discountPercent === 0;
 
 // The nine mandatory fields: the booking gate (#1, Bilag 1).
 const masterDataFields = {
@@ -56,10 +70,12 @@ export const masterDataKeys = Object.keys(masterDataFields) as Array<
   keyof typeof masterDataFields
 >;
 
-export const createCompanySchema = z.object({
-  ...accountFields,
-  legalName: required,
-});
+export const createCompanySchema = z
+  .object({
+    ...accountFields,
+    legalName: required,
+  })
+  .refine(noDiscountUnlessMember, externalHasNoDiscount);
 
 export const masterDataSchema = z.object({
   ...masterDataFields,
@@ -69,22 +85,26 @@ export const masterDataSchema = z.object({
 // Admin may leave master data blank until the company completes it; once
 // company_master_data_completed_at is set, the action re-checks the nine with
 // masterDataSchema so they never go blank again.
-export const adminCompanySchema = z.object({
-  ...accountFields,
-  ...optionalFields,
-  billingAddress: optional,
-  billingCity: optional,
-  billingCountry: optional,
-  billingPostalCode: optional,
-  companyId: z.guid(),
-  contactName: optional,
-  contactPhone: optional,
-  cvrNumber: optional,
-  economicCustomerNumber: optional,
-  internalNote: optionalLong,
-  invoiceEmail: z.union([z.literal(""), email]),
-  legalName: optional,
-});
+export const adminCompanySchema = z
+  .object({
+    ...accountFields,
+    ...optionalFields,
+    billingAddress: optional,
+    billingCity: optional,
+    billingCountry: optional,
+    billingPostalCode: optional,
+    companyId: z.guid(),
+    contactName: optional,
+    contactPhone: optional,
+    cvrNumber: optional,
+    economicCustomerNumber: optional,
+    internalNote: optionalLong,
+    invoiceEmail: z.union([z.literal(""), email]),
+    legalName: optional,
+  })
+  .refine(noDiscountUnlessMember, externalHasNoDiscount);
+
+export type MembershipStatus = (typeof membershipStatuses)[number];
 
 export type CreateCompanyValues = z.infer<typeof createCompanySchema>;
 export type MasterDataValues = z.infer<typeof masterDataSchema>;

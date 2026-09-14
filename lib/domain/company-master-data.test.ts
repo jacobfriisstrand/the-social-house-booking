@@ -112,7 +112,7 @@ describe("admin values round trip", () => {
     expect(update.company_discount_percent).toBe(50);
     expect(update.company_email).toBe("kontakt@rituals.dk");
     expect(update.company_internal_note).toBeNull();
-    expect(update).not.toHaveProperty("company_membership_status");
+    expect(update.company_membership_status).toBe("member");
   });
 });
 
