@@ -17,7 +17,8 @@ const invitePayload = {
   email_data: {
     email_action_type: "invite",
     redirect_to: "http://localhost:3000/",
-    site_url: "http://localhost:3000/",
+    // What Auth really sends here: its own API URL, never the app.
+    site_url: "http://127.0.0.1:54321/auth/v1",
     token: "",
     token_hash: "abc+def/123=",
   },
@@ -34,7 +35,7 @@ describe("hookPayload", () => {
     expect(parsed).toEqual({
       email_data: {
         email_action_type: "invite",
-        site_url: "http://localhost:3000/",
+        redirect_to: "http://localhost:3000/",
         token_hash: "abc+def/123=",
       },
       user: {
@@ -57,6 +58,12 @@ describe("buildActionUrl", () => {
     expect(buildActionUrl(hookPayload.parse(invitePayload).email_data)).toBe(
       "http://localhost:3000/set-password?token_hash=abc%2Bdef%2F123%3D&type=invite"
     );
+  });
+
+  it("builds on redirect_to, never on site_url (that is the Auth API URL)", () => {
+    const url = buildActionUrl(hookPayload.parse(invitePayload).email_data);
+    expect(url.startsWith("http://localhost:3000/")).toBe(true);
+    expect(url).not.toContain("54321");
   });
 });
 

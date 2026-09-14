@@ -12,7 +12,7 @@ Read `docs/vendor/supabase/auth-custom-access-token-hook.md` and `auth-send-emai
 | Admin | Yes — rows in `admins`, JWT claim `app_role = 'admin'` | Same `/login` form |
 | Booker | **No** | Six-digit verification code sent to their work email on every booking (ADR-0004) |
 
-No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which calls `auth.admin.inviteUserByEmail`; the Send Email Hook delivers Mail 1 with a link to `app/(public)/set-password?token_hash=…&type=invite`, and that page verifies the token with `verifyOtp` and takes the password (#1). The link base is Auth's `site_url`, set per cloud project under `[remotes.<name>.auth]` in `config.toml`.
+No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which calls `auth.admin.inviteUserByEmail`; the Send Email Hook delivers Mail 1 with a link to `app/(public)/set-password?token_hash=…&type=invite`, and that page verifies the token with `verifyOtp` and takes the password (#1). The link base is the hook payload's `redirect_to`, which Auth fills from `site_url`, set per cloud project under `[remotes.<name>.auth]` in `config.toml`. The payload's `site_url` field is Auth's own API URL and must not be used.
 
 ## Email login
 

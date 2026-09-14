@@ -2,14 +2,16 @@
 // the set-password link, the development redirect and variable escaping.
 // No Deno APIs, so Vitest covers it (handler.test.ts); index.ts does the I/O.
 // Contract with #1: the link opens app/(public)/set-password, which verifies
-// token_hash with verifyOtp. The base is Auth's site_url, set per remote in
-// supabase/config.toml.
+// token_hash with verifyOtp. The base is email_data.redirect_to: Auth fills it
+// with the project's site_url (supabase/config.toml, per remote) when the
+// invite passes no redirect. email_data.site_url is NOT the site: Auth sends
+// its own API URL there (verified end to end 2026-09-14).
 import { z } from "zod";
 
 export const hookPayload = z.object({
   email_data: z.object({
     email_action_type: z.string(),
-    site_url: z.string(),
+    redirect_to: z.string(),
     token_hash: z.string(),
   }),
   user: z.object({ email: z.string(), id: z.string() }),
@@ -32,10 +34,10 @@ const TRAILING_SLASHES = /\/+$/;
 
 export const buildActionUrl = ({
   email_action_type,
-  site_url,
+  redirect_to,
   token_hash,
 }: HookPayload["email_data"]): string => {
-  const base = site_url.replace(TRAILING_SLASHES, "");
+  const base = redirect_to.replace(TRAILING_SLASHES, "");
   const query = new URLSearchParams({ token_hash, type: email_action_type });
   return `${base}${SET_PASSWORD_PATH}?${query.toString()}`;
 };
