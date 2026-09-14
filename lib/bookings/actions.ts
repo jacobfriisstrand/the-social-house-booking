@@ -15,6 +15,7 @@ import { hoursBetween } from "@/lib/domain/time";
 import {
   canResendCode,
   holdExpiry,
+  VERIFICATION_MAX_ATTEMPTS,
   VERIFICATION_TTL_MINUTES,
   type VerificationOutcome,
   verificationOutcome,
@@ -24,9 +25,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import {
+  bookingIdSchema,
   type CreateHoldValues,
   createHoldSchema,
-  resendCodeSchema,
   type VerifyCodeValues,
   verifyCodeSchema,
 } from "@/lib/validation/booking";
@@ -98,7 +99,7 @@ async function findLiveHold(
   supabase: SessionClient,
   bookingId: unknown
 ): Promise<LiveHold | null> {
-  const parsed = resendCodeSchema.safeParse({ bookingId });
+  const parsed = bookingIdSchema.safeParse({ bookingId });
   if (!parsed.success) {
     return null;
   }
@@ -332,9 +333,9 @@ interface CodeRow {
 async function confirmFailure(
   supabase: SessionClient,
   bookingId: string,
-  code: string | undefined
+  errorCode: string | undefined
 ): Promise<VerifyCodeState> {
-  if (code === EXCLUSION_VIOLATION) {
+  if (errorCode === EXCLUSION_VIOLATION) {
     await releaseHold(supabase, bookingId);
     return errorState(errors.slotTaken);
   }
@@ -378,10 +379,17 @@ const codeUpdate = (code: CodeRow, patch: CodeUpdate) =>
     .update(patch)
     .eq("verification_code_id", code.verification_code_id);
 
-const countAttempt = (code: CodeRow) =>
-  codeUpdate(code, {
+// Compare-and-set on the attempts we read, so two concurrent wrong entries
+// cannot both land on the same count and slip a sixth attempt past the
+// limit; a lost race simply does not count twice. Never bumps past the cap.
+const countAttempt = async (code: CodeRow): Promise<void> => {
+  if (code.verification_code_attempts >= VERIFICATION_MAX_ATTEMPTS) {
+    return;
+  }
+  await codeUpdate(code, {
     verification_code_attempts: code.verification_code_attempts + 1,
-  });
+  }).eq("verification_code_attempts", code.verification_code_attempts);
+};
 
 // One handler per outcome (lib/domain/verification.ts decides which).
 const outcomeHandlers: {
@@ -391,9 +399,16 @@ const outcomeHandlers: {
   ) => Promise<VerifyCodeState>;
 } = {
   accepted: async (_outcome, { bookingId, code, supabase }) => {
-    await codeUpdate(code, {
+    // Single use, also under a double submit: only the caller whose update
+    // consumes the still-unconsumed row goes on to confirm.
+    const consumed = await codeUpdate(code, {
       verification_code_consumed_at: new Date().toISOString(),
-    });
+    })
+      .is("verification_code_consumed_at", null)
+      .select("verification_code_id");
+    if (consumed.error || consumed.data.length === 0) {
+      return errorState(errors.codeConsumed);
+    }
     return confirmBooking(supabase, bookingId);
   },
   consumed: () => Promise.resolve(errorState(errors.codeConsumed)),
@@ -492,19 +507,20 @@ const extendHold = async (
   return error === null;
 };
 
-// A fresh code with a fresh window; the hold moves with it. A failed send
-// leaves the hold: the previous code still works inside its own window.
+// A fresh code with a fresh window; the hold moves with it, but only once
+// the code is stored and sent, so a failed send leaves the hold on the
+// previous code's window instead of holding the room with no live code.
 async function reissueCode(
   supabase: SessionClient,
   hold: LiveHold,
   company: CompanyRow
 ): Promise<HoldState> {
   const expiresAt = holdExpiry(new Date());
-  if (!(await extendHold(supabase, hold.bookingId, expiresAt))) {
-    return errorState(errors.holdExpired);
-  }
   if (!(await tryIssueCode(hold, company, expiresAt))) {
     return errorState(errors.mailFailed);
+  }
+  if (!(await extendHold(supabase, hold.bookingId, expiresAt))) {
+    return errorState(errors.holdExpired);
   }
   return heldState(hold, expiresAt);
 }

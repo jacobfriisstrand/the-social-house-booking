@@ -17,9 +17,13 @@ import { Input } from "@/components/ui/input";
 
 export interface TextFieldProps<Values extends FieldValues> {
   autoComplete?: string;
+  className?: string;
   control: Control<Values>;
   description?: string;
+  disabled?: boolean;
+  inputMode?: "numeric" | "text";
   label: string;
+  maxLength?: number;
   name: Path<Values>;
   type?: "email" | "number" | "password" | "tel" | "text";
 }
@@ -34,9 +38,13 @@ const displayValue = (value: unknown): string | number => {
 
 export function TextField<Values extends FieldValues>({
   autoComplete,
+  className,
   control,
   description,
+  disabled,
+  inputMode,
   label,
+  maxLength,
   name,
   type = "text",
 }: TextFieldProps<Values>) {
@@ -57,7 +65,11 @@ export function TextField<Values extends FieldValues>({
       <Input
         aria-invalid={fieldState.invalid}
         autoComplete={autoComplete}
+        className={className}
+        disabled={disabled}
         id={id}
+        inputMode={inputMode}
+        maxLength={maxLength}
         name={field.name}
         onBlur={field.onBlur}
         onChange={handleChange}

@@ -17,8 +17,8 @@ import {
 import { z } from "zod";
 import { VerificationStep } from "@/components/bookings/verification-step";
 import { applyFieldErrors } from "@/components/forms/field-errors";
+import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { createHold, type Hold, type HoldState } from "@/lib/bookings/actions";
 import { bookerFields } from "@/lib/validation/booking";
@@ -37,9 +36,11 @@ import { messages } from "@/messages/da";
 const copy = messages.booking;
 const HALF_HOUR_SECONDS = 1800;
 
-// The harness takes datetime-local strings (browser time zone) and turns
-// them into the offset ISO instants createHoldSchema requires; the field
-// names match so server field errors land on the right inputs.
+// The harness takes datetime-local strings and turns them into the offset
+// ISO instants createHoldSchema requires. Parsing a zone-less string is
+// against ADR-0021; it is tolerated only here, in a development-only page
+// that #4's dialog replaces with lib/domain/time.ts slots. The field names
+// match so server field errors land on the right inputs.
 const devFormSchema = z.object({
   ...bookerFields,
   endAt: z.string().min(1, copy.errors.required),
@@ -138,15 +139,6 @@ function useHoldResult(
   }, [state, form, onHeld]);
 }
 
-function SubmitButton({ pending }: { pending: boolean }) {
-  return (
-    <Button disabled={pending} type="submit">
-      {pending ? <Spinner data-icon="inline-start" /> : null}
-      {pending ? copy.demo.submitting : copy.demo.submit}
-    </Button>
-  );
-}
-
 const firstRoomId = (rooms: RoomOption[]): string => rooms[0]?.room_id ?? "";
 
 function HoldForm({
@@ -223,7 +215,12 @@ function HoldForm({
           type="tel"
         />
       </FieldGroup>
-      <SubmitButton pending={pending} />
+      <PendingButton
+        idleLabel={copy.demo.submit}
+        pending={pending}
+        pendingLabel={copy.demo.submitting}
+        type="submit"
+      />
     </form>
   );
 }

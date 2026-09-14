@@ -18,14 +18,13 @@ export const messages = {
       codeConsumed: "Koden er allerede brugt. Send en ny kode.",
       codeExpired: "Koden er udløbet. Send en ny kode.",
       codeFormat: "Indtast de seks cifre fra mailen.",
-      codeLocked:
-        "For mange forsøg. Reservationen er sluppet, så start bookingen forfra.",
+      codeLocked: "For mange forsøg. Start bookingen forfra.",
       codeWrong: (attemptsLeft: number) =>
         `Forkert kode. Du har ${attemptsLeft} forsøg tilbage.`,
       createFailed: "Bookingen kunne ikke oprettes. Prøv igen.",
       emailInvalid: "Indtast en gyldig arbejdsemail.",
       endBeforeStart: "Sluttidspunktet skal være efter starttidspunktet.",
-      holdExpired: "Reservationen er udløbet. Start bookingen forfra.",
+      holdExpired: "Tiden til at bekræfte er udløbet. Start bookingen forfra.",
       mailFailed:
         "Bekræftelseskoden kunne ikke sendes. Kontrollér arbejdsemailen og prøv igen.",
       participantsInvalid: "Indtast antal deltagere.",
@@ -53,8 +52,8 @@ export const messages = {
       confirm: "Bekræft booking",
       confirming: "Bekræfter …",
       countdown: (remaining: string) =>
-        `Lokalet er reserveret i ${remaining} endnu.`,
-      expired: "Reservationen er udløbet. Start bookingen forfra.",
+        `Du har ${remaining} til at bekræfte bookingen.`,
+      expired: "Tiden til at bekræfte er udløbet. Start bookingen forfra.",
       resend: "Send ny kode",
       resending: "Sender …",
       sentTo: (email: string) =>

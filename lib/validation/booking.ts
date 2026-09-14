@@ -51,6 +51,7 @@ export const verifyCodeSchema = z.object({
 
 export type VerifyCodeValues = z.infer<typeof verifyCodeSchema>;
 
-export const resendCodeSchema = z.object({
+// A booking id on its own: "Send ny kode" and the live-hold lookup.
+export const bookingIdSchema = z.object({
   bookingId: z.guid(),
 });

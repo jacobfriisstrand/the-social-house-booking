@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { requireOwnCompany } from "@/lib/auth/require-company";
 import { isDevelopment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -13,12 +12,12 @@ export const metadata: Metadata = {
 // Development harness for the booker verification flow (#2): a bare
 // booking form that creates the hold, then the real verification step. The
 // booking dialog (#4) replaces the form; the step and the actions stay.
-// Requires a logged-in company like the real flow; admins are sent on.
+// The (gated) layout requires a session with completed master data, like
+// the real flow; the actions check again.
 export default async function DevBookingPage() {
   if (!isDevelopment) {
     redirect("/");
   }
-  await requireOwnCompany();
   const supabase = await createClient();
   const { data: rooms } = await supabase
     .from("rooms")

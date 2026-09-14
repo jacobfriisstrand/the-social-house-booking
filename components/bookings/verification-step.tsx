@@ -7,22 +7,11 @@
 // page under app/(public)/demo/booking does.
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import {
-  type Control,
-  type UseFormReturn,
-  useController,
-  useForm,
-} from "react-hook-form";
+import { type UseFormReturn, useForm } from "react-hook-form";
+import { PendingButton } from "@/components/forms/pending-button";
+import { TextField } from "@/components/forms/text-field";
 import { useFormAction } from "@/components/forms/use-form-action";
-import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { FieldGroup } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { type Hold, resendCode, verifyCode } from "@/lib/bookings/actions";
 import { VERIFICATION_CODE_LENGTH } from "@/lib/domain/verification";
@@ -82,38 +71,6 @@ function useResendCode(
   return [resending, handleResend];
 }
 
-function CodeField({
-  control,
-  disabled,
-}: {
-  control: Control<VerifyCodeValues>;
-  disabled: boolean;
-}) {
-  const { field, fieldState } = useController({ control, name: "code" });
-  return (
-    <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="field-code">
-        {messages.booking.fields.code}
-      </FieldLabel>
-      <Input
-        aria-invalid={fieldState.invalid}
-        autoComplete="one-time-code"
-        className="text-center font-mono text-2xl tracking-[0.5em]"
-        disabled={disabled}
-        id="field-code"
-        inputMode="numeric"
-        maxLength={VERIFICATION_CODE_LENGTH}
-        name={field.name}
-        onBlur={field.onBlur}
-        onChange={field.onChange}
-        ref={field.ref}
-        value={field.value}
-      />
-      {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
-    </Field>
-  );
-}
-
 function HoldCountdown({ secondsLeft }: { secondsLeft: number }) {
   return (
     <p className="text-muted-foreground text-sm">
@@ -121,34 +78,6 @@ function HoldCountdown({ secondsLeft }: { secondsLeft: number }) {
         ? copy.expired
         : copy.countdown(formatCountdown(secondsLeft))}
     </p>
-  );
-}
-
-// A button whose label and spinner follow its pending state (DESIGN.md:
-// compose Spinner + disabled, Button has no loading prop).
-function PendingButton({
-  disabled,
-  idleLabel,
-  onClick,
-  pending,
-  pendingLabel,
-  type,
-  variant,
-}: {
-  disabled: boolean;
-  idleLabel: string;
-  onClick?: () => void;
-  pending: boolean;
-  pendingLabel: string;
-  type: "button" | "submit";
-  variant?: "secondary";
-}) {
-  const label = pending ? pendingLabel : idleLabel;
-  return (
-    <Button disabled={disabled} onClick={onClick} type={type} variant={variant}>
-      {pending ? <Spinner data-icon="inline-start" /> : null}
-      {label}
-    </Button>
   );
 }
 
@@ -191,7 +120,16 @@ export function VerificationStep({
         <p>{copy.sentTo(hold.bookerEmail)}</p>
       </div>
       <FieldGroup>
-        <CodeField control={form.control} disabled={expired} />
+        <TextField
+          autoComplete="one-time-code"
+          className="text-center font-mono text-2xl tracking-[0.5em]"
+          control={form.control}
+          disabled={expired}
+          inputMode="numeric"
+          label={messages.booking.fields.code}
+          maxLength={VERIFICATION_CODE_LENGTH}
+          name="code"
+        />
       </FieldGroup>
       <HoldCountdown secondsLeft={secondsLeft} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -202,7 +140,7 @@ export function VerificationStep({
           pending={resending}
           pendingLabel={copy.resending}
           type="button"
-          variant="secondary"
+          variant="outline"
         />
         <PendingButton
           disabled={disabled}

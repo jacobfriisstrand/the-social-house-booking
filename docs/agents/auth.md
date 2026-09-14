@@ -33,12 +33,12 @@ The Custom Access Token Hook is a Postgres function `public.custom_access_token_
 - Server code checks the role with `getSession()` from `lib/auth/get-session.ts` → `session.appRole`. Do not decode the JWT by hand in components.
 
 - `app/(company)/*`: requires a session. `app/(admin)/*`: requires `app_role = 'admin'`. Both enforced in the route-group layout via `lib/auth/requireSession()` / `requireAdmin()`, and again inside every server action (layouts are not a security boundary).
-- `app/(public)/*`: notice board, cancellation link pages, and the development-only demo pages. No session. Booker verification is not a public page: it is the verification step inside the booking dialog, under the company's session (#2).
+- `app/(public)/*`: notice board, cancellation link pages, the forms demo. No session. Booker verification is not a public page: it is the verification step inside the booking dialog, under the company's session (#2).
 - Use `@supabase/ssr` cookie handling exactly as in `docs/vendor/supabase/`; refresh the session in `proxy.ts` (Next 16's name for the former middleware — check `node_modules/next/dist/docs/`).
 
 ## Booker verification and holds
 
-Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/domain/verification.ts`, the code itself in `lib/bookings/verification-code.ts`, the UI in `components/bookings/verification-step.tsx`. Until the booking dialog (#4) exists, `app/(public)/demo/booking` (development only) is the form that starts the flow.
+Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/domain/verification.ts`, the code itself in `lib/bookings/verification-code.ts`, the UI in `components/bookings/verification-step.tsx`. Until the booking dialog (#4) exists, `app/(company)/(gated)/demo/booking` (development only, behind the session and the master-data gate like the real flow) is the form that starts the flow.
 
 - "Book nu" → `createHold()` inserts a `pending_verification` booking with `booking_hold_expires_at = now() + 10 minutes` and the price snapshot, under the company's session and RLS. The database's no-overlap constraint is the availability check: an `exclusion_violation` (23P01) reads as "Lokalet er ikke ledigt". The action then stores a code and sends Mail 2 via `sendMail()` (template `verification-code`, greeting the company display name, recipient the booker's work email). If the mail fails, the hold is released at once.
 - The code is six digits from `crypto.randomInt`, stored in `verification_codes` as a SHA-256 hash bound to the booking id, compared with `timingSafeEqual`. Only this table goes through the service-role client (allowlist entry 1); it is admin-only under RLS because the booker is not an auth user.
