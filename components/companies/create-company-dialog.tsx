@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { SelectField } from "@/components/forms/select-field";
 import { TextField } from "@/components/forms/text-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
@@ -22,14 +21,12 @@ import {
   createCompanySchema,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
-import { membershipStatusItems } from "./company-field-list";
 
 const defaultValues: CreateCompanyValues = {
   discountPercent: 0,
   displayName: "",
   email: "",
   legalName: "",
-  membershipStatus: "external",
 };
 
 const labels = messages.companyFields;
@@ -73,12 +70,6 @@ export function CreateCompanyDialog() {
               control={form.control}
               label={labels.legalName}
               name="legalName"
-            />
-            <SelectField
-              control={form.control}
-              items={membershipStatusItems}
-              label={labels.membershipStatus}
-              name="membershipStatus"
             />
             <TextField
               control={form.control}

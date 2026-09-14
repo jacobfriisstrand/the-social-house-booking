@@ -50,8 +50,9 @@ const createAuthUser = async (email: string): Promise<Step<string>> => {
   return { ok: true, value: created.data.user.id };
 };
 
-// 2. The companies row under the admin's session. On failure the auth user
-// is removed again so the email is free for a retry.
+// 2. The companies row under the admin's session, always as a member (no
+// external companies until #14). On failure the auth user is removed again
+// so the email is free for a retry.
 const insertCompany = async (
   values: CreateCompanyValues,
   authUserId: string
@@ -65,7 +66,7 @@ const insertCompany = async (
       company_display_name: values.displayName,
       company_email: values.email,
       company_legal_name: values.legalName,
-      company_membership_status: values.membershipStatus,
+      company_membership_status: "member",
     })
     .select("company_id")
     .single();

@@ -106,13 +106,13 @@ describe("admin values round trip", () => {
     const values = companyToAdminValues(row);
     expect(values.billingCountry).toBe("");
     expect(values.companyId).toBe(row.company_id);
-    expect(values.membershipStatus).toBe("member");
 
     const update = adminValuesToUpdate(values);
     expect(update.company_billing_country).toBeNull();
     expect(update.company_discount_percent).toBe(50);
     expect(update.company_email).toBe("kontakt@rituals.dk");
     expect(update.company_internal_note).toBeNull();
+    expect(update).not.toHaveProperty("company_membership_status");
   });
 });
 

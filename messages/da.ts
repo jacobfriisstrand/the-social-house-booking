@@ -86,7 +86,6 @@ export const messages = {
     internalNote: "Intern note (valgfrit)",
     invoiceEmail: "Faktura-email",
     legalName: "Juridisk virksomhedsnavn",
-    membershipStatus: "Medlemsstatus",
     reference: "PO-nummer, reference eller omkostningssted (valgfrit)",
   },
   dashboard: {

@@ -18,10 +18,10 @@ const optional = z.string().trim().max(SHORT_MAX, errors.tooLong);
 const optionalLong = z.string().trim().max(LONG_MAX, errors.tooLong);
 const email = z.email(errors.emailInvalid);
 
-export const membershipStatusValues = ["member", "external"] as const;
-
 // What admin sets at creation and may change later; the trigger
-// companies_guard_self_escalation keeps companies away from the last two.
+// companies_guard_self_escalation keeps companies away from the discount.
+// Membership status is not a form field: every company is created as
+// `member` (decided 2026-09-14; external companies wait for #14).
 const accountFields = {
   discountPercent: z
     .number(errors.discountInvalid)
@@ -30,7 +30,6 @@ const accountFields = {
     .max(100, errors.discountInvalid),
   displayName: required,
   email,
-  membershipStatus: z.enum(membershipStatusValues),
 };
 
 // The nine mandatory fields: the booking gate (#1, Bilag 1).

@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { SelectField } from "@/components/forms/select-field";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
@@ -21,10 +20,7 @@ import {
   adminCompanySchema,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
-import {
-  masterDataTextFields,
-  membershipStatusItems,
-} from "./company-field-list";
+import { masterDataTextFields } from "./company-field-list";
 
 const labels = messages.companyFields;
 const copy = messages.companies;
@@ -63,12 +59,6 @@ export function CompanyForm({
               control={form.control}
               label={labels.displayName}
               name="displayName"
-            />
-            <SelectField
-              control={form.control}
-              items={membershipStatusItems}
-              label={labels.membershipStatus}
-              name="membershipStatus"
             />
             <TextField
               control={form.control}

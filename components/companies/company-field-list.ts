@@ -60,8 +60,3 @@ export const masterDataTextFields = [
   | "legalName"
   | "reference"
 >[];
-
-export const membershipStatusItems = [
-  { label: messages.companies.membership.member, value: "member" },
-  { label: messages.companies.membership.external, value: "external" },
-];
