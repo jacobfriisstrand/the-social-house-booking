@@ -7,11 +7,23 @@ export const messages = {
   },
   booking: {
     admin: {
+      created: (bookingNumber: string) =>
+        `Bookingen ${bookingNumber} er oprettet og bekræftet.`,
+      demo: {
+        description:
+          "Udviklingsside for bookinger, som admin opretter på en virksomheds vegne (#14). Bookingen bekræftes med det samme uden bekræftelseskode. Tidspunkter tolkes i browserens tidszone. Den rigtige dialog kommer med #4.",
+        title: "Booking for virksomhed (udvikling)",
+      },
       errors: {
         companyIncomplete:
           "Virksomhedens stam- og faktureringsoplysninger skal udfyldes, før den kan have bookinger.",
         companyNotFound: "Virksomheden findes ikke.",
       },
+      fields: {
+        company: "Virksomhed",
+      },
+      submit: "Opret booking",
+      submitting: "Opretter …",
     },
     confirmed: "Booking bekræftet",
     demo: {
