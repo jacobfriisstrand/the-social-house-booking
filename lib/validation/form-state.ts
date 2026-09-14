@@ -14,13 +14,15 @@ export type FormState<Values> =
 
 export const idleFormState = { status: "idle" } as const;
 
+export type FormError<Values> = Extract<FormState<Values>, { status: "error" }>;
+
 // The error state for a failed zod parse: one generic message for the toast,
 // the schema's messages per field. Values is the form's value type; a
 // stricter re-check (a subset of the fields) narrows to the same keys.
 export const invalidFormState = <Values>(
   error: z.ZodError,
   message: string
-): FormState<Values> => ({
+): FormError<Values> => ({
   error: message,
   fieldErrors: z.flattenError(error).fieldErrors as Partial<
     Record<keyof Values, string[]>

@@ -60,7 +60,7 @@ RLS is the security boundary. Admins are ordinary authenticated users whose JWT 
 
 The service-role client (`lib/supabase/admin.ts`) may be imported in exactly these places. Adding a sixth requires updating this list in the same PR.
 
-1. Verification-code flow and booker-facing booking pages — the booker is not an auth user (ADR-0004).
+1. `lib/bookings/actions.ts` — the `verification_codes` reads and writes in the booker verification flow (#2); the table is admin-only and the booker is not an auth user (ADR-0004). The booking row itself is written under the company's session.
 2. Cancellation via secure link — unauthenticated.
 3. `lib/email/send-mail.ts` and the Resend webhook — `outbound_emails` writes.
 4. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).

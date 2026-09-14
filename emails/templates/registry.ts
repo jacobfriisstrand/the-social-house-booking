@@ -8,6 +8,7 @@ import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
 import { adminCompanyCompleted } from "./admin-company-completed.ts";
 import { companyInvitation } from "./company-invitation.ts";
+import { verificationCode } from "./verification-code.ts";
 
 export type OutboundEmailKind =
   Database["public"]["Enums"]["outbound_email_kind"];
@@ -26,4 +27,5 @@ export const emailTemplates: Partial<Record<OutboundEmailKind, EmailTemplate>> =
   {
     "admin-company-completed": adminCompanyCompleted,
     "company-invitation": companyInvitation,
+    "verification-code": verificationCode,
   };

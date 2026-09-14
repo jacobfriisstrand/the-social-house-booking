@@ -5,6 +5,62 @@ export const messages = {
     companiesLink: "Virksomheder",
     homeTitle: "Administration",
   },
+  booking: {
+    confirmed: "Booking bekræftet",
+    demo: {
+      description:
+        "Udviklingsside for bookerbekræftelsen (#2). Tidspunkter tolkes i browserens tidszone. Den rigtige bookingdialog kommer med #4.",
+      submit: "Book nu",
+      submitting: "Opretter …",
+      title: "Booking (udvikling)",
+    },
+    errors: {
+      codeConsumed: "Koden er allerede brugt. Send en ny kode.",
+      codeExpired: "Koden er udløbet. Send en ny kode.",
+      codeFormat: "Indtast de seks cifre fra mailen.",
+      codeLocked: "For mange forsøg. Start bookingen forfra.",
+      codeWrong: (attemptsLeft: number) =>
+        `Forkert kode. Du har ${attemptsLeft} forsøg tilbage.`,
+      createFailed: "Bookingen kunne ikke oprettes. Prøv igen.",
+      emailInvalid: "Indtast en gyldig arbejdsemail.",
+      endBeforeStart: "Sluttidspunktet skal være efter starttidspunktet.",
+      holdExpired: "Tiden til at bekræfte er udløbet. Start bookingen forfra.",
+      mailFailed:
+        "Bekræftelseskoden kunne ikke sendes. Kontrollér arbejdsemailen og prøv igen.",
+      participantsInvalid: "Indtast antal deltagere.",
+      required: "Feltet skal udfyldes.",
+      roomCapacity: "Lokalet har ikke plads til så mange deltagere.",
+      roomNotFound: "Lokalet findes ikke.",
+      slotTaken: "Lokalet er ikke ledigt i det valgte tidsrum.",
+      tooLong: "Teksten er for lang.",
+      tooManyResends:
+        "Der kan ikke sendes flere koder til denne booking. Start bookingen forfra.",
+      verifyFailed: "Koden kunne ikke bekræftes. Prøv igen.",
+    },
+    fields: {
+      bookerEmail: "Arbejdsemail",
+      bookerName: "Fulde navn",
+      bookerPhone: "Mobilnummer",
+      code: "Bekræftelseskode",
+      endAt: "Slut",
+      participantCount: "Antal deltagere",
+      room: "Lokale",
+      startAt: "Start",
+    },
+    verification: {
+      codeSent: "Vi har sendt en ny kode",
+      confirm: "Bekræft booking",
+      confirming: "Bekræfter …",
+      countdown: (remaining: string) =>
+        `Du har ${remaining} til at bekræfte bookingen.`,
+      expired: "Tiden til at bekræfte er udløbet. Start bookingen forfra.",
+      resend: "Send ny kode",
+      resending: "Sender …",
+      sentTo: (email: string) =>
+        `Vi har sendt en sekscifret kode til ${email}. Indtast den her for at gennemføre bookingen.`,
+      title: "Bekræft din booking",
+    },
+  },
   common: {
     loading: "Indlæser …",
     signOut: "Log ud",
