@@ -246,6 +246,7 @@ export type Database = {
           company_billing_notes: string | null
           company_billing_postal_code: string | null
           company_contact_name: string | null
+          company_contact_phone: string | null
           company_created_at: string
           company_cvr_number: string | null
           company_department: string | null
@@ -272,6 +273,7 @@ export type Database = {
           company_billing_notes?: string | null
           company_billing_postal_code?: string | null
           company_contact_name?: string | null
+          company_contact_phone?: string | null
           company_created_at?: string
           company_cvr_number?: string | null
           company_department?: string | null
@@ -298,6 +300,7 @@ export type Database = {
           company_billing_notes?: string | null
           company_billing_postal_code?: string | null
           company_contact_name?: string | null
+          company_contact_phone?: string | null
           company_created_at?: string
           company_cvr_number?: string | null
           company_department?: string | null

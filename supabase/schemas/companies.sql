@@ -32,7 +32,10 @@ create table public.companies (
   company_internal_note text,
   company_master_data_completed_at timestamptz,
   company_created_at timestamptz not null default now(),
-  company_updated_at timestamptz not null default now()
+  company_updated_at timestamptz not null default now(),
+  -- Bilag 1 requires the contact's mobile number (#1). Appended last, per
+  -- docs/agents/supabase.md, to keep the migration diff clean.
+  company_contact_phone text
 );
 
 -- Deny-by-default; policy content belongs to #19.

@@ -21,8 +21,8 @@ assert.equal(full.SUPABASE_SECRET_KEY, "secret");
 assert.equal(full.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, undefined);
 assert.equal(full.RESEND_API_KEY, undefined);
 assert.equal("PATH" in full, false);
-// The schema covers every variable in .env.example — exactly 14 today.
-assert.equal(Object.keys(envSchema.shape).length, 14);
+// The schema covers every variable in .env.example — exactly 15 today.
+assert.equal(Object.keys(envSchema.shape).length, 15);
 
 // APP_ENV accepts exactly the two documented values.
 assert.throws(
