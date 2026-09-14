@@ -89,6 +89,8 @@ The booker's email is confirmed on every booking with a six-digit code. The book
 
 The code must be time-limited, and the room must be held temporarily while the code is entered. The system must check availability again before the booking is confirmed.
 
+> **Decision (ADR-0023):** Verification applies to bookings a company makes itself. A booking admin enters on a company's behalf (external customers, ADR-0008) is confirmed at once without a hold or a code; the booker's details are still required.
+
 Booking confirmations and reminders are addressed to the company's display name, not to the specific person.
 
 Example

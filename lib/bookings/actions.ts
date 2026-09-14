@@ -10,8 +10,6 @@ import { captureException } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { requireOwnCompany } from "@/lib/auth/require-company";
 import type { CompanyRow } from "@/lib/domain/company-master-data";
-import { buildSnapshot } from "@/lib/domain/snapshot";
-import { hoursBetween } from "@/lib/domain/time";
 import {
   canResendCode,
   holdExpiry,
@@ -31,13 +29,16 @@ import {
   type VerifyCodeValues,
   verifyCodeSchema,
 } from "@/lib/validation/booking";
-import {
-  type FormError,
-  type FormState,
-  invalidFormState,
-} from "@/lib/validation/form-state";
+import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { escapeHtml } from "@/supabase/functions/send-email/handler";
+import {
+  EXCLUSION_VIOLATION,
+  findBookableRoom,
+  newBookingRow,
+  type SessionClient,
+  type Step,
+} from "./new-booking";
 import {
   generateVerificationCode,
   hashVerificationCode,
@@ -60,22 +61,13 @@ export type HoldState =
 
 export type VerifyCodeState = FormState<VerifyCodeValues>;
 
-// Postgres exclusion_violation: the no-overlap constraint and the
-// house-event triggers (#24) both raise it.
-const EXCLUSION_VIOLATION = "23P01";
-
 const errorState = (error: string) => ({ error, status: "error" as const });
-
-type SessionClient = Awaited<ReturnType<typeof createClient>>;
 
 interface LiveHold {
   bookerEmail: string;
   bookingId: string;
   bookingNumber: string;
 }
-
-// Either a value or the error state to return to the form.
-type Step<T> = { ok: true; value: T } | { ok: false; state: FormError<never> };
 
 const fail = (error: string): Step<never> => ({
   ok: false,
@@ -196,35 +188,9 @@ const heldState = (hold: LiveHold, expiresAt: Date): HoldState => ({
   status: "held",
 });
 
-// An active room with room for the participants; the hourly price is what
-// the snapshot needs.
-async function findBookableRoom(
-  supabase: SessionClient,
-  input: CreateHoldValues
-): Promise<Step<number>> {
-  const room = await supabase
-    .from("rooms")
-    .select("room_capacity, room_is_active, room_price_ore")
-    .eq("room_id", input.roomId)
-    .maybeSingle();
-  if (!room.data?.room_is_active) {
-    return fail(errors.roomNotFound);
-  }
-  if (room.data.room_capacity < input.participantCount) {
-    return {
-      ok: false,
-      state: {
-        ...errorState(errors.roomCapacity),
-        fieldErrors: { participantCount: [errors.roomCapacity] },
-      },
-    };
-  }
-  return { ok: true, value: room.data.room_price_ore };
-}
-
-// The pending_verification row with its price snapshot (ADR-0005; add-ons
-// arrive with #7). The database rejects an overlapping slot, so no separate
-// availability query runs first.
+// The pending_verification row (newBookingRow carries the snapshot). The
+// database rejects an overlapping slot, so no separate availability query
+// runs first.
 async function insertHold(
   supabase: SessionClient,
   company: CompanyRow,
@@ -232,29 +198,16 @@ async function insertHold(
   roomHourlyPriceOre: number,
   expiresAt: Date
 ): Promise<Step<LiveHold>> {
-  const snapshot = buildSnapshot({
-    addOnsOre: 0,
-    discountPercent: company.company_discount_percent,
-    hours: hoursBetween(new Date(input.startAt), new Date(input.endAt)),
-    roomHourlyPriceOre,
-  });
   const inserted = await supabase
     .from("bookings")
     .insert({
-      booking_booker_email: input.bookerEmail,
-      booking_booker_name: input.bookerName,
-      booking_booker_phone: input.bookerPhone,
+      ...newBookingRow(
+        input,
+        company.company_discount_percent,
+        roomHourlyPriceOre
+      ),
       booking_company_id: company.company_id,
-      booking_discount_percent: snapshot.discountPercent,
-      booking_end_at: input.endAt,
-      booking_expected_total_ore: snapshot.totalOre,
       booking_hold_expires_at: expiresAt.toISOString(),
-      // Overwritten by the bookings_assign_number trigger (#24).
-      booking_number: "",
-      booking_participant_count: input.participantCount,
-      booking_room_id: input.roomId,
-      booking_room_price_ore: snapshot.roomHourlyPriceOre,
-      booking_start_at: input.startAt,
       booking_status: "pending_verification",
     })
     .select("booking_id, booking_number")

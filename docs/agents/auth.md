@@ -45,6 +45,7 @@ Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/d
 - Rules: ten-minute window shared by the code and the hold, five attempts, then the hold is released (`expired`). A consumed or expired code is dead whatever is typed. "Send ny kode" (`resendCode()`) issues a new code and moves the hold to the new window; at most three resends per booking.
 - `verifyCode()` confirms: status → `confirmed` only where the row is still `pending_verification` with a live hold, so a hold that died meanwhile fails with "Reservationen er udløbet". The room-free trigger re-runs on the status change, which is the spec's second availability check. The snapshot freezes by trigger (ADR-0005). Mail 4 and Mail 8 are wired at this point by #11.
 - Expired holds are ignored by availability and cleaned up by the hourly job (`email.md`).
+- Admin books on a company's behalf with `createAdminBooking()` in `lib/bookings/admin-actions.ts` (#14): the row is inserted as `confirmed` under the admin's session, with no hold and no code (ADR-0023). External companies only ever get bookings this way (ADR-0008). The action has no screen yet: #4's booking dialog gives admins a company selector and calls it.
 
 ## Auth emails
 

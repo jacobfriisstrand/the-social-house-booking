@@ -52,6 +52,7 @@ export const adminValuesToUpdate = (
   company_economic_customer_number: orNull(values.economicCustomerNumber),
   company_email: values.email,
   company_internal_note: orNull(values.internalNote),
+  company_membership_status: values.membershipStatus,
 });
 
 export const companyToMasterDataValues = (
@@ -82,6 +83,7 @@ export const companyToAdminValues = (row: CompanyRow): AdminCompanyValues => ({
   economicCustomerNumber: orEmpty(row.company_economic_customer_number),
   email: row.company_email,
   internalNote: orEmpty(row.company_internal_note),
+  membershipStatus: row.company_membership_status,
 });
 
 // Mail 10 variables (#1). Resend inserts {{{KEY}}} unescaped, so every value

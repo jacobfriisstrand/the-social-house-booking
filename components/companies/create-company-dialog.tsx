@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { TextField } from "@/components/forms/text-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
@@ -21,24 +21,31 @@ import {
   createCompanySchema,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
+import { MembershipField } from "./membership-field";
 
 const defaultValues: CreateCompanyValues = {
   discountPercent: 0,
   displayName: "",
   email: "",
   legalName: "",
+  membershipStatus: "member",
 };
 
 const labels = messages.companyFields;
 
-// Create + invite. The action redirects to the new company's page on
-// success, so the dialog only ever shows errors.
+// Create, and for a member also invite (#14: an external company gets no
+// invite). The action redirects to the new company's page on success, so
+// the dialog only ever shows errors.
 export function CreateCompanyDialog() {
   const form = useForm<CreateCompanyValues>({
     defaultValues,
     resolver: zodResolver(createCompanySchema),
   });
   const { pending, submit } = useFormAction({ action: createCompany, form });
+  const membershipStatus = useWatch({
+    control: form.control,
+    name: "membershipStatus",
+  });
 
   return (
     <Dialog>
@@ -71,8 +78,10 @@ export function CreateCompanyDialog() {
               label={labels.legalName}
               name="legalName"
             />
+            <MembershipField control={form.control} />
             <TextField
               control={form.control}
+              disabled={membershipStatus === "external"}
               label={labels.discountPercent}
               name="discountPercent"
               type="number"
@@ -83,7 +92,7 @@ export function CreateCompanyDialog() {
           <Button form="create-company-form" pending={pending} type="submit">
             {pending
               ? messages.companies.createSubmitting
-              : messages.companies.createSubmit}
+              : messages.companies.createSubmit[membershipStatus]}
           </Button>
         </DialogFooter>
       </DialogContent>

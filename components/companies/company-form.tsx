@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
 import { masterDataTextFields } from "./company-field-list";
+import { MembershipField } from "./membership-field";
 
 const labels = messages.companyFields;
 const copy = messages.companies;
@@ -39,6 +40,10 @@ export function CompanyForm({
     action: updateCompany,
     form,
     successMessage: copy.saved,
+  });
+  const membershipStatus = useWatch({
+    control: form.control,
+    name: "membershipStatus",
   });
 
   return (
@@ -60,8 +65,10 @@ export function CompanyForm({
               label={labels.displayName}
               name="displayName"
             />
+            <MembershipField control={form.control} />
             <TextField
               control={form.control}
+              disabled={membershipStatus === "external"}
               label={labels.discountPercent}
               name="discountPercent"
               type="number"

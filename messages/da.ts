@@ -6,6 +6,13 @@ export const messages = {
     homeTitle: "Administration",
   },
   booking: {
+    admin: {
+      errors: {
+        companyIncomplete:
+          "Virksomhedens stam- og faktureringsoplysninger skal udfyldes, før den kan have bookinger.",
+        companyNotFound: "Virksomheden findes ikke.",
+      },
+    },
     confirmed: "Booking bekræftet",
     demo: {
       description:
@@ -78,8 +85,11 @@ export const messages = {
     },
     create: "Opret virksomhed",
     createDescription:
-      "Virksomheden får en invitation på mail og vælger selv sin adgangskode.",
-    createSubmit: "Opret og send invitation",
+      "Et medlem får en invitation på mail og vælger selv sin adgangskode. En ekstern virksomhed opretter du uden invitation.",
+    createSubmit: {
+      external: "Opret virksomhed",
+      member: "Opret og send invitation",
+    },
     createSubmitting: "Opretter …",
     emptyDescription: "Opret den første virksomhed for at sende en invitation.",
     emptyTitle: "Ingen virksomheder endnu",
@@ -136,12 +146,21 @@ export const messages = {
     errors: {
       discountInvalid: "Rabatten skal være et helt tal mellem 0 og 100.",
       emailInvalid: "Indtast en gyldig email.",
+      externalDiscount:
+        "En ekstern virksomhed betaler fuld pris og kan ikke få rabat.",
+      membershipInvalid: "Vælg medlemsstatus.",
       required: "Feltet skal udfyldes.",
       tooLong: "Teksten er for lang.",
     },
     internalNote: "Intern note (valgfrit)",
     invoiceEmail: "Faktura-email",
     legalName: "Juridisk virksomhedsnavn",
+    membershipStatus: "Medlemsstatus",
+    membershipStatusHint: {
+      external:
+        "Betaler fuld lokalepris. Oprettes uden invitation; du udfylder oplysningerne selv.",
+      member: "Får rabat på lokaleleje og en invitation på mail.",
+    },
     reference: "PO-nummer, reference eller omkostningssted (valgfrit)",
   },
   dashboard: {
