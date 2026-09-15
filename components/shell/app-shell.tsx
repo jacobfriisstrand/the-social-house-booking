@@ -96,11 +96,10 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
           </Button>
         </SidebarGroupContent>
       </SidebarGroup>
-      {/* Gap between the nav groups (the ADMIN block sits apart). */}
-      <SidebarContent className="gap-4">
+      <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {shellMainLinks(isAdmin).map((link) => (
                 <ShellNavLinkItem key={link.href} link={link} />
               ))}
@@ -113,7 +112,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
               {messages.shell.adminGroup}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {shellAdminLinks().map((link) => (
                   <ShellNavLinkItem key={link.href} link={link} />
                 ))}
@@ -123,7 +122,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
           <SidebarMenuItem>
             <form action={signOut}>
               <SidebarMenuButton
