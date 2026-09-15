@@ -46,6 +46,10 @@ _Avoid_: venue, space, meeting room
 **Opening hours** (åbningstider):
 The hours a room can be booked. Admin-editable; every booking must fit within them.
 
+**Special closing day** (lukkedag):
+A single date where a room deviates from its weekly opening hours: closed all day, or open with different hours. Admin-set per room; overrides the weekly hours for that date.
+_Avoid_: exception, undtagelse, særdag
+
 **Buffer**:
 A 30-minute, non-billable block reserved automatically after every booking. Blocks the room, is never billed, is not part of the booked time, and is removed on cancellation and moved with the booking on admin changes.
 _Avoid_: turnaround, padding, gap

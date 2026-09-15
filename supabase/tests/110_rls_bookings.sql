@@ -16,8 +16,8 @@ insert into public.companies (company_id, company_auth_user_id, company_email, c
   ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals'),
   ('22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111003', 'nordic@tsh.test', 'Nordic Events');
 
-insert into public.rooms (room_id, room_name, room_capacity, room_price_ore, room_opens_at, room_closes_at) values
-  ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000, '08:00', '18:00');
+insert into public.rooms (room_id, room_name, room_capacity, room_hourly_price_ore) values
+  ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000);
 
 insert into public.addons (addon_id, addon_name, addon_price_ore, addon_pricing_model) values
   ('55555555-5555-5555-5555-555555555001', 'Lunch', 22500, 'per_participant');

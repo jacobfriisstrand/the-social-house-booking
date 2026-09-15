@@ -30,7 +30,7 @@ export async function findBookableRoom(
 ): Promise<Step<number>> {
   const room = await supabase
     .from("rooms")
-    .select("room_capacity, room_is_active, room_price_ore")
+    .select("room_capacity, room_is_active, room_hourly_price_ore")
     .eq("room_id", input.roomId)
     .maybeSingle();
   if (!room.data?.room_is_active) {
@@ -49,7 +49,7 @@ export async function findBookableRoom(
       },
     };
   }
-  return { ok: true, value: room.data.room_price_ore };
+  return { ok: true, value: room.data.room_hourly_price_ore };
 }
 
 type BookingInsert = Omit<

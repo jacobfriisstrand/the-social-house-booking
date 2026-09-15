@@ -31,8 +31,25 @@
       ]
     },
     { "file": "components/ui/alert.tsx", "exports": ["AlertAction"] },
+    {
+      "file": "components/ui/attachment.tsx",
+      "exports": ["AttachmentGroup"]
+    },
     { "file": "components/ui/card.tsx", "exports": ["CardAction"] },
     { "file": "components/ui/dialog.tsx", "exports": ["DialogClose"] },
+    { "file": "components/ui/empty.tsx", "exports": ["EmptyContent"] },
+    {
+      "file": "components/ui/popover.tsx",
+      "exports": ["PopoverDescription", "PopoverHeader", "PopoverTitle"]
+    },
+    {
+      "file": "components/ui/select.tsx",
+      "exports": ["SelectLabel", "SelectSeparator"]
+    },
+    {
+      "file": "components/ui/sheet.tsx",
+      "exports": ["SheetClose", "SheetDescription", "SheetFooter"]
+    },
     {
       "file": "components/ui/table.tsx",
       "exports": ["TableCaption", "TableFooter"]
@@ -40,8 +57,8 @@
   ],
   // Kept intentionally before first use, not dead code:
   // - lib/format.ts: formatOre/formatDateTime land with the booking UI (ui.md)
-  // - lib/supabase/client.ts: browser client for realtime/optimistic UI
-  "ignoreFindings": ["lib/format.ts", "lib/supabase/client.ts"],
+  // - components/ui/checkbox.tsx: the booking form's required terms checkbox (#4, ui.md)
+  "ignoreFindings": ["lib/format.ts", "components/ui/checkbox.tsx"],
   "duplicates": {
     // :root and .dark repeat the generated shadcn token values on purpose;
     // .dark exists only so components compile (DESIGN.md: no dark mode in v1).

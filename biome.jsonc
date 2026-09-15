@@ -21,7 +21,8 @@
       }
     }
   },
-  // noProcessEnv exemptions live here: lib/env.ts is the validating reader;
+  // noProcessEnv exemptions live here: lib/env.ts and lib/env-client.ts are the
+  // validating readers (server full schema, browser NEXT_PUBLIC subset);
   // proxy.ts runs in Next's sandbox before .env.local is injected, so it must
   // read process.env itself (and skips the session refresh when unset); and
   // scripts/*.ts run under plain Node outside Next; and the Sentry
@@ -31,6 +32,7 @@
     {
       "includes": [
         "lib/env.ts",
+        "lib/env-client.ts",
         "netlify/functions/*.mts",
         "scripts/*.ts",
         "next.config.ts",
