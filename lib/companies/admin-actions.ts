@@ -82,7 +82,8 @@ const insertCompany = async (
 
 // 3. The invite, members only: an external company is admin's to fill in
 // (#14, ADR-0008) and Mail 1 speaks to members. On failure the company
-// exists and admin re-sends from its page, which shows the failure.
+// exists and admin re-sends from its sheet on the list, which shows the
+// failure.
 const inviteQuery = async (values: CreateCompanyValues): Promise<string> => {
   if (values.membershipStatus === "external") {
     return "";
@@ -114,7 +115,7 @@ export async function createCompany(
     return { error: inserted.error, status: "error" };
   }
   const query = await inviteQuery(parsed.data);
-  redirect(`/admin/companies/${inserted.value}${query}`);
+  redirect(`/admin/companies${query}`);
 }
 
 // Same call as the first invite; Auth issues a fresh single-use link. Fails
@@ -269,6 +270,5 @@ export async function updateCompany(
     return { error: failure, status: "error" };
   }
   revalidatePath("/admin/companies");
-  revalidatePath(`/admin/companies/${parsed.data.companyId}`);
   return { status: "success" };
 }

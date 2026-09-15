@@ -90,7 +90,6 @@ export const messages = {
     unauthorizedTitle: "Ikke autoriseret",
   },
   companies: {
-    back: "Tilbage til virksomheder",
     columns: {
       discount: "Rabat",
       displayName: "Visningsnavn",

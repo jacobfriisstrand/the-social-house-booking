@@ -48,7 +48,10 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
         tooltip={link.label}
       >
         <Icon />
-        <span>{link.label}</span>
+        {/* Hidden on the icon rail: the collapsed button centers the icon. */}
+        <span className="group-data-[collapsible=icon]:hidden">
+          {link.label}
+        </span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -58,7 +61,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
             className="group-data-[collapsible=icon]:hidden"
@@ -93,7 +96,8 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
           </Button>
         </SidebarGroupContent>
       </SidebarGroup>
-      <SidebarContent>
+      {/* Gap between the nav groups (the ADMIN block sits apart). */}
+      <SidebarContent className="gap-4">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -128,7 +132,9 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
                 type="submit"
               >
                 <LogOutIcon />
-                <span>{messages.common.signOut}</span>
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {messages.common.signOut}
+                </span>
               </SidebarMenuButton>
             </form>
           </SidebarMenuItem>
@@ -167,7 +173,7 @@ export function AppShell({
     <SidebarProvider defaultOpen={defaultOpen}>
       <ShellSidebar isAdmin={isAdmin} />
       <SidebarInset>
-        <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
+        <div className="flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
           <SidebarTrigger
             aria-label={messages.shell.openMenu}
             className="self-start md:hidden"

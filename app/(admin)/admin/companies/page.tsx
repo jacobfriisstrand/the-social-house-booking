@@ -1,6 +1,7 @@
-import Link from "next/link";
+import { CompanySheet } from "@/components/companies/company-sheet";
 import { CreateCompanyDialog } from "@/components/companies/create-company-dialog";
 import { PageHeader, PagePanel } from "@/components/shell/page";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -21,17 +22,31 @@ import { messages } from "@/messages/da";
 
 const copy = messages.companies;
 
-export default async function AdminCompaniesPage() {
-  const supabase = await createClient();
+// Virksomheder (admin): every company with status and master-data state.
+// The sheet carries the company's information — no dedicated page; Mail 10
+// and a failed first invite point back at this list (DESIGN.md: admin edit
+// in a dialog or a sheet).
+export default async function AdminCompaniesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string }>;
+}) {
+  const [{ invite }, supabase] = await Promise.all([
+    searchParams,
+    createClient(),
+  ]);
   const { data: companies } = await supabase
     .from("companies")
-    .select(
-      "company_id, company_display_name, company_email, company_membership_status, company_discount_percent, company_master_data_completed_at"
-    )
+    .select("*")
     .order("company_display_name");
 
   return (
     <>
+      {invite === "failed" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{copy.errors.inviteFailed}</AlertDescription>
+        </Alert>
+      ) : null}
       <PageHeader title={copy.title}>
         <CreateCompanyDialog />
       </PageHeader>
@@ -54,12 +69,7 @@ export default async function AdminCompaniesPage() {
                 {companies.map((company) => (
                   <TableRow key={company.company_id}>
                     <TableCell className="font-medium">
-                      <Link
-                        className="underline-offset-4 hover:underline"
-                        href={`/admin/companies/${company.company_id}`}
-                      >
-                        {company.company_display_name}
-                      </Link>
+                      <CompanySheet company={company} />
                     </TableCell>
                     <TableCell>{company.company_email}</TableCell>
                     <TableCell>

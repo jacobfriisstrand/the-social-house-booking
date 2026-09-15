@@ -23,7 +23,9 @@ export async function notifyAdminCompanyCompleted(
     );
     return;
   }
-  const actionUrl = `${env.NEXT_PUBLIC_SITE_URL}/admin/companies/${company.company_id}`;
+  // The list is the single entry: the company opens from there in a sheet,
+  // so the mail links to the list rather than a per-company page.
+  const actionUrl = `${env.NEXT_PUBLIC_SITE_URL}/admin/companies`;
   try {
     await sendMail({
       companyId: company.company_id,
