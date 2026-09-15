@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { CompanyForm } from "@/components/companies/company-form";
 import { ResendInvitationButton } from "@/components/companies/resend-invitation-button";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { companyToAdminValues } from "@/lib/domain/company-master-data";
@@ -35,7 +36,7 @@ export default async function AdminCompanyPage({
   }
 
   return (
-    <main className="flex flex-col gap-6 p-8">
+    <>
       <div>
         <Button
           nativeButton={false}
@@ -47,20 +48,19 @@ export default async function AdminCompanyPage({
           {copy.back}
         </Button>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-semibold text-3xl">
-          {company.company_display_name}
-        </h1>
+      <PageHeader title={company.company_display_name}>
         <ResendInvitationButton companyId={company.company_id} />
-      </div>
+      </PageHeader>
       {invite === "failed" ? (
         <Alert variant="destructive">
           <AlertDescription>{copy.errors.inviteFailed}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="max-w-2xl">
-        <CompanyForm defaultValues={companyToAdminValues(company)} />
-      </div>
-    </main>
+      <PagePanel>
+        <div className="max-w-2xl">
+          <CompanyForm defaultValues={companyToAdminValues(company)} />
+        </div>
+      </PagePanel>
+    </>
   );
 }

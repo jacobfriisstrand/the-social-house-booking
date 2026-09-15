@@ -367,4 +367,20 @@ export const messages = {
     submitting: "Gemmer …",
     title: "Vælg adgangskode",
   },
+  shell: {
+    adminGroup: "Admin",
+    bookings: "Bookinger",
+    bookRoom: "Book lokale",
+    companies: "Virksomheder",
+    footer: {
+      network: "TheSocialHouseguest",
+      password: "SocialHouse",
+      passwordLabel: "adgangskode",
+    },
+    home: "Hjem",
+    menuSheetDescription: "Navigationsmenu",
+    menuSheetTitle: "Menu",
+    openMenu: "Åbn menu",
+    toggleSidebar: "Vis eller skjul sidepanel",
+  },
 } as const;

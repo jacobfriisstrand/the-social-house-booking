@@ -1,17 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth/actions";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { messages } from "@/messages/da";
 
-// Placeholder page: content only. Layout, page title, and the muted panel
-// belong to the app shell (#55).
+// Bookinger (member): the booking overview from #9 renders on the panel.
+// The shell (#55) owns the sidebar, the title, the panel and the footer.
 export default function CompanyBookingsPage() {
   return (
-    <main>
-      <form action={signOut}>
-        <Button type="submit" variant="outline">
-          {messages.common.signOut}
-        </Button>
-      </form>
-    </main>
+    <>
+      <PageHeader title={messages.shell.bookings} />
+      <PagePanel />
+    </>
   );
 }

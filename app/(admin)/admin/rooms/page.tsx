@@ -1,6 +1,7 @@
 import { RoomActiveButton } from "@/components/rooms/room-active-button";
 import { RoomPreviewDialog } from "@/components/rooms/room-preview-dialog";
 import { RoomSheet } from "@/components/rooms/room-sheet";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -155,9 +156,8 @@ function RoomStatusCell({ isActive }: { isActive: boolean }) {
 // Lokaler (admin): every room with status and price. Edit and create open
 // in a sheet on this page (DESIGN.md: admin edit in a dialog or a sheet —
 // no dedicated page per entity). Deactivated rooms stay listed with a
-// badge — their history is preserved (issue #3). Page title, shell layout,
-// and the muted panel come from the app shell (#55); this page renders
-// content only.
+// badge — their history is preserved (issue #3). The sidebar, footer line
+// and page frame come from the app shell (#55).
 export default async function AdminRoomsPage() {
   const supabase = await createClient();
   const [rooms, addons] = await Promise.all([
@@ -166,8 +166,8 @@ export default async function AdminRoomsPage() {
   ]);
 
   return (
-    <main className="flex flex-col gap-6">
-      <div className="flex justify-end">
+    <>
+      <PageHeader title={messages.rooms.listTitle}>
         <RoomSheet
           addons={addons}
           images={[]}
@@ -177,61 +177,64 @@ export default async function AdminRoomsPage() {
           triggerSize="default"
           triggerVariant="default"
         />
-      </div>
-
-      {rooms.length === 0 ? (
-        <Card className="py-16">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h2 className="font-medium text-lg">{messages.rooms.emptyTitle}</h2>
-            <p className="text-muted-foreground text-sm">
-              {messages.rooms.emptyDescription}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <Card className="py-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16" />
-                <TableHead>{messages.rooms.nameColumn}</TableHead>
-                <TableHead>{messages.rooms.capacityColumn}</TableHead>
-                <TableHead>{messages.rooms.priceColumn}</TableHead>
-                <TableHead>{messages.rooms.activeColumn}</TableHead>
-                <TableHead className="w-40" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rooms.map((room) => (
-                <TableRow key={room.roomId}>
-                  <RoomImageCell room={room} />
-                  <RoomNameCell room={room} />
-                  <TableCell className="tabular-nums">
-                    {room.capacity} {messages.rooms.persons}
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatKroner(room.hourlyPriceOre)}
-                    {messages.rooms.perHourSuffix}
-                  </TableCell>
-                  <RoomStatusCell isActive={room.isActive} />
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2 *:basis-1/2">
-                      <RoomSheet
-                        {...sheetPropsOf(room, addons)}
-                        triggerLabel={messages.rooms.editLabel}
-                      />
-                      <RoomActiveButton
-                        isActive={room.isActive}
-                        roomId={room.roomId}
-                      />
-                    </div>
-                  </TableCell>
+      </PageHeader>
+      <PagePanel>
+        {rooms.length === 0 ? (
+          <Card className="py-16">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h2 className="font-medium text-lg">
+                {messages.rooms.emptyTitle}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {messages.rooms.emptyDescription}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card className="py-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16" />
+                  <TableHead>{messages.rooms.nameColumn}</TableHead>
+                  <TableHead>{messages.rooms.capacityColumn}</TableHead>
+                  <TableHead>{messages.rooms.priceColumn}</TableHead>
+                  <TableHead>{messages.rooms.activeColumn}</TableHead>
+                  <TableHead className="w-40" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-    </main>
+              </TableHeader>
+              <TableBody>
+                {rooms.map((room) => (
+                  <TableRow key={room.roomId}>
+                    <RoomImageCell room={room} />
+                    <RoomNameCell room={room} />
+                    <TableCell className="tabular-nums">
+                      {room.capacity} {messages.rooms.persons}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatKroner(room.hourlyPriceOre)}
+                      {messages.rooms.perHourSuffix}
+                    </TableCell>
+                    <RoomStatusCell isActive={room.isActive} />
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2 *:basis-1/2">
+                        <RoomSheet
+                          {...sheetPropsOf(room, addons)}
+                          triggerLabel={messages.rooms.editLabel}
+                        />
+                        <RoomActiveButton
+                          isActive={room.isActive}
+                          roomId={room.roomId}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </PagePanel>
+    </>
   );
 }

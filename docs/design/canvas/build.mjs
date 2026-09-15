@@ -96,7 +96,7 @@ const sidebar = (active) => `
   <nav style="display: flex; flex-direction: column; gap: ${s(1)};">
     ${navItem("bookings", "Bookinger", active === "bookinger")}
     ${navItem("rooms", "Lokaler", active === "adminlokaler")}
-    ${navItem("users", "Brugere")}
+    ${navItem("users", "Virksomheder")}
     ${navItem("cup", "Tilkøb")}
     ${navItem("percent", "Rabatter")}
     ${navItem("megaphone", "Opslag")}
@@ -120,7 +120,7 @@ const shell = (active, title, body, height, action = "") => `
     <div style="flex-grow: 1; background: ${T.muted}; border-radius: 9.2px; padding: ${s(6)}; display: flex; flex-direction: column; gap: ${s(6)}; min-height: 0;">
     ${body}
     </div>
-    <div style="display: flex; justify-content: flex-end; align-items: center; gap: ${s(2)}; font-size: 12px; color: ${T.mutedFg};"><span style="display: inline-flex;">${icon(I.wifi, 16)}</span><span>thesocialhouseguest</span><span style="width: 1px; height: 14px; background: ${T.border};"></span><span>adgangskode</span><span class="mono" style="background: ${T.muted}; border: 1px solid ${T.border}; border-radius: ${T.radius}; padding: 1px 6px; color: ${T.fg};">thesocialhouse</span></div>
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: ${s(2)}; font-size: 12px; color: ${T.mutedFg};"><span style="display: inline-flex;">${icon(I.wifi, 16)}</span><span>TheSocialHouseguest</span><span style="width: 1px; height: 14px; background: ${T.border};"></span><span>adgangskode</span><span class="mono" style="background: ${T.muted}; border: 1px solid ${T.border}; border-radius: ${T.radius}; padding: 1px 6px; color: ${T.fg};">SocialHouse</span></div>
   </main>
 </div>`;
 

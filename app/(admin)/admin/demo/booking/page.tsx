@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { isDevelopment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -32,11 +33,16 @@ export default async function AdminDemoBookingPage() {
   ]);
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-10">
-      <AdminBookingForm
-        companies={companies.data ?? []}
-        rooms={rooms.data ?? []}
-      />
-    </main>
+    <>
+      <PageHeader title={messages.booking.admin.demo.title} />
+      <PagePanel>
+        <div className="mx-auto w-full max-w-md">
+          <AdminBookingForm
+            companies={companies.data ?? []}
+            rooms={rooms.data ?? []}
+          />
+        </div>
+      </PagePanel>
+    </>
   );
 }
