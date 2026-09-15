@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cphWallClock, hoursBetween, toUtc } from "./time";
+import { cphWallClock, hoursBetween, timeOptions, toUtc } from "./time";
 
 describe("toUtc", () => {
   it("parses an ISO string with positive offset to a UTC Date", () => {
@@ -46,6 +46,25 @@ describe("hoursBetween", () => {
   });
 });
 
+describe("timeOptions", () => {
+  it("produces 30-minute steps inclusive of both ends", () => {
+    expect(timeOptions(30, 8 * 60, 9 * 60)).toEqual([
+      "08:00",
+      "08:30",
+      "09:00",
+    ]);
+  });
+
+  it("can express midnight as an end bound (24:00)", () => {
+    const options = timeOptions(30, 23 * 60, 24 * 60);
+    expect(options.at(-1)).toBe("24:00");
+  });
+
+  it("returns a single option when from equals to", () => {
+    expect(timeOptions(30, 9 * 60, 9 * 60)).toEqual(["09:00"]);
+  });
+});
+
 describe("cphWallClock", () => {
   it("converts a UTC summer time to Copenhagen local time", () => {
     // UTC 08:00 in summer = CEST 10:00
@@ -66,6 +85,14 @@ describe("cphWallClock", () => {
     const utc = new Date("2025-06-15T23:30:00Z");
     const cph = cphWallClock(utc);
     expect(cph).toEqual({ hour: 1, minute: 30 });
+  });
+
+  it("renders exact midnight as hour 0", () => {
+    // UTC 22:00 in summer = 00:00 CEST next day. The fit check treats an
+    // end at 00:00 as the previous day's 24:00, which relies on hour 0.
+    const utc = new Date("2025-06-15T22:00:00Z");
+    const cph = cphWallClock(utc);
+    expect(cph).toEqual({ hour: 0, minute: 0 });
   });
 
   it("handles DST spring-forward gap correctly", () => {

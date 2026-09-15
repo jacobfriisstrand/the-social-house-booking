@@ -5,9 +5,10 @@ import { z } from "zod";
 // it) becomes undefined so consumers can feature-flag on absence. Keys are
 // lint-sorted alphabetically, not grouped by service.
 //
-// ponytail: one schema serves both runtimes — server-only keys are optional, so
-// a client component importing @/lib/env sees undefined for them instead of
-// failing at boot. Upgrade: split client/server schemas if that must throw.
+// Server schema (imported by lib/env.ts): required INSIDE a node runtime.
+// Client bundles only inline NEXT_PUBLIC_* keys, so importing this schema
+// from a "use client" file must fail with undefined REQUIRED keys — it does
+// not run in the browser; lib/env-client.ts is the browser-safe twin.
 const emptyToUndefined = <S extends z.ZodType>(schema: S) =>
   z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -30,4 +31,12 @@ export const envSchema = z.object({
   SENTRY_AUTH_TOKEN: emptyToUndefined(z.string().min(1)),
   SENTRY_WEBHOOK_SECRET: emptyToUndefined(z.string().min(1)),
   SUPABASE_SECRET_KEY: emptyToUndefined(z.string().min(1)),
+});
+
+// Browser-safe subset: only the NEXT_PUBLIC_* keys Next inlines into client
+// bundles. lib/supabase/client.ts uses this; the moment another client
+// component needs env, add that key here (and to the lint exemption block).
+export const publicEnvSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: emptyToUndefined(z.string().min(1)),
+  NEXT_PUBLIC_SUPABASE_URL: z.url(),
 });
