@@ -61,7 +61,9 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
+        {/* Fixed height: collapsing hides the logo, and the row must not
+            shrink or the whole nav shifts up. */}
+        <div className="flex h-9 items-center justify-between group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
             className="group-data-[collapsible=icon]:hidden"
@@ -85,10 +87,12 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
           >
             {messages.shell.bookRoom}
           </Button>
+          {/* Same height as the text button so collapsing does not shift
+              the nav. */}
           <Button
             aria-disabled="true"
             aria-label={messages.shell.bookRoom}
-            className="mx-auto hidden group-data-[collapsible=icon]:flex"
+            className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
             disabled
             size="icon"
           >
