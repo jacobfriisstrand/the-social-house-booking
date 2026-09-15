@@ -12,8 +12,13 @@ import {
 } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/toast";
 import { deleteRoomImage, reorderRoomImages } from "@/lib/rooms/actions";
+import type { AddonOption } from "@/lib/rooms/data";
 import { messages } from "@/messages/da";
-import { type AddonOption, RoomForm, type RoomFormInitial } from "./room-form";
+import {
+  RoomForm,
+  type RoomFormInitial,
+  type RoomFormProps,
+} from "./room-form";
 import {
   type SpecialClosingDayItem,
   SpecialClosingDays,
@@ -33,6 +38,67 @@ interface RoomSheetProps {
   triggerLabel: string;
   triggerSize?: ComponentProps<typeof Button>["size"];
   triggerVariant?: ComponentProps<typeof Button>["variant"];
+}
+
+interface RoomSheetBodyProps {
+  addons: AddonOption[];
+  close: () => void;
+  images: RoomSheetProps["images"];
+  initial: RoomFormInitial | null;
+  removeImage: (roomImageId: string) => Promise<void>;
+  reorderImages: (
+    roomId: string,
+    orderedRoomImageIds: string[]
+  ) => Promise<boolean>;
+  specialDays: SpecialClosingDayItem[];
+}
+
+// Edit-only form props, present only when a room exists.
+function editOnlyProps(
+  initial: RoomFormInitial | null,
+  images: RoomSheetProps["images"],
+  removeImage: RoomSheetBodyProps["removeImage"],
+  reorderImages: RoomSheetBodyProps["reorderImages"]
+): Pick<RoomFormProps, "onRemoveImage" | "onReorderImages" | "savedImages"> {
+  if (!initial) {
+    return {
+      onRemoveImage: undefined,
+      onReorderImages: undefined,
+      savedImages: undefined,
+    };
+  }
+  return {
+    onRemoveImage: removeImage,
+    onReorderImages: (orderedRoomImageIds: string[]) =>
+      reorderImages(initial.roomId, orderedRoomImageIds),
+    savedImages: images,
+  };
+}
+
+// The sheet's body: the form plus, in edit mode, the special closing days
+// card. Edit-only props pass through only when a room exists.
+function RoomSheetBody({
+  addons,
+  close,
+  images,
+  initial,
+  removeImage,
+  reorderImages,
+  specialDays,
+}: RoomSheetBodyProps) {
+  return (
+    <div className="flex flex-col gap-6 px-4 pb-8">
+      <RoomForm
+        {...editOnlyProps(initial, images, removeImage, reorderImages)}
+        addons={addons}
+        initial={initial}
+        onSaved={close}
+      />
+      {initial ? (
+        <SpecialClosingDays roomId={initial.roomId} specialDays={specialDays} />
+      ) : null}
+    </div>
+  );
 }
 
 // The room form in a right-hand sheet (DESIGN.md: admin edit in a dialog or
@@ -95,27 +161,15 @@ export function RoomSheet({
             {initial ? messages.rooms.editTitle : messages.rooms.createTitle}
           </SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col gap-6 px-4 pb-8">
-          <RoomForm
-            addons={addons}
-            initial={initial}
-            onRemoveImage={initial ? removeImage : undefined}
-            onReorderImages={
-              initial
-                ? (orderedRoomImageIds) =>
-                    reorderImages(initial.roomId, orderedRoomImageIds)
-                : undefined
-            }
-            onSaved={close}
-            savedImages={initial ? images : undefined}
-          />
-          {initial ? (
-            <SpecialClosingDays
-              roomId={initial.roomId}
-              specialDays={specialDays}
-            />
-          ) : null}
-        </div>
+        <RoomSheetBody
+          addons={addons}
+          close={close}
+          images={images}
+          initial={initial}
+          removeImage={removeImage}
+          reorderImages={reorderImages}
+          specialDays={specialDays}
+        />
       </SheetContent>
     </Sheet>
   );

@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// One error shape for both validators (lib/env.ts server-side,
+// lib/env-client.ts browser-side): "path: message" lines under one header.
+// Returns the parsed data so the caller keeps its narrowed type.
+export function assertEnvironment<T>(
+  result: { success: true; data: T } | { success: false; error: z.ZodError }
+): T {
+  if (result.success) {
+    return result.data;
+  }
+  const details = result.error.issues
+    .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+    .join("\n");
+  throw new Error(`Invalid environment:\n${details}`);
+}
+
 // Same variables as .env.example: a variable with a concrete value there is
 // required here; one left empty is optional, and "" (as dotenv and Netlify set
 // it) becomes undefined so consumers can feature-flag on absence. Keys are

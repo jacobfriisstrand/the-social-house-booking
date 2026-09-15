@@ -50,6 +50,9 @@ function useCarousel() {
   return context;
 }
 
+// Generated shadcn source, kept intact like the rest of components/ui (see
+// biome.jsonc).
+// fallow-ignore-next-line complexity
 function Carousel({
   orientation = "horizontal",
   opts,

@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -66,9 +67,25 @@ function revalidateRooms(): void {
   revalidatePath("/admin/rooms");
 }
 
-// Insert or update the room row; returns the room id on success.
-// isNew carries a client-generated roomId (the storage path needs it before
-// the row exists), so the insert includes it explicitly.
+// Insert a room row and return its id, or a failure. Both save paths share
+// it; create passes the client-chosen id in the row (the storage path needs
+// it before the row exists).
+async function insertRoomRow(
+  supabase: SupabaseClient<Database>,
+  row: Database["public"]["Tables"]["rooms"]["Insert"]
+): Promise<{ roomId: string } | ActionFailure> {
+  const { data, error } = await supabase
+    .from("rooms")
+    .insert(row)
+    .select("room_id")
+    .single();
+  if (error || !data) {
+    return FAIL_SAVE;
+  }
+  return { roomId: data.room_id };
+}
+
+// Update the room row when the id exists; otherwise insert a new one.
 async function saveRoomRow(
   supabase: SupabaseClient<Database>,
   values: RoomFormValues,
@@ -79,42 +96,23 @@ async function saveRoomRow(
       .from("rooms")
       .update(roomValues)
       .eq("room_id", values.roomId);
-    if (error) {
-      return FAIL_SAVE;
-    }
-    return { roomId: values.roomId };
+    return error ? FAIL_SAVE : { roomId: values.roomId };
   }
-  const { data, error } = await supabase
-    .from("rooms")
-    .insert(roomValues)
-    .select("room_id")
-    .single();
-  if (error || !data) {
-    return FAIL_SAVE;
-  }
-  return { roomId: data.room_id };
+  return insertRoomRow(supabase, roomValues);
 }
 
 // Create with a client-chosen id (create mode uploads images before the
 // room exists). Keep this separate from saveRoomRow: distinguishing insert
 // from update on roomId presence alone is fragile.
-async function saveCreateRoomRow(
+function saveCreateRoomRow(
   supabase: SupabaseClient<Database>,
   values: RoomFormValues,
   roomValues: Database["public"]["Tables"]["rooms"]["Insert"]
 ): Promise<{ roomId: string } | ActionFailure> {
   if (!values.roomId) {
-    return FAIL_SAVE;
+    return Promise.resolve(FAIL_SAVE);
   }
-  const { data, error } = await supabase
-    .from("rooms")
-    .insert({ ...roomValues, room_id: values.roomId })
-    .select("room_id")
-    .single();
-  if (error || !data) {
-    return FAIL_SAVE;
-  }
-  return { roomId: data.room_id };
+  return insertRoomRow(supabase, { ...roomValues, room_id: values.roomId });
 }
 
 // Replace the room's seven weekly rows (unique per room + day).
@@ -173,6 +171,30 @@ async function replaceRoomAddons(
   return null;
 }
 
+// The first free sort order for this batch, or a failure: the cap rejects
+// when saved photos plus this batch exceed ROOM_IMAGE_MAX_FILES. The client
+// counts both too, but the server is the boundary.
+type ImageSlot = { base: number; status: "ok" } | ActionFailure;
+
+async function firstFreeSortOrder(
+  supabase: SupabaseClient<Database>,
+  roomId: string,
+  incoming: number
+): Promise<ImageSlot> {
+  const { count, error } = await supabase
+    .from("room_images")
+    .select("room_image_id", { count: "exact", head: true })
+    .eq("room_image_room_id", roomId);
+  if (error) {
+    return FAIL_IMAGE;
+  }
+  const base = count ?? 0;
+  if (base + incoming > ROOM_IMAGE_MAX_FILES) {
+    return { error: messages.rooms.errors.imageMaxCount, status: "error" };
+  }
+  return { base, status: "ok" };
+}
+
 // Record pre-uploaded images (client upload strategy): the client sent the
 // bytes to storage, the action only writes the referencing rows with the
 // original file name and size shown in the admin form. The bucket enforces
@@ -187,15 +209,9 @@ async function recordImages(
   if (images.length === 0) {
     return null;
   }
-  const { count, error: countError } = await supabase
-    .from("room_images")
-    .select("room_image_id", { count: "exact", head: true })
-    .eq("room_image_room_id", roomId);
-  if (countError) {
-    return FAIL_IMAGE;
-  }
-  if ((count ?? 0) + images.length > ROOM_IMAGE_MAX_FILES) {
-    return { error: messages.rooms.errors.imageMaxCount, status: "error" };
+  const slot = await firstFreeSortOrder(supabase, roomId, images.length);
+  if (slot.status === "error") {
+    return slot;
   }
 
   const { error } = await supabase.from("room_images").insert(
@@ -203,11 +219,29 @@ async function recordImages(
       room_image_file_name: image.fileName,
       room_image_file_size: image.sizeBytes,
       room_image_room_id: roomId,
-      room_image_sort_order: (count ?? 0) + index,
+      room_image_sort_order: slot.base + index,
       room_image_storage_path: image.path,
     }))
   );
   return error ? FAIL_IMAGE : null;
+}
+
+// The room row, with create mode inserting the client-chosen id (see
+// saveCreateRoomRow).
+function saveRoomRowFor(
+  supabase: SupabaseClient<Database>,
+  isNew: boolean,
+  values: RoomFormValues,
+  roomValues: Database["public"]["Tables"]["rooms"]["Insert"]
+): Promise<{ roomId: string } | ActionFailure> {
+  return isNew
+    ? saveCreateRoomRow(supabase, values, roomValues)
+    : saveRoomRow(supabase, values, roomValues);
+}
+
+// The first validation message, if any.
+function firstIssueMessage(error: z.ZodError): string | undefined {
+  return error.issues[0]?.message;
 }
 
 // Create or update a room with all fields (Bilag 1): basic info, price,
@@ -228,7 +262,7 @@ export async function saveRoom(
 
   const images = roomImageUploadsSchema.safeParse(payload.images);
   if (!images.success) {
-    return { error: images.error.issues[0]?.message, status: "error" };
+    return { error: firstIssueMessage(images.error), status: "error" };
   }
 
   const supabase = await createClient();
@@ -245,33 +279,44 @@ export async function saveRoom(
     room_updated_at: new Date().toISOString(),
   };
 
-  const saved = isNew
-    ? await saveCreateRoomRow(supabase, values, roomValues)
-    : await saveRoomRow(supabase, values, roomValues);
+  const saved = await saveRoomRowFor(supabase, isNew, values, roomValues);
   if (!("roomId" in saved)) {
     return saved;
   }
-  const { roomId } = saved;
 
-  const hoursOutcome = await replaceWeeklyHours(supabase, roomId, values);
-  if (hoursOutcome) {
-    return hoursOutcome;
-  }
-  const addonsOutcome = await replaceRoomAddons(
+  const outcome = await writeRoomChildren(
     supabase,
-    roomId,
-    values.addonIds
+    saved.roomId,
+    values,
+    images.data
   );
-  if (addonsOutcome) {
-    return addonsOutcome;
-  }
-  const imagesOutcome = await recordImages(supabase, roomId, images.data);
-  if (imagesOutcome) {
-    return imagesOutcome;
+  if (outcome) {
+    return outcome;
   }
 
   revalidateRooms();
-  return { roomId, status: "success" };
+  return { roomId: saved.roomId, status: "success" };
+}
+
+// The writes after the room row: weekly hours, add-on selection, image
+// rows. Each is replace-style, so a retry after a mid-sequence failure
+// converges; the first failure short-circuits the save (sequential on
+// purpose — later writes key on the earlier ones).
+async function writeRoomChildren(
+  supabase: SupabaseClient<Database>,
+  roomId: string,
+  values: RoomFormValues,
+  images: RoomImageUpload[]
+): Promise<ActionFailure | null> {
+  const hours = await replaceWeeklyHours(supabase, roomId, values);
+  if (hours) {
+    return hours;
+  }
+  const addons = await replaceRoomAddons(supabase, roomId, values.addonIds);
+  if (addons) {
+    return addons;
+  }
+  return recordImages(supabase, roomId, images);
 }
 
 // Deactivate without losing history: bookings keep referencing the room by
@@ -295,12 +340,12 @@ export async function setRoomActive(
   return { status: "success" };
 }
 
-// Delete the storage object first: an orphaned object is harmless, a
-// dangling path is not.
-export async function deleteRoomImage(
+// Remove the storage object for a saved image, then its row: an orphaned
+// object is harmless, a dangling path is not. Returns the failure, if any.
+async function deleteImageAsset(
+  supabase: SupabaseClient<Database>,
   roomImageId: string
-): Promise<ActionResult> {
-  const supabase = await createClient();
+): Promise<ActionFailure | null> {
   const { data: image, error: fetchError } = await supabase
     .from("room_images")
     .select("room_image_storage_path")
@@ -309,12 +354,20 @@ export async function deleteRoomImage(
   if (fetchError || !image) {
     return FAIL_IMAGE;
   }
-
   const { error: removeError } = await supabase.storage
     .from(STORAGE_BUCKET)
     .remove([image.room_image_storage_path]);
-  if (removeError) {
-    return FAIL_IMAGE;
+  return removeError ? FAIL_IMAGE : null;
+}
+
+// Delete a saved room image: storage bytes first, then the referencing row.
+export async function deleteRoomImage(
+  roomImageId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const assetFailure = await deleteImageAsset(supabase, roomImageId);
+  if (assetFailure) {
+    return assetFailure;
   }
   const { error } = await supabase
     .from("room_images")
@@ -335,56 +388,108 @@ export async function deleteRoomImage(
 // renumber runs in two phases (out of the way, then into place) because the
 // unique constraint on (room, sort_order) rejects a swap's in-between state.
 const SORT_ORDER_OFFSET = 1_000_000;
-
-export async function reorderRoomImages(
-  roomId: string,
-  orderedRoomImageIds: string[]
-): Promise<ActionResult> {
-  const ordered = roomImageOrderSchema.safeParse(orderedRoomImageIds);
-  if (!ordered.success) {
-    return FAIL_IMAGE;
-  }
-  const supabase = await createClient();
+// The room's saved image ids, or null when the read fails.
+async function fetchRoomImageIds(
+  supabase: SupabaseClient<Database>,
+  roomId: string
+): Promise<string[] | null> {
   const { data: images, error } = await supabase
     .from("room_images")
     .select("room_image_id")
     .eq("room_image_room_id", roomId);
   if (error || !images) {
+    return null;
+  }
+  return images.map((image) => image.room_image_id);
+}
+
+// The id list must be a permutation of the saved ids: no missing, unknown,
+// or duplicate entries.
+function isPermutationOfSaved(saved: string[], ids: string[]): boolean {
+  const existing = new Set(saved);
+  return (
+    ids.length === saved.length &&
+    new Set(ids).size === ids.length &&
+    ids.every((id) => existing.has(id))
+  );
+}
+
+// Validate the sent order against the saved rows; a failure short-circuits.
+async function assertReorderable(
+  supabase: SupabaseClient<Database>,
+  roomId: string,
+  orderedRoomImageIds: string[]
+): Promise<ActionFailure | null> {
+  const parsed = roomImageOrderSchema.safeParse(orderedRoomImageIds);
+  if (!parsed.success) {
     return FAIL_IMAGE;
   }
-
-  const existing = new Set(images.map((image) => image.room_image_id));
-  const ids = ordered.data;
-  if (
-    ids.length !== images.length ||
-    new Set(ids).size !== ids.length ||
-    !ids.every((id) => existing.has(id))
-  ) {
+  const saved = await fetchRoomImageIds(supabase, roomId);
+  if (!(saved && isPermutationOfSaved(saved, parsed.data))) {
     return FAIL_IMAGE;
   }
+  return null;
+}
 
-  const writeOrders = (offset: number): Promise<boolean[]> =>
-    Promise.all(
-      ids.map(async (roomImageId, index) => {
-        const { error: updateError } = await supabase
-          .from("room_images")
-          .update({ room_image_sort_order: offset + index })
-          .eq("room_image_id", roomImageId);
-        return updateError === null;
-      })
-    );
+// One phase of the renumber: write every row's sort order in parallel.
+// False when any write failed.
+async function writeSortOrders(
+  supabase: SupabaseClient<Database>,
+  ids: string[],
+  offset: number
+): Promise<boolean> {
+  const results = await Promise.all(
+    ids.map(async (roomImageId, index) => {
+      const { error } = await supabase
+        .from("room_images")
+        .update({ room_image_sort_order: offset + index })
+        .eq("room_image_id", roomImageId);
+      return error === null;
+    })
+  );
+  return results.every((ok) => ok);
+}
 
-  const movedAside = await writeOrders(SORT_ORDER_OFFSET);
-  if (movedAside.includes(false)) {
+export async function reorderRoomImages(
+  roomId: string,
+  orderedRoomImageIds: string[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const invalid = await assertReorderable(
+    supabase,
+    roomId,
+    orderedRoomImageIds
+  );
+  if (invalid) {
+    return invalid;
+  }
+  // Phase 1 moves every row out of the real range, phase 2 writes the final
+  // order — sequential on purpose, since the unique constraint on (room,
+  // sort_order) rejects a swap's in-between state.
+  const movedAside = await writeSortOrders(
+    supabase,
+    orderedRoomImageIds,
+    SORT_ORDER_OFFSET
+  );
+  if (!movedAside) {
     return FAIL_IMAGE;
   }
-  const written = await writeOrders(0);
-  if (written.includes(false)) {
+  const written = await writeSortOrders(supabase, orderedRoomImageIds, 0);
+  if (!written) {
     return FAIL_IMAGE;
   }
 
   revalidateRooms();
   return { status: "success" };
+}
+// A closed day carries no times; an open day needs both.
+function specialDayTimes(values: SpecialClosingDayValues): {
+  closes: string | null;
+  opens: string | null;
+} {
+  return values.isClosed
+    ? { closes: null, opens: null }
+    : { closes: values.closes, opens: values.opens };
 }
 
 // useActionState signature (docs/agents/ui.md): the caller dispatches the
@@ -399,16 +504,13 @@ export async function saveSpecialClosingDay(
   }
 
   const supabase = await createClient();
+  const times = specialDayTimes(parsed.data);
   const { error } = await supabase.from("room_special_closing_days").upsert(
     {
-      room_special_closing_day_closes: parsed.data.isClosed
-        ? null
-        : parsed.data.closes,
+      room_special_closing_day_closes: times.closes,
       room_special_closing_day_date: parsed.data.date,
       room_special_closing_day_is_closed: parsed.data.isClosed,
-      room_special_closing_day_opens: parsed.data.isClosed
-        ? null
-        : parsed.data.opens,
+      room_special_closing_day_opens: times.opens,
       room_special_closing_day_room_id: payload.roomId,
     },
     {

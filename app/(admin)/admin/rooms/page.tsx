@@ -1,5 +1,4 @@
 import { RoomActiveButton } from "@/components/rooms/room-active-button";
-import type { AddonOption } from "@/components/rooms/room-form";
 import { RoomPreviewDialog } from "@/components/rooms/room-preview-dialog";
 import { RoomSheet } from "@/components/rooms/room-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +12,50 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatKroner } from "@/lib/format";
-import { listAddons, listRoomDetails, type RoomDetail } from "@/lib/rooms/data";
+import {
+  type AddonOption,
+  listAddons,
+  listRoomDetails,
+  type RoomDetail,
+} from "@/lib/rooms/data";
 import { createClient } from "@/lib/supabase/server";
 import type { RoomFormValues } from "@/lib/validation/rooms";
 import { messages } from "@/messages/da";
+
+// Stored `time` values come back as "09:00:00" from Postgres; the form's
+// selects work on "HH:mm".
+function timeShort(value: string | null | undefined): string | null {
+  return value ? value.slice(0, 5) : null;
+}
+
+// The stored row for one weekday, or null (a missing row means closed).
+function rowForWeekday(
+  stored: RoomDetail["openingHours"],
+  dayOfWeek: number
+): RoomDetail["openingHours"][number] | undefined {
+  return stored.find((h) => h.room_opening_hour_day_of_week === dayOfWeek);
+}
+
+// One weekday's open/close from its stored row; closed days fall back to
+// placeholder times the form ignores (the day renders as closed).
+function opensForDay(
+  row: RoomDetail["openingHours"][number] | undefined
+): string {
+  return timeShort(row?.room_opening_hour_opens) ?? "08:00";
+}
+
+function closesForDay(
+  row: RoomDetail["openingHours"][number] | undefined
+): string {
+  return timeShort(row?.room_opening_hour_closes) ?? "18:00";
+}
+
+// A missing row means the day is closed.
+function isClosedForDay(
+  row: RoomDetail["openingHours"][number] | undefined
+): boolean {
+  return row?.room_opening_hour_is_closed ?? true;
+}
 
 // Stored weekly rows → the form's full seven-day list; a room without a row
 // for a weekday shows that day as closed (a missing row means closed).
@@ -24,22 +63,14 @@ function openingHoursForForm(
   stored: RoomDetail["openingHours"]
 ): RoomFormValues["openingHours"] {
   return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
-    const row = stored.find(
-      (h) => h.room_opening_hour_day_of_week === dayOfWeek
-    );
+    const row = rowForWeekday(stored, dayOfWeek);
     return {
-      closes: timeShort(row?.room_opening_hour_closes) ?? "18:00",
+      closes: closesForDay(row),
       dayOfWeek,
-      isClosed: row ? row.room_opening_hour_is_closed : true,
-      opens: timeShort(row?.room_opening_hour_opens) ?? "08:00",
+      isClosed: isClosedForDay(row),
+      opens: opensForDay(row),
     };
   });
-}
-
-// Stored `time` values come back as "09:00:00" from Postgres; the form's
-// selects work on "HH:mm".
-function timeShort(value: string | null | undefined): string | null {
-  return value ? value.slice(0, 5) : null;
 }
 
 function sheetPropsOf(room: RoomDetail, addons: AddonOption[]) {
@@ -71,6 +102,54 @@ function sheetPropsOf(room: RoomDetail, addons: AddonOption[]) {
       roomSpecialClosingDayId: day.room_special_closing_day_id,
     })),
   };
+}
+
+// The room's first photo as the row thumbnail: the preview dialog when the
+// room has images, a muted placeholder otherwise.
+function RoomImageCell({ room }: { room: RoomDetail }) {
+  const first = room.images[0]?.url;
+  return (
+    <TableCell className="w-20">
+      <div className="flex justify-center">
+        {first ? (
+          <RoomPreviewDialog
+            alt={messages.rooms.imageAlt.replace("{name}", room.name)}
+            images={room.images.map((image) => image.url)}
+            roomName={room.name}
+          />
+        ) : (
+          <div className="size-10 rounded-lg border bg-muted" />
+        )}
+      </div>
+    </TableCell>
+  );
+}
+
+// Name with the floor/location line underneath.
+function RoomNameCell({ room }: { room: RoomDetail }) {
+  return (
+    <TableCell className="font-medium">
+      {room.name}
+      {room.location ? (
+        <span className="block text-muted-foreground text-xs">
+          {room.location}
+        </span>
+      ) : null}
+    </TableCell>
+  );
+}
+
+// Status badge: Aktiv when bookable, Deaktiveret when not (history kept).
+function RoomStatusCell({ isActive }: { isActive: boolean }) {
+  return (
+    <TableCell>
+      {isActive ? (
+        <Badge variant="success">{messages.rooms.activeLabel}</Badge>
+      ) : (
+        <Badge variant="destructive">{messages.rooms.inactiveLabel}</Badge>
+      )}
+    </TableCell>
+  );
 }
 
 // Lokaler (admin): every room with status and price. Edit and create open
@@ -125,30 +204,8 @@ export default async function AdminRoomsPage() {
             <TableBody>
               {rooms.map((room) => (
                 <TableRow key={room.roomId}>
-                  <TableCell className="w-20">
-                    <div className="flex justify-center">
-                      {room.images[0]?.url ? (
-                        <RoomPreviewDialog
-                          alt={messages.rooms.imageAlt.replace(
-                            "{name}",
-                            room.name
-                          )}
-                          images={room.images.map((image) => image.url)}
-                          roomName={room.name}
-                        />
-                      ) : (
-                        <div className="size-10 rounded-lg border bg-muted" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {room.name}
-                    {room.location ? (
-                      <span className="block text-muted-foreground text-xs">
-                        {room.location}
-                      </span>
-                    ) : null}
-                  </TableCell>
+                  <RoomImageCell room={room} />
+                  <RoomNameCell room={room} />
                   <TableCell className="tabular-nums">
                     {room.capacity} {messages.rooms.persons}
                   </TableCell>
@@ -156,17 +213,7 @@ export default async function AdminRoomsPage() {
                     {formatKroner(room.hourlyPriceOre)}
                     {messages.rooms.perHourSuffix}
                   </TableCell>
-                  <TableCell>
-                    {room.isActive ? (
-                      <Badge variant="success">
-                        {messages.rooms.activeLabel}
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
-                        {messages.rooms.inactiveLabel}
-                      </Badge>
-                    )}
-                  </TableCell>
+                  <RoomStatusCell isActive={room.isActive} />
                   <TableCell>
                     <div className="flex items-center justify-end gap-2 *:basis-1/2">
                       <RoomSheet

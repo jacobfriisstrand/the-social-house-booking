@@ -8,19 +8,12 @@
 // individual `process.env.NEXT_PUBLIC_*` member references are statically
 // replaced by Turbopack/Webpack. So the input must be built from explicit
 // member reads, never `process.env` wholesale.
-import { publicEnvSchema } from "./env-schema.ts";
+import { assertEnvironment, publicEnvSchema } from "./env-schema.ts";
 
-const parsed = publicEnvSchema.safeParse({
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-});
-
-if (!parsed.success) {
-  const details = parsed.error.issues
-    .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-    .join("\n");
-  throw new Error(`Invalid environment:\n${details}`);
-}
-
-export const publicEnv = parsed.data;
+export const publicEnv = assertEnvironment(
+  publicEnvSchema.safeParse({
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  })
+);

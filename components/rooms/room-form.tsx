@@ -21,7 +21,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { type Control, useController, useForm } from "react-hook-form";
+import {
+  type Control,
+  type UseFormReturn,
+  useController,
+  useForm,
+} from "react-hook-form";
 import {
   Attachment,
   AttachmentAction,
@@ -52,6 +57,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { formatKroner } from "@/lib/format";
 import { type RoomFormState, saveRoom } from "@/lib/rooms/actions";
+import type { AddonOption } from "@/lib/rooms/data";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -73,13 +79,6 @@ const IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
   "image/webp",
 ]);
 
-export interface AddonOption {
-  addonId: string;
-  name: string;
-  priceOre: number;
-  pricingModel: "fixed" | "per_participant";
-}
-
 export interface RoomFormInitial {
   addonIds: string[];
   capacity: number;
@@ -93,7 +92,7 @@ export interface RoomFormInitial {
   roomId: string;
 }
 
-interface RoomFormProps {
+export interface RoomFormProps {
   addons: AddonOption[];
   // Pre-filled room in edit mode; absent in create mode.
   initial: RoomFormInitial | null;
@@ -121,6 +120,37 @@ function defaultOpeningHours(): RoomFormValues["openingHours"] {
     isClosed: dayOfWeek === 6,
     opens: "08:00",
   }));
+}
+
+// The form's starting values: the prefilled room in edit mode, defaults in
+// create mode.
+function initialFormValues(initial: RoomFormInitial | null) {
+  if (!initial) {
+    return {
+      addonIds: [],
+      capacity: 10,
+      description: "",
+      hourlyPriceKroner: 0,
+      isActive: true,
+      location: "",
+      name: "",
+      openingHours: defaultOpeningHours(),
+      practicalNotes: "",
+      roomId: undefined,
+    };
+  }
+  return {
+    addonIds: initial.addonIds,
+    capacity: initial.capacity,
+    description: initial.description,
+    hourlyPriceKroner: initial.hourlyPriceOre / 100,
+    isActive: initial.isActive,
+    location: initial.location,
+    name: initial.name,
+    openingHours: initial.openingHours,
+    practicalNotes: initial.practicalNotes,
+    roomId: initial.roomId,
+  };
 }
 
 // "House Service (500,00 kr)" / "Lunch (225,00 kr / person)".
@@ -257,6 +287,36 @@ interface SortableRoomImageProps {
   roomName?: string;
 }
 
+interface ItemImageProps {
+  item: RoomImageItem;
+  roomName?: string;
+}
+
+// The 96px preview: picked files carry a local object URL (the optimizer
+// cannot fetch blob:, so skip it); saved photos come from storage.
+function ItemImage({ item, roomName }: ItemImageProps) {
+  if (item.kind === "picked") {
+    return (
+      <Image
+        alt={item.fileName}
+        className="object-cover"
+        height={96}
+        src={item.previewUrl}
+        unoptimized
+        width={96}
+      />
+    );
+  }
+  return (
+    <Image
+      alt={messages.rooms.imageAlt.replace("{name}", roomName ?? "")}
+      height={96}
+      src={item.url}
+      width={96}
+    />
+  );
+}
+
 // One draggable image row: a grip handle (the only drag activator, so the
 // delete button and the rest of the row stay untouched) plus a delete
 // action, full-width in the vertical list. Both saved photos and picked
@@ -302,24 +362,7 @@ function SortableRoomImage({
       size="sm"
     >
       <AttachmentMedia variant="image">
-        {item.kind === "picked" ? (
-          // Local object URL — the optimizer cannot fetch blob:, so skip it.
-          <Image
-            alt={item.fileName}
-            className="object-cover"
-            height={96}
-            src={item.previewUrl}
-            unoptimized
-            width={96}
-          />
-        ) : (
-          <Image
-            alt={messages.rooms.imageAlt.replace("{name}", roomName ?? "")}
-            height={96}
-            src={item.url}
-            width={96}
-          />
-        )}
+        <ItemImage item={item} roomName={roomName} />
       </AttachmentMedia>
       <AttachmentContent>
         <AttachmentTitle>{item.fileName}</AttachmentTitle>
@@ -349,12 +392,17 @@ function SortableRoomImage({
 
 interface ActiveFieldProps {
   control: Control<RoomFormValues>;
+  // Only rendered in edit mode (create has no active toggle yet).
+  initial: RoomFormInitial | null;
 }
 
 // Active toggle (edit mode): switch on = the room is bookable; off =
 // deactivated rooms keep their booking and invoicing history (#3).
-function ActiveField({ control }: ActiveFieldProps) {
+function ActiveField({ control, initial }: ActiveFieldProps) {
   const { field } = useController({ control, name: "isActive" });
+  if (!initial) {
+    return null;
+  }
 
   return (
     <Field orientation="horizontal">
@@ -501,40 +549,146 @@ function ImagesCard({
   );
 }
 
-// The admin room form (issue #3): all room fields — basic info, price and
-// capacity, weekly opening hours, add-on selection, and image picking.
-// Files upload straight to storage on submit; the room action records them.
-export function RoomForm({
-  addons,
-  initial,
-  onSaved,
-  savedImages,
-  onReorderImages,
-  onRemoveImage,
-}: RoomFormProps) {
-  const [state, formAction, pending] = useActionState(saveRoom, {
-    status: "idle",
-  } satisfies RoomFormState);
-  const form = useForm<RoomFormValues>({
-    defaultValues: {
-      addonIds: initial?.addonIds ?? [],
-      capacity: initial?.capacity ?? 10,
-      description: initial?.description ?? "",
-      hourlyPriceKroner: initial ? initial.hourlyPriceOre / 100 : 0,
-      isActive: initial?.isActive ?? true,
-      location: initial?.location ?? "",
-      name: initial?.name ?? "",
-      openingHours: initial?.openingHours ?? defaultOpeningHours(),
-      practicalNotes: initial?.practicalNotes ?? "",
-      roomId: initial?.roomId,
-    },
-    resolver: zodResolver(roomFormSchema),
+// Strip helpers — small, pure, each under the complexity bar.
+
+// "yyyy-mm-dd" etc. not needed here; keep the helpers focused.
+
+// Free slots for new picks: the cap counts saved photos too, because the
+// picked files are saved on top of them.
+function freeSlots(savedCount: number, pickedCount: number): number {
+  return Math.max(0, ROOM_IMAGE_MAX_FILES - savedCount - pickedCount);
+}
+
+// The inline field error a rejected batch earns, or null when all files
+// are accepted. Oversized or non-image files are rejected with an inline
+// field error — a toast would hide behind the sheet, the Billeder field
+// does not.
+function pickErrorFor(files: File[], slots: number): string | null {
+  if (files.some((file) => file.size > ROOM_IMAGE_MAX_BYTES)) {
+    return messages.rooms.errors.imageMaxSize;
+  }
+  if (files.some((file) => !IMAGE_MIME_TYPES.has(file.type))) {
+    return messages.rooms.errors.imageMimeType;
+  }
+  const valid = files.filter(
+    (file) =>
+      file.size <= ROOM_IMAGE_MAX_BYTES && IMAGE_MIME_TYPES.has(file.type)
+  );
+  if (valid.length > slots) {
+    // Say how many were dropped: the files that fit are still added.
+    return messages.rooms.errors.imageMaxCountAdded.replace(
+      "{count}",
+      String(valid.length - slots)
+    );
+  }
+  return null;
+}
+
+// The saved strip (id, name, size, order) as sortable items.
+function savedItemsOf(
+  savedImages: NonNullable<RoomFormProps["savedImages"]>
+): RoomImageItem[] {
+  return savedImages.map(
+    (image): RoomImageItem => ({
+      fileName: image.fileName,
+      fileSizeBytes: image.fileSizeBytes,
+      id: image.roomImageId,
+      kind: "saved",
+      url: image.url,
+    })
+  );
+}
+
+// The picked strip as sortable items.
+function pickedItemsOf(pickedFiles: PickedFile[]): RoomImageItem[] {
+  return pickedFiles.map(
+    (picked): RoomImageItem => ({
+      fileName: picked.file.name,
+      fileSizeBytes: picked.file.size,
+      id: picked.id,
+      kind: "picked",
+      previewUrl: picked.previewUrl,
+    })
+  );
+}
+
+// Strip order: the last drag result (orderIds) wins; ids unknown to it
+// (new picks, refreshed rows) fall back to their natural position.
+function itemsInOrder(
+  items: RoomImageItem[],
+  orderIds: string[]
+): RoomImageItem[] {
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const orderedSet = new Set(orderIds);
+  return [
+    ...orderIds.flatMap((id) => {
+      const item = itemById.get(id);
+      return item ? [item] : [];
+    }),
+    ...items.filter((item) => !orderedSet.has(item.id)),
+  ];
+}
+
+// Picked files upload in their display order, so new images land on the
+// server where the list shows them (after the saved photos).
+function pickedInDisplayOrder(
+  ordered: RoomImageItem[],
+  pickedFiles: PickedFile[]
+): PickedFile[] {
+  const pickedById = new Map(pickedFiles.map((file) => [file.id, file]));
+  return ordered.flatMap((item) => {
+    const picked = item.kind === "picked" ? pickedById.get(item.id) : null;
+    return picked ? [picked] : [];
   });
+}
+
+// Create mode mints the id the storage paths need before the row exists.
+function roomIdOf(initial: RoomFormInitial | null): string {
+  return initial?.roomId ?? crypto.randomUUID();
+}
+
+// The error toast for a failed save, falling back to the generic copy.
+function toastSaveError(error: string | undefined): void {
+  toast.add({ title: error ?? messages.rooms.saveFailed, type: "error" });
+}
+
+function applyFieldErrors(
+  state: Extract<RoomFormState, { status: "error" }>,
+  form: UseFormReturn<RoomFormValues>
+): void {
+  for (const [key, errs] of Object.entries(state.fieldErrors ?? {})) {
+    if ((errs as string[]).length > 0) {
+      form.setError(key as keyof RoomFormValues, { message: errs[0] });
+    }
+  }
+}
+
+// Drag end: remember the new strip order locally, then persist the saved
+// subset; a rejected reorder snaps the strip back to the previous order.
+function persistSavedOrder(
+  reordered: RoomImageItem[],
+  onReorderImages: RoomFormProps["onReorderImages"]
+): Promise<boolean> {
+  if (!onReorderImages) {
+    return Promise.resolve(true);
+  }
+  const savedIds = reordered.flatMap((item) =>
+    item.kind === "saved" ? [item.id] : []
+  );
+  if (savedIds.length === 0) {
+    return Promise.resolve(true);
+  }
+  return onReorderImages(savedIds);
+}
+
+interface UseImagePicksOptions {
+  savedImages?: RoomFormProps["savedImages"];
+}
+
+// Picked (not yet saved) image files: adding within the cap, removing,
+// and the picker trigger. Saved photos count toward the cap too.
+function useImagePicks({ savedImages }: UseImagePicksOptions) {
   const [pickedFiles, setPickedFiles] = useState<PickedFile[]>([]);
-  const [uploading, setUploading] = useState(false);
-  // Strip order after the latest drag (item ids); null until the first
-  // drag, so the default saved-then-picked order applies.
-  const [imageOrder, setImageOrder] = useState<string[] | null>(null);
   // Inline validation error for the images field (size, type, count); a
   // later pick that passes clears it.
   const [imageError, setImageError] = useState<string | null>(null);
@@ -542,9 +696,7 @@ export function RoomForm({
   // dependency (object-URL bookkeeping runs there, not in state updaters).
   const pickedRef = useRef<PickedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Storage paths from the running submit, so a failed save can be rolled
-  // back (uploaded bytes would otherwise orphan).
-  const uploadedPathsRef = useRef<string[]>([]);
+
   useEffect(() => {
     pickedRef.current = pickedFiles;
   }, [pickedFiles]);
@@ -557,144 +709,23 @@ export function RoomForm({
     []
   );
 
-  // Roll back uploaded bytes when content entry fails at the action.
-  const rollbackUploaded = useCallback((): void => {
-    const paths = uploadedPathsRef.current;
-    if (paths.length === 0) {
-      return;
-    }
-    uploadedPathsRef.current = [];
-    removeStoragePaths(paths);
-  }, []);
-
-  useEffect(() => {
-    if (state.status === "success") {
-      toast.add({ title: messages.rooms.savedToast, type: "success" });
-      onSaved?.();
-    }
-    if (state.status === "error") {
-      rollbackUploaded();
-      toast.add({
-        title: state.error ?? messages.rooms.saveFailed,
-        type: "error",
-      });
-      for (const [key, errs] of Object.entries(state.fieldErrors ?? {})) {
-        if ((errs as string[]).length > 0) {
-          form.setError(key as keyof RoomFormValues, { message: errs[0] });
-        }
-      }
-    }
-  }, [state, form, onSaved, rollbackUploaded]);
-
-  // Strip contents: saved photos first, then picked files. The last drag
-  // result (imageOrder) overrides that default; ids unknown to it (new
-  // picks, refreshed rows) fall back to their natural position.
-  const { orderedItems, pickedInOrder } = useMemo(() => {
-    const imageItems: RoomImageItem[] = [
-      ...(savedImages ?? []).map(
-        (image): RoomImageItem => ({
-          fileName: image.fileName,
-          fileSizeBytes: image.fileSizeBytes,
-          id: image.roomImageId,
-          kind: "saved",
-          url: image.url,
-        })
-      ),
-      ...pickedFiles.map(
-        (picked): RoomImageItem => ({
-          fileName: picked.file.name,
-          fileSizeBytes: picked.file.size,
-          id: picked.id,
-          kind: "picked",
-          previewUrl: picked.previewUrl,
-        })
-      ),
-    ];
-    const itemById = new Map(imageItems.map((item) => [item.id, item]));
-    const orderedIds = imageOrder ?? imageItems.map((item) => item.id);
-    const orderedSet = new Set(orderedIds);
-    const ordered = [
-      ...orderedIds.flatMap((id) => {
-        const item = itemById.get(id);
-        return item ? [item] : [];
-      }),
-      ...imageItems.filter((item) => !orderedSet.has(item.id)),
-    ];
-    // Picked files upload in their display order, so new images land on
-    // the server where the list shows them (after the saved photos).
-    const pickedById = new Map(pickedFiles.map((file) => [file.id, file]));
-    const pickedFilesInOrder = ordered.flatMap((item) => {
-      const picked = item.kind === "picked" ? pickedById.get(item.id) : null;
-      return picked ? [picked] : [];
-    });
-    return { orderedItems: ordered, pickedInOrder: pickedFilesInOrder };
-  }, [imageOrder, pickedFiles, savedImages]);
-
-  const handleSubmit = form.handleSubmit(async (values) => {
-    const roomId = initial?.roomId ?? crypto.randomUUID();
-    setUploading(true);
-    const uploaded = await uploadPickedImages(roomId, pickedInOrder);
-    if (!uploaded.ok) {
-      removeStoragePaths(uploaded.paths);
-      toast.add({
-        title: messages.rooms.imageActionFailed,
-        type: "error",
-      });
-      setUploading(false);
-      return;
-    }
-    uploadedPathsRef.current = uploaded.paths;
-    setUploading(false);
-    startTransition(() => {
-      formAction({
-        images: uploaded.images,
-        isNew: !initial,
-        // Create mode: the client-chosen id is the storage path room too;
-        // the action inserts the row with it (see saveCreateRoomRow).
-        values: { ...values, roomId },
-      });
-    });
-  });
-
   // Add picked files (file picker or drop) within the room's image cap —
-  // saved photos count too, because the picked files are saved on top of
-  // them. Oversized or non-image files are rejected with an inline field
-  // error — a toast would hide behind the sheet, the Billeder field does
-  // not. Object URLs are revoked on remove and unmount.
+  // saved photos count too. The files that fit are still added; the error
+  // message says how many were dropped.
   const addPickedFiles = useCallback(
     (files: File[]): void => {
       if (files.length === 0) {
         return;
       }
-      const oversized = files.some((file) => file.size > ROOM_IMAGE_MAX_BYTES);
-      const unsupported = files.some(
-        (file) => !IMAGE_MIME_TYPES.has(file.type)
+      const slots = freeSlots(
+        savedImages?.length ?? 0,
+        pickedRef.current.length
       );
+      setImageError(pickErrorFor(files, slots));
       const valid = files.filter(
         (file) =>
           file.size <= ROOM_IMAGE_MAX_BYTES && IMAGE_MIME_TYPES.has(file.type)
       );
-      const slots = Math.max(
-        0,
-        ROOM_IMAGE_MAX_FILES -
-          (savedImages?.length ?? 0) -
-          pickedRef.current.length
-      );
-      if (oversized) {
-        setImageError(messages.rooms.errors.imageMaxSize);
-      } else if (unsupported) {
-        setImageError(messages.rooms.errors.imageMimeType);
-      } else if (valid.length > slots) {
-        // Say how many were dropped: the files that fit are still added.
-        setImageError(
-          messages.rooms.errors.imageMaxCountAdded.replace(
-            "{count}",
-            String(valid.length - slots)
-          )
-        );
-      } else {
-        setImageError(null);
-      }
       const created = valid.slice(0, slots).map((file) => ({
         file,
         id: crypto.randomUUID(),
@@ -725,8 +756,47 @@ export function RoomForm({
     fileInputRef.current?.click();
   }, []);
 
-  // Drag end: remember the new strip order locally, then persist the saved
-  // subset; a rejected reorder snaps the strip back to the previous order.
+  return {
+    addPickedFiles,
+    fileInputRef,
+    handleImagesPicked,
+    imageError,
+    openImagePicker,
+    pickedFiles,
+    removePicked,
+  };
+}
+
+interface UseImageOrderOptions {
+  onReorderImages?: RoomFormProps["onReorderImages"];
+  pickedFiles: PickedFile[];
+  savedImages?: RoomFormProps["savedImages"];
+}
+
+// The strip's display order: saved photos first, then picked files, with
+// the last drag result winning. A rejected reorder snaps back.
+function useImageOrder({
+  onReorderImages,
+  pickedFiles,
+  savedImages,
+}: UseImageOrderOptions) {
+  // Strip order after the latest drag (item ids); null until the first
+  // drag, so the default saved-then-picked order applies.
+  const [imageOrder, setImageOrder] = useState<string[] | null>(null);
+
+  const { orderedItems, pickedInOrder } = useMemo(() => {
+    const items = [
+      ...savedItemsOf(savedImages ?? []),
+      ...pickedItemsOf(pickedFiles),
+    ];
+    const orderIds = imageOrder ?? items.map((item) => item.id);
+    const ordered = itemsInOrder(items, orderIds);
+    return {
+      orderedItems: ordered,
+      pickedInOrder: pickedInDisplayOrder(ordered, pickedFiles),
+    };
+  }, [imageOrder, pickedFiles, savedImages]);
+
   const handleImageDragEnd = useCallback(
     async (event: DragEndEvent): Promise<void> => {
       const reordered = move(orderedItems, event);
@@ -736,19 +806,167 @@ export function RoomForm({
       }
       const previousOrder = imageOrder;
       setImageOrder(ids);
-      const savedIds = reordered.flatMap((item) =>
-        item.kind === "saved" ? [item.id] : []
-      );
-      if (!onReorderImages || savedIds.length === 0) {
-        return;
-      }
-      const persisted = await onReorderImages(savedIds);
+      const persisted = await persistSavedOrder(reordered, onReorderImages);
       if (!persisted) {
         setImageOrder(previousOrder);
       }
     },
     [orderedItems, imageOrder, onReorderImages]
   );
+
+  return { handleImageDragEnd, orderedItems, pickedInOrder };
+}
+
+// The upload flow: storage upload with rollback of the uploaded bytes when
+// the save fails at the action.
+function useImageUpload({ pickedInOrder }: { pickedInOrder: PickedFile[] }) {
+  const [uploading, setUploading] = useState(false);
+  // Storage paths from the running submit, so a failed save can be rolled
+  // back (uploaded bytes would otherwise orphan).
+  const uploadedPathsRef = useRef<string[]>([]);
+
+  // Roll back uploaded bytes when the save fails at the action.
+  const rollbackUploaded = useCallback((): void => {
+    const paths = uploadedPathsRef.current;
+    if (paths.length === 0) {
+      return;
+    }
+    uploadedPathsRef.current = [];
+    removeStoragePaths(paths);
+  }, []);
+
+  // Upload the picked files to storage; null after a failed upload (the
+  // bytes uploaded so far are rolled back and the toast is shown).
+  const uploadPicked = useCallback(
+    async (roomId: string): Promise<RoomImageUpload[] | null> => {
+      setUploading(true);
+      const uploaded = await uploadPickedImages(roomId, pickedInOrder);
+      setUploading(false);
+      if (!uploaded.ok) {
+        removeStoragePaths(uploaded.paths);
+        toast.add({ title: messages.rooms.imageActionFailed, type: "error" });
+        return null;
+      }
+      uploadedPathsRef.current = uploaded.paths;
+      return uploaded.images;
+    },
+    [pickedInOrder]
+  );
+
+  return { rollbackUploaded, uploading, uploadPicked };
+}
+
+interface UseRoomSaveOptions {
+  form: UseFormReturn<RoomFormValues>;
+  onSaved?: () => void;
+  rollbackUploaded: () => void;
+}
+
+// The save action and its reactions: success toasts and closes the sheet,
+// a failure rolls the uploaded bytes back, toasts, and pushes the server's
+// field errors onto the form.
+function useRoomSave({ form, onSaved, rollbackUploaded }: UseRoomSaveOptions) {
+  const [state, formAction, pending] = useActionState(saveRoom, {
+    status: "idle",
+  } satisfies RoomFormState);
+
+  useEffect(() => {
+    if (state.status === "success") {
+      toast.add({ title: messages.rooms.savedToast, type: "success" });
+      onSaved?.();
+    }
+  }, [state, onSaved]);
+
+  useEffect(() => {
+    if (state.status === "error") {
+      rollbackUploaded();
+      toastSaveError(state.error);
+      applyFieldErrors(state, form);
+    }
+  }, [state, form, rollbackUploaded]);
+
+  // Dispatch the save action in a transition (useActionState requirement).
+  const submitSave = useCallback(
+    (payload: {
+      images: RoomImageUpload[];
+      isNew: boolean;
+      values: RoomFormValues;
+    }): void => {
+      startTransition(() => {
+        formAction(payload);
+      });
+    },
+    [formAction]
+  );
+
+  return { pending, submitSave };
+}
+
+interface SaveButtonProps {
+  pending: boolean;
+  uploading: boolean;
+}
+
+// The submit button: pending while the action runs or the files upload.
+function SaveButton({ pending, uploading }: SaveButtonProps) {
+  const saving = pending || uploading;
+  return (
+    <Button pending={saving} type="submit">
+      {saving ? messages.rooms.saving : messages.rooms.save}
+    </Button>
+  );
+}
+
+// One field's inline error from react-hook-form, or nothing.
+function FieldMessage({ error }: { error?: { message?: string } }) {
+  if (!error?.message) {
+    return null;
+  }
+  return <FieldError errors={[error]} />;
+}
+
+// The admin room form (issue #3): all room fields — basic info, price and
+// capacity, weekly opening hours, add-on selection, and image picking.
+// Files upload straight to storage on submit; the room action records them.
+export function RoomForm({
+  addons,
+  initial,
+  onSaved,
+  savedImages,
+  onReorderImages,
+  onRemoveImage,
+}: RoomFormProps) {
+  const form = useForm<RoomFormValues>({
+    defaultValues: initialFormValues(initial),
+    resolver: zodResolver(roomFormSchema),
+  });
+  const picks = useImagePicks({ savedImages });
+  const order = useImageOrder({
+    onReorderImages,
+    pickedFiles: picks.pickedFiles,
+    savedImages,
+  });
+  const upload = useImageUpload({ pickedInOrder: order.pickedInOrder });
+  const save = useRoomSave({
+    form,
+    onSaved,
+    rollbackUploaded: upload.rollbackUploaded,
+  });
+
+  const handleSubmit = form.handleSubmit(async (values) => {
+    const roomId = roomIdOf(initial);
+    const images = await upload.uploadPicked(roomId);
+    if (images === null) {
+      return;
+    }
+    save.submitSave({
+      images,
+      isNew: !initial,
+      // Create mode: the client-chosen id is the storage path room too;
+      // the action inserts the row with it (see saveCreateRoomRow).
+      values: { ...values, roomId },
+    });
+  });
 
   return (
     <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
@@ -762,9 +980,7 @@ export function RoomForm({
               {messages.rooms.fields.name}
             </FieldLabel>
             <Input id="room-name" {...form.register("name")} />
-            {form.formState.errors.name ? (
-              <FieldError errors={[form.formState.errors.name]} />
-            ) : null}
+            <FieldMessage error={form.formState.errors.name} />
           </Field>
           <Field>
             <FieldLabel htmlFor="room-description">
@@ -780,13 +996,9 @@ export function RoomForm({
             <FieldLabel htmlFor="room-location">
               {messages.rooms.fields.location}
             </FieldLabel>
-            <Input
-              id="room-location"
-              placeholder="1. sal"
-              {...form.register("location")}
-            />
+            <Input id="room-location" {...form.register("location")} />
           </Field>
-          {initial ? <ActiveField control={form.control} /> : null}
+          <ActiveField control={form.control} initial={initial} />
         </CardContent>
       </Card>
 
@@ -807,9 +1019,7 @@ export function RoomForm({
               type="number"
               {...form.register("hourlyPriceKroner", { valueAsNumber: true })}
             />
-            {form.formState.errors.hourlyPriceKroner ? (
-              <FieldError errors={[form.formState.errors.hourlyPriceKroner]} />
-            ) : null}
+            <FieldMessage error={form.formState.errors.hourlyPriceKroner} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.capacity)}>
             <FieldLabel htmlFor="room-capacity">
@@ -823,9 +1033,7 @@ export function RoomForm({
               type="number"
               {...form.register("capacity", { valueAsNumber: true })}
             />
-            {form.formState.errors.capacity ? (
-              <FieldError errors={[form.formState.errors.capacity]} />
-            ) : null}
+            <FieldMessage error={form.formState.errors.capacity} />
           </Field>
           <Field>
             <FieldLabel htmlFor="room-practical-notes">
@@ -861,22 +1069,20 @@ export function RoomForm({
       </Card>
 
       <ImagesCard
-        fileInputRef={fileInputRef}
-        imageError={imageError}
-        onImageDragEnd={handleImageDragEnd}
-        onImagesDropped={addPickedFiles}
-        onImagesPicked={handleImagesPicked}
-        onOpenPicker={openImagePicker}
-        onRemovePicked={removePicked}
+        fileInputRef={picks.fileInputRef}
+        imageError={picks.imageError}
+        onImageDragEnd={order.handleImageDragEnd}
+        onImagesDropped={picks.addPickedFiles}
+        onImagesPicked={picks.handleImagesPicked}
+        onOpenPicker={picks.openImagePicker}
+        onRemovePicked={picks.removePicked}
         onRemoveSaved={onRemoveImage}
-        orderedItems={orderedItems}
+        orderedItems={order.orderedItems}
         roomName={initial?.name}
       />
 
       <div className="flex justify-end">
-        <Button pending={pending || uploading} type="submit">
-          {pending || uploading ? messages.rooms.saving : messages.rooms.save}
-        </Button>
+        <SaveButton pending={save.pending} uploading={upload.uploading} />
       </div>
     </form>
   );
