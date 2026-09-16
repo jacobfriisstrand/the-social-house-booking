@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useSidebar } from "@/components/ui/sidebar";
 import { dateToIso } from "@/lib/calendar-date";
 import {
   GRID_END_MINUTES,
@@ -161,9 +162,21 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
 
 export function SearchDialog() {
   const [open, setOpen] = useState(false);
+  const { setOpenMobile } = useSidebar();
+  // On phone the trigger sits in the off-canvas sidebar sheet: close it
+  // as the dialog opens, or the dialog lands on top of the menu.
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (next) {
+        setOpenMobile(false);
+      }
+      setOpen(next);
+    },
+    [setOpenMobile]
+  );
   const close = useCallback(() => setOpen(false), []);
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogTrigger
         render={
           <Button
@@ -187,7 +200,7 @@ export function SearchDialog() {
       >
         <CalendarPlusIcon />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:overflow-y-auto max-md:rounded-none sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>
