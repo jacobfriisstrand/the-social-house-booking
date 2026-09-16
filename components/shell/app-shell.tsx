@@ -27,7 +27,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
-import type { RoomOption } from "@/lib/rooms/public-data";
 import type { WifiSettings } from "@/lib/settings/data";
 import {
   isShellLinkActive,
@@ -59,13 +58,7 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   );
 }
 
-function ShellSidebar({
-  isAdmin,
-  rooms,
-}: {
-  isAdmin: boolean;
-  rooms: RoomOption[];
-}) {
+function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -86,7 +79,7 @@ function ShellSidebar({
       </SidebarHeader>
       <SidebarGroup>
         <SidebarGroupContent>
-          <SearchDialog rooms={rooms} />
+          <SearchDialog />
         </SidebarGroupContent>
       </SidebarGroup>
       <SidebarContent>
@@ -156,18 +149,16 @@ export function AppShell({
   children,
   isAdmin,
   defaultOpen,
-  rooms,
   wifi,
 }: {
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
-  rooms: RoomOption[];
   wifi: WifiSettings;
 }) {
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <ShellSidebar isAdmin={isAdmin} rooms={rooms} />
+      <ShellSidebar isAdmin={isAdmin} />
       <SidebarInset>
         <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:px-4 md:py-3">
           <SidebarTrigger

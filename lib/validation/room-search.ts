@@ -8,7 +8,6 @@ const wallClock = z.string().regex(/^\d{2}:\d{2}$/);
 export const roomSearchSchema = z.object({
   dato: z.iso.date(),
   fra: wallClock,
-  lokale: z.guid().optional(),
   personer: z.coerce.number().int().min(1),
   til: wallClock,
 });

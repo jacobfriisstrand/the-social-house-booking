@@ -208,7 +208,7 @@ Day view only. Week and month views are out of v1.0 (ADR-0022) even though the s
 
 ### Book lokale
 
-1. "Book lokale" opens a dialog with room (default "Alle lokaler"), date, start time, end time, participants, and a primary "Søg".
+1. "Book lokale" opens a dialog with participants, date, start time, end time, and a primary "Søg". No room field: the search returns every room that is free and holds the party (decided 2026-09-16 in #4).
 2. Results are a page at `/rooms?dato=…&fra=…&til=…&personer=…` titled "Ledige lokaler" with a 3-column card grid (1 column on phone, 2 on tablet). Empty state: "Ingen ledige lokaler i det valgte tidsrum."
 3. A room card: photo carousel with two round ghost arrows bottom right of the photo, then name (card title), capacity and size chips, then a two-column price row: "Normalpris" struck in muted-foreground left, "Din pris" in 18px foreground right. When the company has no discount the struck price is omitted and "Din pris" sits alone.
 4. The room detail page is two columns on desktop (info 40%, photos 60%), one column on phone with photos first. Left: bold title, chips row (size, capacity, price per hour), a border, description, a border, "Tilkøb" list where each add-on has its price as a chip ("+ 35 kr", "Gratis", "+ 200 kr / person"). Right: photos stacked, `rounded-lg`. A sticky bottom bar spans the content column: room name left, "Normalpris" struck and "Din pris" centre-right, primary "Book nu" right. On phone the bar is a fixed footer.

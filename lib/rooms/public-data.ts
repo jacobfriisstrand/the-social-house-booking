@@ -74,25 +74,3 @@ export async function findPublicRoom(
   const rooms = await listPublicRooms(supabase);
   return rooms.find((room) => room.roomId === roomId) ?? null;
 }
-
-export interface RoomOption {
-  capacity: number;
-  name: string;
-  roomId: string;
-}
-
-// The active rooms by name, for the search dialog's room select.
-export async function listRoomOptions(
-  supabase: SupabaseClient<Database>
-): Promise<RoomOption[]> {
-  const { data } = await supabase
-    .from("rooms")
-    .select("room_id, room_name, room_capacity")
-    .eq("room_is_active", true)
-    .order("room_name");
-  return (data ?? []).map((room) => ({
-    capacity: room.room_capacity,
-    name: room.room_name,
-    roomId: room.room_id,
-  }));
-}

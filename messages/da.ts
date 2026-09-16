@@ -94,7 +94,6 @@ export const messages = {
       startAt: "Start",
     },
     search: {
-      allRooms: "Alle lokaler",
       date: "Dato",
       description: "Find de lokaler, der er ledige og har plads nok.",
       from: "Fra",

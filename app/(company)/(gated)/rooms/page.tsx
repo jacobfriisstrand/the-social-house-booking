@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const matchesSearch = (room: PublicRoom, search: RoomSearch): boolean =>
-  (!search.lokale || room.roomId === search.lokale) &&
   room.capacity >= search.personer;
 
 // The rooms that are free for the searched period and hold the
