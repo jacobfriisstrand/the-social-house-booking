@@ -12,7 +12,7 @@ Read `docs/vendor/supabase/auth-custom-access-token-hook.md` and `auth-send-emai
 | Admin | Yes — rows in `admins`, JWT claim `app_role = 'admin'` | Same `/login` form |
 | Booker | **No** | Six-digit verification code sent to their work email on every booking (ADR-0004) |
 
-No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which sends the "invitation to the company's creation" email; the company sets its password from that invite.
+No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which calls `auth.admin.inviteUserByEmail`; the Send Email Hook delivers Mail 1 with a link to `app/(public)/set-password?token_hash=…&type=invite`, and that page verifies the token with `verifyOtp` and takes the password (#1). The link base is the hook payload's `redirect_to`, which Auth fills from `site_url`, set per cloud project under `[remotes.<name>.auth]` in `config.toml`. The payload's `site_url` field is Auth's own API URL and must not be used.
 
 ## Email login
 
@@ -33,16 +33,20 @@ The Custom Access Token Hook is a Postgres function `public.custom_access_token_
 - Server code checks the role with `getSession()` from `lib/auth/get-session.ts` → `session.appRole`. Do not decode the JWT by hand in components.
 
 - `app/(company)/*`: requires a session. `app/(admin)/*`: requires `app_role = 'admin'`. Both enforced in the route-group layout via `lib/auth/requireSession()` / `requireAdmin()`, and again inside every server action (layouts are not a security boundary).
-- `app/(public)/*`: notice board, booker verification pages, cancellation link pages. No session.
+- `app/(public)/*`: notice board, cancellation link pages, the forms demo. No session. Booker verification is not a public page: it is the verification step inside the booking dialog, under the company's session (#2).
 - Use `@supabase/ssr` cookie handling exactly as in `docs/vendor/supabase/`; refresh the session in `proxy.ts` (Next 16's name for the former middleware — check `node_modules/next/dist/docs/`).
 
 ## Booker verification and holds
 
-- Booking form → server action creates a `pending_verification` booking with `booking_hold_expires_at = now() + 10 minutes` and sends the code via `sendMail()` (template `verification-code`).
-- The code is a six-digit string, single-use, stored in `verification_codes` (see #2: `verification_code_booking_id`, `verification_code_expires_at`, `verification_code_attempts`, `verification_code_consumed_at`). Max 5 attempts, then the hold is released.
-- Entering the code confirms the booking: status → `confirmed`, price snapshot frozen (ADR-0005), confirmation emails sent.
+Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/domain/verification.ts`, the code itself in `lib/bookings/verification-code.ts`, the UI in `components/bookings/verification-step.tsx`. Until the booking dialog (#4) exists, `app/(company)/(gated)/demo/booking` (development only, behind the session and the master-data gate like the real flow) is the form that starts the flow.
+
+- "Book nu" → `createHold()` inserts a `pending_verification` booking with `booking_hold_expires_at = now() + 10 minutes` and the price snapshot, under the company's session and RLS. The database's no-overlap constraint is the availability check: an `exclusion_violation` (23P01) reads as "Lokalet er ikke ledigt". The action then stores a code and sends Mail 2 via `sendMail()` (template `verification-code`, greeting the company display name, recipient the booker's work email). If the mail fails, the hold is released at once.
+- The code is six digits from `crypto.randomInt`, stored in `verification_codes` as a SHA-256 hash bound to the booking id, compared with `timingSafeEqual`. Only this table goes through the service-role client (allowlist entry 1); it is admin-only under RLS because the booker is not an auth user.
+- Rules: ten-minute window shared by the code and the hold, five attempts, then the hold is released (`expired`). A consumed or expired code is dead whatever is typed. "Send ny kode" (`resendCode()`) issues a new code and moves the hold to the new window; at most three resends per booking.
+- `verifyCode()` confirms: status → `confirmed` only where the row is still `pending_verification` with a live hold, so a hold that died meanwhile fails with "Reservationen er udløbet". The room-free trigger re-runs on the status change, which is the spec's second availability check. The snapshot freezes by trigger (ADR-0005). Mail 4 and Mail 8 are wired at this point by #11.
 - Expired holds are ignored by availability and cleaned up by the hourly job (`email.md`).
+- Admin books on a company's behalf with `createAdminBooking()` in `lib/bookings/admin-actions.ts` (#14): the row is inserted as `confirmed` under the admin's session, with no hold and no code (ADR-0023). External companies only ever get bookings this way (ADR-0008). Until #4's dialog grows a company selector, `app/(admin)/admin/demo/booking` (development only) is the form; #4 deletes both demo routes and `components/bookings/dev-fields.tsx`.
 
 ## Auth emails
 
-Supabase's own SMTP is disabled. Every auth email (invite, password reset, email change) goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. See `email.md`.
+Supabase's own SMTP is disabled. Every auth email goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. Only `invite` is mapped today; `recovery` comes with #11, and `email_change` is never triggered because admin sets a new email with `email_confirm: true`. Locally the hook is off and the mail catcher on port 54324 receives auth mail. See `email.md`.

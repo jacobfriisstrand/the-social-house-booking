@@ -9,6 +9,10 @@ export interface Session {
   userId: string;
 }
 
+// app_role is an untyped JSON claim, so it is narrowed explicitly.
+const appRoleOf = (claims: Record<string, unknown>): string | undefined =>
+  typeof claims.app_role === "string" ? claims.app_role : undefined;
+
 export async function getSession(): Promise<Session | null> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -18,7 +22,7 @@ export async function getSession(): Promise<Session | null> {
   }
 
   return {
-    appRole: typeof claims.app_role === "string" ? claims.app_role : undefined,
+    appRole: appRoleOf(claims),
     email: claims.email ?? "",
     userId: claims.sub,
   };

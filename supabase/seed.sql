@@ -108,15 +108,14 @@ insert into public.companies (
 
 insert into public.rooms (
   room_id, room_name, room_description, room_location,
-  room_capacity, room_price_ore, room_opens_at, room_closes_at,
-  room_practical_info
+  room_capacity, room_hourly_price_ore, room_practical_notes
 ) values
   (
     '00000000-0000-0000-0000-0000000000c1',
     'Room of Power',
     'Det store mødelokale med plads til store møder og workshops.',
     '1. sal',
-    12, 80000, '08:00', '18:00',
+    12, 80000,
     'Skærm, whiteboard og kaffeautomat. Husk at rykke borde og stole tilbage.'
   ),
   (
@@ -124,9 +123,29 @@ insert into public.rooms (
     'Room of Art',
     'Lyst kreativt lokale med langbord og god naturlig lys.',
     'Stueetage',
-    6, 40000, '09:00', '17:00',
+    6, 40000,
     'Kaffe og te kan hentes i køkkenet.'
   );
+
+-- Weekly opening hours: day_of_week 0 = Monday … 6 = Sunday.
+insert into public.room_opening_hours (
+  room_opening_hour_room_id, room_opening_hour_day_of_week,
+  room_opening_hour_opens, room_opening_hour_closes, room_opening_hour_is_closed
+) values
+  ('00000000-0000-0000-0000-0000000000c1', 0, '08:00', '18:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 1, '08:00', '18:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 2, '08:00', '18:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 3, '08:00', '18:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 4, '08:00', '18:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 5, '08:00', '14:00', false),
+  ('00000000-0000-0000-0000-0000000000c1', 6, '08:00', '18:00', true),
+  ('00000000-0000-0000-0000-0000000000c2', 0, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 1, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 2, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 3, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 4, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 5, '09:00', '17:00', false),
+  ('00000000-0000-0000-0000-0000000000c2', 6, '09:00', '17:00', true);
 
 insert into public.addons (
   addon_id, addon_name, addon_description, addon_price_ore, addon_pricing_model
@@ -163,5 +182,11 @@ insert into public.room_addons (room_addon_room_id, room_addon_addon_id) values
   ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d4'),
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d1'),
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d3');
+
+-- Site-wide settings (#55 footer, single row per settings.sql): the Wi-Fi
+-- credentials the shell footer shows until an admin edits them.
+insert into public.settings (setting_wifi_network, setting_wifi_password)
+values ('TheSocialHouseguest', 'SocialHouse')
+on conflict (setting_id) do nothing;
 
 commit;

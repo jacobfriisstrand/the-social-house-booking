@@ -27,7 +27,7 @@ The company's full registered name, used only for invoicing.
 _Avoid_: registered name, official name
 
 **Membership status** (medlemsstatus):
-Whether a company is an active member, and on what terms. Managed by admin.
+Whether a company is a member or external. Managed by admin.
 
 **Discount** (rabat):
 The percentage off room rental a member receives. Applies to room rental only — never add-ons, catering, or services.
@@ -45,6 +45,10 @@ _Avoid_: venue, space, meeting room
 
 **Opening hours** (åbningstider):
 The hours a room can be booked. Admin-editable; every booking must fit within them.
+
+**Special closing day** (lukkedag):
+A single date where a room deviates from its weekly opening hours: closed all day, or open with different hours. Admin-set per room; overrides the weekly hours for that date.
+_Avoid_: exception, undtagelse, særdag
 
 **Buffer**:
 A 30-minute, non-billable block reserved automatically after every booking. Blocks the room, is never billed, is not part of the booked time, and is removed on cancellation and moved with the booking on admin changes.
@@ -64,7 +68,7 @@ The specific person who makes a booking (full name, work email, mobile), distinc
 _Avoid_: user, contact, member
 
 **Verification code** (bekræftelseskode):
-A six-digit, time-limited code sent to the booker's work email; the booking is final only once the code is entered. The room is held temporarily while the code is entered.
+A six-digit, time-limited code sent to the booker's work email; the booking is final only once the code is entered. The room is held temporarily while the code is entered. Bookings admin enters on a company's behalf skip it and are confirmed at once (ADR-0023).
 _Avoid_: OTP, confirmation code, token
 
 **Participant count** (deltagerantal):

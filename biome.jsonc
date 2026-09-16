@@ -21,18 +21,20 @@
       }
     }
   },
-  // noProcessEnv exemptions live here: lib/env.ts is the validating reader;
+  // noProcessEnv exemptions live here: lib/env.ts and lib/env-client.ts are the
+  // validating readers (server full schema, browser NEXT_PUBLIC subset);
   // proxy.ts runs in Next's sandbox before .env.local is injected, so it must
   // read process.env itself (and skips the session refresh when unset); and
-  // scripts/create-admin.ts runs under plain Node outside Next; and the Sentry
+  // scripts/*.ts run under plain Node outside Next; and the Sentry
   // files (next.config.ts, instrumentation*.ts, sentry.*.config.ts) run before
   // lib/env.ts can, so they read process.env by design (docs/agents/stack.md).
   "overrides": [
     {
       "includes": [
         "lib/env.ts",
+        "lib/env-client.ts",
         "netlify/functions/*.mts",
-        "scripts/create-admin.ts",
+        "scripts/*.ts",
         "next.config.ts",
         "instrumentation.ts",
         "instrumentation-client.ts",
@@ -58,24 +60,40 @@
         }
       }
     },
-    // components/ui/ is generated shadcn source (owned per docs/agents/ui.md). Registry
-    // updates would clobber hand-patches, so its known lint noise is suppressed here
-    // instead of edited away. Feature code keeps full strictness.
+    // supabase/functions/ runs on Deno: the Deno global is real there.
     {
-      "includes": ["components/ui/**"],
+      "includes": ["supabase/functions/**"],
+      "javascript": { "globals": ["Deno"] }
+    },
+    // components/ui/ and hooks/ are generated shadcn source (owned per
+    // docs/agents/ui.md). Registry updates would clobber hand-patches, so its
+    // known lint noise is suppressed here instead of edited away. Feature code
+    // keeps full strictness.
+    {
+      "includes": ["components/ui/**", "hooks/use-mobile.ts"],
       "linter": {
         "rules": {
           "a11y": {
             "noLabelWithoutControl": "off",
             "useSemanticElements": "off"
           },
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          },
+          "performance": {
+            "noJsxPropsBind": "off",
+            "noNamespaceImport": "off"
+          },
           "suspicious": {
             "noArrayIndexKey": "off",
+            "noDocumentCookie": "off",
             "noDoubleEquals": "off",
             "noLeakedRender": "off",
+            "noShadow": "off",
             "noUnnecessaryConditions": "off"
           },
           "style": {
+            "useConsistentTypeDefinitions": "off",
             "useDestructuring": "off"
           }
         }

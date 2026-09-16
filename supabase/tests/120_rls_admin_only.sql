@@ -14,12 +14,12 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, e
 insert into public.companies (company_id, company_auth_user_id, company_email, company_display_name) values
   ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals');
 
-insert into public.rooms (room_id, room_name, room_capacity, room_price_ore, room_opens_at, room_closes_at, room_is_active) values
-  ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000, '08:00', '18:00', true),
-  ('44444444-4444-4444-4444-444444444002', 'Room of Art', 6, 400000, '09:00', '17:00', false);
+insert into public.rooms (room_id, room_name, room_capacity, room_hourly_price_ore, room_is_active) values
+  ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000, true),
+  ('44444444-4444-4444-4444-444444444002', 'Room of Art', 6, 400000, false);
 
-insert into public.room_images (room_image_id, room_image_room_id, room_image_url) values
-  ('88888888-8888-8888-8888-888888888001', '44444444-4444-4444-4444-444444444001', 'https://example.test/power.jpg');
+insert into public.room_images (room_image_id, room_image_room_id, room_image_storage_path, room_image_file_name, room_image_file_size) values
+  ('88888888-8888-8888-8888-888888888001', '44444444-4444-4444-4444-444444444001', 'rooms/44444444-4444-4444-4444-444444444001/power.jpg', 'power.jpg', 1024);
 
 insert into public.addons (addon_id, addon_name, addon_price_ore, addon_pricing_model) values
   ('55555555-5555-5555-5555-555555555001', 'House Service', 50000, 'fixed');
@@ -46,7 +46,7 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","r
 select is((select count(*) from public.rooms), 4::bigint, 'company reads rooms incl. deactivated (2 fixture + 2 seed)');
 select is((select count(*) from public.room_images), 1::bigint, 'company reads room images');
 select throws_ok(
-  'insert into public.rooms (room_name, room_capacity, room_price_ore, room_opens_at, room_closes_at) values (''X'', 1, 1::bigint, ''08:00'', ''09:00'')',
+  'insert into public.rooms (room_name, room_capacity, room_hourly_price_ore) values (''X'', 1, 1::bigint)',
   '42501', null,
   'company cannot create rooms');
 select lives_ok(
@@ -82,7 +82,7 @@ select lives_ok(
   'insert into public.house_event_rooms (house_event_room_event_id, house_event_room_room_id) values (''99999999-9999-9999-9999-999999999002'', ''44444444-4444-4444-4444-444444444002'')',
   'admin links a house event to a room');
 select lives_ok(
-  'insert into public.room_images (room_image_id, room_image_room_id, room_image_url) values (''88888888-8888-8888-8888-888888888002'', ''44444444-4444-4444-4444-444444444002'', ''https://example.test/art.jpg'')',
+  'insert into public.room_images (room_image_id, room_image_room_id, room_image_storage_path, room_image_file_name, room_image_file_size) values (''88888888-8888-8888-8888-888888888002'', ''44444444-4444-4444-4444-444444444002'', ''rooms/44444444-4444-4444-4444-444444444002/art.jpg'', ''art.jpg'', 2048)',
   'admin uploads a room image');
 select lives_ok(
   'update public.room_images set room_image_sort_order = 1 where room_image_id = ''88888888-8888-8888-8888-888888888002''',

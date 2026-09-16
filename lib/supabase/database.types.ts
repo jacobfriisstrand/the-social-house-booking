@@ -246,6 +246,7 @@ export type Database = {
           company_billing_notes: string | null
           company_billing_postal_code: string | null
           company_contact_name: string | null
+          company_contact_phone: string | null
           company_created_at: string
           company_cvr_number: string | null
           company_department: string | null
@@ -272,6 +273,7 @@ export type Database = {
           company_billing_notes?: string | null
           company_billing_postal_code?: string | null
           company_contact_name?: string | null
+          company_contact_phone?: string | null
           company_created_at?: string
           company_cvr_number?: string | null
           company_department?: string | null
@@ -298,6 +300,7 @@ export type Database = {
           company_billing_notes?: string | null
           company_billing_postal_code?: string | null
           company_contact_name?: string | null
+          company_contact_phone?: string | null
           company_created_at?: string
           company_cvr_number?: string | null
           company_department?: string | null
@@ -496,24 +499,30 @@ export type Database = {
       room_images: {
         Row: {
           room_image_created_at: string
+          room_image_file_name: string
+          room_image_file_size: number
           room_image_id: string
           room_image_room_id: string
           room_image_sort_order: number
-          room_image_url: string
+          room_image_storage_path: string
         }
         Insert: {
           room_image_created_at?: string
+          room_image_file_name: string
+          room_image_file_size: number
           room_image_id?: string
           room_image_room_id: string
           room_image_sort_order?: number
-          room_image_url: string
+          room_image_storage_path: string
         }
         Update: {
           room_image_created_at?: string
+          room_image_file_name?: string
+          room_image_file_size?: number
           room_image_id?: string
           room_image_room_id?: string
           room_image_sort_order?: number
-          room_image_url?: string
+          room_image_storage_path?: string
         }
         Relationships: [
           {
@@ -525,48 +534,136 @@ export type Database = {
           },
         ]
       }
+      room_opening_hours: {
+        Row: {
+          room_opening_hour_closes: string
+          room_opening_hour_day_of_week: number
+          room_opening_hour_id: string
+          room_opening_hour_is_closed: boolean
+          room_opening_hour_opens: string
+          room_opening_hour_room_id: string
+        }
+        Insert: {
+          room_opening_hour_closes: string
+          room_opening_hour_day_of_week: number
+          room_opening_hour_id?: string
+          room_opening_hour_is_closed?: boolean
+          room_opening_hour_opens: string
+          room_opening_hour_room_id: string
+        }
+        Update: {
+          room_opening_hour_closes?: string
+          room_opening_hour_day_of_week?: number
+          room_opening_hour_id?: string
+          room_opening_hour_is_closed?: boolean
+          room_opening_hour_opens?: string
+          room_opening_hour_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_opening_hours_room_opening_hour_room_id_fkey"
+            columns: ["room_opening_hour_room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      room_special_closing_days: {
+        Row: {
+          room_special_closing_day_closes: string | null
+          room_special_closing_day_date: string
+          room_special_closing_day_id: string
+          room_special_closing_day_is_closed: boolean
+          room_special_closing_day_opens: string | null
+          room_special_closing_day_room_id: string
+        }
+        Insert: {
+          room_special_closing_day_closes?: string | null
+          room_special_closing_day_date: string
+          room_special_closing_day_id?: string
+          room_special_closing_day_is_closed?: boolean
+          room_special_closing_day_opens?: string | null
+          room_special_closing_day_room_id: string
+        }
+        Update: {
+          room_special_closing_day_closes?: string | null
+          room_special_closing_day_date?: string
+          room_special_closing_day_id?: string
+          room_special_closing_day_is_closed?: boolean
+          room_special_closing_day_opens?: string | null
+          room_special_closing_day_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_special_closing_days_room_special_closing_day_room_id_fkey"
+            columns: ["room_special_closing_day_room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           room_capacity: number
-          room_closes_at: string
           room_created_at: string
           room_description: string | null
+          room_hourly_price_ore: number
           room_id: string
           room_is_active: boolean
           room_location: string | null
           room_name: string
-          room_opens_at: string
-          room_practical_info: string | null
-          room_price_ore: number
+          room_practical_notes: string | null
           room_updated_at: string
         }
         Insert: {
           room_capacity: number
-          room_closes_at: string
           room_created_at?: string
           room_description?: string | null
+          room_hourly_price_ore: number
           room_id?: string
           room_is_active?: boolean
           room_location?: string | null
           room_name: string
-          room_opens_at: string
-          room_practical_info?: string | null
-          room_price_ore: number
+          room_practical_notes?: string | null
           room_updated_at?: string
         }
         Update: {
           room_capacity?: number
-          room_closes_at?: string
           room_created_at?: string
           room_description?: string | null
+          room_hourly_price_ore?: number
           room_id?: string
           room_is_active?: boolean
           room_location?: string | null
           room_name?: string
-          room_opens_at?: string
-          room_practical_info?: string | null
-          room_price_ore?: number
+          room_practical_notes?: string | null
           room_updated_at?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          setting_created_at: string
+          setting_id: number
+          setting_updated_at: string
+          setting_wifi_network: string
+          setting_wifi_password: string
+        }
+        Insert: {
+          setting_created_at?: string
+          setting_id?: number
+          setting_updated_at?: string
+          setting_wifi_network: string
+          setting_wifi_password: string
+        }
+        Update: {
+          setting_created_at?: string
+          setting_id?: number
+          setting_updated_at?: string
+          setting_wifi_network?: string
+          setting_wifi_password?: string
         }
         Relationships: []
       }

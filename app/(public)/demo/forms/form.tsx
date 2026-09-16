@@ -6,6 +6,7 @@ import {
   Controller,
   type ControllerFieldState,
   type ControllerRenderProps,
+  type UseFormReturn,
   useForm,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,19 @@ import { messages } from "@/messages/da";
 import { type DemoFormState, submitDemoForm } from "./actions";
 
 const initialState: DemoFormState = { status: "idle" };
+
+// Applies server-side field errors through the field API: the first message
+// per field, since the form never lists more than the schema produced.
+const applyFieldErrors = (
+  form: UseFormReturn<DemoFormValues>,
+  fieldErrors: Partial<Record<keyof DemoFormValues, string[]>>
+): void => {
+  for (const [key, errs] of Object.entries(fieldErrors)) {
+    if (errs?.length) {
+      form.setError(key as keyof DemoFormValues, { message: errs[0] });
+    }
+  }
+};
 
 interface FieldRender<K extends keyof DemoFormValues> {
   field: ControllerRenderProps<DemoFormValues, K>;
@@ -111,11 +125,7 @@ export function DemoForm() {
     if (state.status === "error") {
       // The toast never names a field; field errors go through the field API (DESIGN.md).
       toast.add({ title: messages.demo.toastError, type: "error" });
-      for (const [key, errs] of Object.entries(state.fieldErrors ?? {})) {
-        if (errs?.length) {
-          form.setError(key as keyof DemoFormValues, { message: errs[0] });
-        }
-      }
+      applyFieldErrors(form, state.fieldErrors ?? {});
     }
   }, [state, form]);
 

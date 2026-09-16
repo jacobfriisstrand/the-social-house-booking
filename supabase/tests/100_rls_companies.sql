@@ -13,7 +13,7 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, e
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111003', 'authenticated', 'authenticated', 'nordic@tsh.test', 'x', now(), '{}', '{}', now(), now());
 
 insert into public.companies (company_id, company_auth_user_id, company_email, company_display_name, company_membership_status, company_discount_percent) values
-  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals', 'external', 50),
+  ('22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', 'rituals@tsh.test', 'Rituals', 'member', 50),
   ('22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111003', 'nordic@tsh.test', 'Nordic Events', 'external', 0);
 
 insert into public.admins (admin_id, admin_auth_user_id, admin_display_name) values
@@ -30,9 +30,9 @@ select lives_ok(
   'update public.companies set company_display_name = ''Rituals ApS''',
   'company updates its own non-privileged fields');
 select throws_ok(
-  'update public.companies set company_membership_status = ''member''',
+  'update public.companies set company_membership_status = ''external'', company_discount_percent = 0',
   '42501', null,
-  'company cannot promote itself to member');
+  'company cannot change its own membership status');
 select throws_ok(
   'update public.companies set company_discount_percent = 90',
   '42501', null,

@@ -84,7 +84,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 │  ADMIN       │ │                                      │ │
 │  Bookinger   │ │                                      │ │
 │  Lokaler     │ │                                      │ │
-│  Brugere     │ │                                      │ │
+│  Virksomheder│ │                                      │ │
 │  Tilkøb      │ │                                      │ │
 │  Rabatter    │ │                                      │ │
 │  Opslag      │ │                                      │ │
@@ -100,9 +100,19 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
 - The content panel is `bg-muted rounded-xl p-6` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
-- The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, the guest network name, then "adgangskode" and the password in a mono chip. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
+- The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in a mono chip. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
 - Content column: `max-w-[1400px]`, padding `px-8 py-6` on desktop, `px-4 py-4` on phone.
 - Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button at the top left of the content.
+
+Decisions the shell (#55) records on top of these rules:
+
+- The nav shows only routes that exist; each later issue adds its own entry with its page. At the time of the shell: Hjem (`/`), member Bookinger (`/bookings`), admin Lokaler (`/admin/rooms`), Virksomheder (`/admin/companies`) and Indstillinger (`/admin/settings`), and Log ud. No stub pages, no dead links.
+- Member Bookinger is hidden for admins: they have no company, so the page would always be empty.
+- "Book lokale" renders disabled; #4 wires the click to the search dialog.
+- `/admin` redirects to `/` — one home for everyone, the day grid above.
+- The collapse state follows the shadcn block's `sidebar_state` cookie.
+- Footer line copy: seeded in the settings table (`TheSocialHouseguest` / `SocialHouse`), editable by admins under Indstillinger; `messages/da.ts` carries the same values as the fallback. Every viewer is a logged-in member, so the password in the bundle is intended.
+- Paths stay English (`/rooms`, `/bookings`, `/admin/companies`); labels come from `messages/da.ts`.
 
 Login is outside the shell: a centred white card on the background with the logo, email, password and one primary button.
 
@@ -166,7 +176,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom.
 
-**Toasts.** One library, sonner through shadcn. Every server action result ends in a toast: success or failure, one line, Danish. Bottom right on desktop, top on phone. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
+**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
 **Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence.
 
@@ -197,7 +207,7 @@ Day view only. Week and month views are out of v1.0 (ADR-0022) even though the s
 ### Book lokale
 
 1. "Book lokale" opens a dialog with room (default "Alle lokaler"), date, start time, end time, participants, and a primary "Søg".
-2. Results are a page at `/lokaler?dato=…&fra=…&til=…&personer=…` titled "Ledige lokaler" with a 3-column card grid (1 column on phone, 2 on tablet). Empty state: "Ingen ledige lokaler i det valgte tidsrum."
+2. Results are a page at `/rooms?dato=…&fra=…&til=…&personer=…` titled "Ledige lokaler" with a 3-column card grid (1 column on phone, 2 on tablet). Empty state: "Ingen ledige lokaler i det valgte tidsrum."
 3. A room card: photo carousel with two round ghost arrows bottom right of the photo, then name (card title), capacity and size chips, then a two-column price row: "Normalpris" struck in muted-foreground left, "Din pris" in 18px foreground right. When the company has no discount the struck price is omitted and "Din pris" sits alone.
 4. The room detail page is two columns on desktop (info 40%, photos 60%), one column on phone with photos first. Left: bold title, chips row (size, capacity, price per hour), a border, description, a border, "Tilkøb" list where each add-on has its price as a chip ("+ 35 kr", "Gratis", "+ 200 kr / person"). Right: photos stacked, `rounded-lg`. A sticky bottom bar spans the content column: room name left, "Normalpris" struck and "Din pris" centre-right, primary "Book nu" right. On phone the bar is a fixed footer.
 5. "Book nu", and an empty-slot click on the grid, open the booking dialog.
@@ -240,7 +250,7 @@ Below, three white cards with monthly bar charts since January of the current ye
 
 ### Other admin pages
 
-Lokaler, Brugere, Tilkøb, Rabatter, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
+Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
 
 ## Formatting
 

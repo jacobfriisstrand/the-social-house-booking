@@ -1,6 +1,9 @@
 import { NotAuthorizedAlert } from "@/components/not-authorized-alert";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { messages } from "@/messages/da";
 
+// Hjem: the day grid from #12 renders on the panel. The shell (#55) owns
+// the sidebar, the title, the panel and the footer line.
 export default async function HomePage({
   searchParams,
 }: {
@@ -9,9 +12,10 @@ export default async function HomePage({
   const params = await searchParams;
 
   return (
-    <main className="p-8">
-      <h1 className="font-semibold text-3xl">{messages.dashboard.title}</h1>
+    <>
       {params.unauthorized ? <NotAuthorizedAlert /> : null}
-    </main>
+      <PageHeader title={messages.shell.home} />
+      <PagePanel />
+    </>
   );
 }

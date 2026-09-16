@@ -1,5 +1,5 @@
-// Service-role client — bypasses RLS. server-only and restricted to the four
-// allowlisted places in docs/agents/supabase.md; adding a fifth requires
+// Service-role client — bypasses RLS. server-only and restricted to the five
+// allowlisted places in docs/agents/supabase.md; adding a sixth requires
 // updating that list in the same PR. scripts/create-admin.ts builds its own
 // client in a standalone process instead (server-only is unusable there).
 import "server-only";

@@ -35,6 +35,8 @@ const I = {
     '<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"></path><path d="m9 15 6-6"></path><path d="M9.5 9.5h.01"></path><path d="M14.5 14.5h.01"></path>',
   megaphone:
     '<path d="M3 11v2a1 1 0 0 0 1 1h2l6 4V6L6 10H4a1 1 0 0 0-1 1z"></path><path d="M16 9a3.5 3.5 0 0 1 0 6"></path><path d="M19 6.5a7 7 0 0 1 0 11"></path><path d="M7 14v5"></path>',
+  settings:
+    '<path d="M3 6h8"></path><path d="M18 6h3"></path><circle cx="15.5" cy="6" r="2.5"></circle><path d="M3 12h4"></path><path d="M14 12h7"></path><circle cx="11.5" cy="12" r="2.5"></circle><path d="M3 18h10"></path><path d="M20 18h1"></path><circle cx="17.5" cy="18" r="2.5"></circle>',
   chart: '<path d="M3 3v18h18"></path><path d="m7 15 4-5 4 3 5-7"></path>',
   user: '<circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path>',
   logout: '<path d="M14 4h5v16h-5"></path><path d="M3 12h11"></path><path d="m10 8 4 4-4 4"></path>',
@@ -96,7 +98,8 @@ const sidebar = (active) => `
   <nav style="display: flex; flex-direction: column; gap: ${s(1)};">
     ${navItem("bookings", "Bookinger", active === "bookinger")}
     ${navItem("rooms", "Lokaler", active === "adminlokaler")}
-    ${navItem("users", "Brugere")}
+    ${navItem("users", "Virksomheder")}
+    ${navItem("settings", "Indstillinger")}
     ${navItem("cup", "Tilkøb")}
     ${navItem("percent", "Rabatter")}
     ${navItem("megaphone", "Opslag")}
@@ -120,7 +123,7 @@ const shell = (active, title, body, height, action = "") => `
     <div style="flex-grow: 1; background: ${T.muted}; border-radius: 9.2px; padding: ${s(6)}; display: flex; flex-direction: column; gap: ${s(6)}; min-height: 0;">
     ${body}
     </div>
-    <div style="display: flex; justify-content: flex-end; align-items: center; gap: ${s(2)}; font-size: 12px; color: ${T.mutedFg};"><span style="display: inline-flex;">${icon(I.wifi, 16)}</span><span>thesocialhouseguest</span><span style="width: 1px; height: 14px; background: ${T.border};"></span><span>adgangskode</span><span class="mono" style="background: ${T.muted}; border: 1px solid ${T.border}; border-radius: ${T.radius}; padding: 1px 6px; color: ${T.fg};">thesocialhouse</span></div>
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: ${s(2)}; font-size: 12px; color: ${T.mutedFg};"><span style="display: inline-flex;">${icon(I.wifi, 16)}</span><span>TheSocialHouseguest</span><span style="width: 1px; height: 14px; background: ${T.border};"></span><span>adgangskode</span><span class="mono" style="background: ${T.muted}; border: 1px solid ${T.border}; border-radius: ${T.radius}; padding: 1px 6px; color: ${T.fg};">SocialHouse</span></div>
   </main>
 </div>`;
 
