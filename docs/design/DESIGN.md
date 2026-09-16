@@ -176,7 +176,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom.
 
-**Toasts.** One library, sonner through shadcn. Every server action result ends in a toast: success or failure, one line, Danish. Bottom right on desktop, top on phone. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
+**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
 **Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence.
 
