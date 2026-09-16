@@ -36,7 +36,15 @@
       "exports": ["AttachmentGroup"]
     },
     { "file": "components/ui/card.tsx", "exports": ["CardAction"] },
-    { "file": "components/ui/dialog.tsx", "exports": ["DialogClose"] },
+    {
+      "file": "components/ui/dialog.tsx",
+      "exports": [
+        "DialogClose",
+        "DialogDescription",
+        "DialogFooter",
+        "DialogHeader"
+      ]
+    },
     { "file": "components/ui/empty.tsx", "exports": ["EmptyContent"] },
     {
       "file": "components/ui/popover.tsx",
@@ -50,6 +58,22 @@
       "file": "components/ui/sheet.tsx",
       "exports": ["SheetClose", "SheetDescription", "SheetFooter"]
     },
+    {
+      "file": "components/ui/sidebar.tsx",
+      "exports": [
+        "SidebarGroupAction",
+        "SidebarInput",
+        "SidebarMenuAction",
+        "SidebarMenuBadge",
+        "SidebarMenuSkeleton",
+        "SidebarMenuSub",
+        "SidebarMenuSubButton",
+        "SidebarMenuSubItem",
+        "SidebarRail",
+        "SidebarSeparator"
+      ]
+    },
+    { "file": "components/ui/tooltip.tsx", "exports": ["TooltipProvider"] },
     {
       "file": "components/ui/table.tsx",
       "exports": ["TableCaption", "TableFooter"]
