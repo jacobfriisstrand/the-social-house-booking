@@ -176,9 +176,7 @@ function ShellFooter({ wifi }: { wifi: WifiSettings }) {
       <span>{wifi.network}</span>
       <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
       <span>{messages.shell.footer.passwordLabel}</span>
-      <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-foreground">
-        {wifi.password}
-      </span>
+      <span className="font-mono text-foreground">{wifi.password}</span>
     </footer>
   );
 }
