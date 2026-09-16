@@ -10,8 +10,8 @@ import {
   useState,
 } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { applyFieldErrors } from "@/components/forms/field-errors";
 import { TextField } from "@/components/forms/text-field";
+import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
@@ -80,12 +80,7 @@ export function CreateCompanySheet() {
     [form]
   );
 
-  useEffect(() => {
-    if (state.status === "error") {
-      toast.add({ title: state.error, type: "error" });
-      applyFieldErrors(form, state.fieldErrors ?? {});
-    }
-  }, [state, form]);
+  useActionError(state, form);
 
   useEffect(() => {
     if (state.status !== "created") {

@@ -33,8 +33,12 @@ import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { escapeHtml } from "@/supabase/functions/send-email/handler";
 import {
+  type BookableRoom,
   EXCLUSION_VIOLATION,
+  expireBooking,
   findBookableRoom,
+  insertBooking,
+  insertBookingAddons,
   newBookingRow,
   type SessionClient,
   type Step,
@@ -112,18 +116,7 @@ async function findLiveHold(
   };
 }
 
-// Frees the room: the exclusion constraint and calendar_entries ignore
-// expired rows (#24).
-async function releaseHold(
-  supabase: SessionClient,
-  bookingId: string
-): Promise<void> {
-  await supabase
-    .from("bookings")
-    .update({ booking_status: "expired" })
-    .eq("booking_id", bookingId)
-    .eq("booking_status", "pending_verification");
-}
+const releaseHold = expireBooking;
 
 // Stores a new hashed code and sends Mail 2 to the booker, greeting the
 // company (Bilag 1 "Emails"). Throws on either failure.
@@ -188,44 +181,33 @@ const heldState = (hold: LiveHold, expiresAt: Date): HoldState => ({
   status: "held",
 });
 
-// The pending_verification row (newBookingRow carries the snapshot). The
-// database rejects an overlapping slot, so no separate availability query
-// runs first.
+// The pending_verification row (newBookingRow carries the snapshot) and
+// its add-on rows. The database rejects an overlapping slot, so no
+// separate availability query runs first.
 async function insertHold(
   supabase: SessionClient,
   company: CompanyRow,
   input: CreateHoldValues,
-  roomHourlyPriceOre: number,
+  room: BookableRoom,
   expiresAt: Date
 ): Promise<Step<LiveHold>> {
-  const inserted = await supabase
-    .from("bookings")
-    .insert({
-      ...newBookingRow(
-        input,
-        company.company_discount_percent,
-        roomHourlyPriceOre
-      ),
-      booking_company_id: company.company_id,
-      booking_hold_expires_at: expiresAt.toISOString(),
-      booking_status: "pending_verification",
-    })
-    .select("booking_id, booking_number")
-    .single();
-  if (inserted.error) {
-    return fail(
-      inserted.error.code === EXCLUSION_VIOLATION
-        ? errors.slotTaken
-        : errors.createFailed
-    );
+  const inserted = await insertBooking(supabase, {
+    ...newBookingRow(input, company.company_discount_percent, room),
+    booking_company_id: company.company_id,
+    booking_hold_expires_at: expiresAt.toISOString(),
+    booking_status: "pending_verification",
+  });
+  if (!inserted.ok) {
+    return inserted;
+  }
+  const { bookingId, bookingNumber } = inserted.value;
+  if (!(await insertBookingAddons(supabase, bookingId, room.addons))) {
+    await releaseHold(supabase, bookingId);
+    return fail(errors.createFailed);
   }
   return {
     ok: true,
-    value: {
-      bookerEmail: input.bookerEmail,
-      bookingId: inserted.data.booking_id,
-      bookingNumber: inserted.data.booking_number,
-    },
+    value: { bookerEmail: input.bookerEmail, bookingId, bookingNumber },
   };
 }
 

@@ -4,12 +4,12 @@
 // admin group only when the session carries the admin role, the content
 // column (mobile menu button, page content, footer line), and the
 // off-canvas sheet on phone. Visual rules: docs/design/DESIGN.md, "Shell".
-import { CalendarPlusIcon, LogOutIcon, WifiIcon } from "lucide-react";
+import { LogOutIcon, WifiIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { SearchDialog } from "@/components/bookings/search-dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -27,6 +27,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
+import type { RoomOption } from "@/lib/rooms/public-data";
 import type { WifiSettings } from "@/lib/settings/data";
 import {
   isShellLinkActive,
@@ -58,7 +59,13 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   );
 }
 
-function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
+function ShellSidebar({
+  isAdmin,
+  rooms,
+}: {
+  isAdmin: boolean;
+  rooms: RoomOption[];
+}) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -79,26 +86,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
       </SidebarHeader>
       <SidebarGroup>
         <SidebarGroupContent>
-          {/* Wired to the search dialog by #4; renders disabled until then. */}
-          <Button
-            aria-disabled="true"
-            className="w-full group-data-[collapsible=icon]:hidden"
-            disabled
-            size="lg"
-          >
-            {messages.shell.bookRoom}
-          </Button>
-          {/* Same height as the text button so collapsing does not shift
-              the nav. */}
-          <Button
-            aria-disabled="true"
-            aria-label={messages.shell.bookRoom}
-            className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
-            disabled
-            size="icon"
-          >
-            <CalendarPlusIcon />
-          </Button>
+          <SearchDialog rooms={rooms} />
         </SidebarGroupContent>
       </SidebarGroup>
       <SidebarContent>
@@ -168,16 +156,18 @@ export function AppShell({
   children,
   isAdmin,
   defaultOpen,
+  rooms,
   wifi,
 }: {
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
+  rooms: RoomOption[];
   wifi: WifiSettings;
 }) {
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <ShellSidebar isAdmin={isAdmin} />
+      <ShellSidebar isAdmin={isAdmin} rooms={rooms} />
       <SidebarInset>
         <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
           <SidebarTrigger
