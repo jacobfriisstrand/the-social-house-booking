@@ -3,7 +3,7 @@
 // The white bordered panel of the booking dialog (DESIGN.md): calendar
 // month, the start-time list with unavailable slots muted and disabled,
 // the end-time select.
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { da } from "react-day-picker/locale";
 import { ChoiceSelect } from "@/components/forms/choice-select";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,14 @@ import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 
 const copy = messages.booking.dialog;
+
+// Scrolls the list (the element's parent) so the element sits mid-list.
+const centreInList = (el: HTMLElement): void => {
+  const list = el.parentElement;
+  if (list) {
+    list.scrollTop = el.offsetTop - (list.clientHeight - el.clientHeight) / 2;
+  }
+};
 
 const statusLabel = (status: StartSlot["status"]): string | null =>
   status === "available" ? null : copy.slotStatus[status];
@@ -47,6 +55,16 @@ function SlotButton({
   slot: StartSlot;
 }) {
   const available = slot.status === "available";
+  const ref = useRef<HTMLButtonElement>(null);
+
+  // Keep the chosen start in view: a pre-filled search lands mid-list. The
+  // list scrolls on its own, so the dialog around it stays put.
+  useEffect(() => {
+    if (selected && ref.current) {
+      centreInList(ref.current);
+    }
+  }, [selected]);
+
   const handleClick = useCallback(
     () => onStartChange(slot.startAt.toISOString()),
     [onStartChange, slot.startAt]
@@ -62,6 +80,7 @@ function SlotButton({
       )}
       disabled={!available || loading}
       onClick={handleClick}
+      ref={ref}
       role="option"
       type="button"
       variant="outline"
@@ -83,7 +102,7 @@ function StartList({
     <div
       aria-busy={loading}
       aria-label={copy.startListLabel}
-      className="flex max-h-80 flex-col gap-1 overflow-y-auto pr-1"
+      className="relative flex max-h-80 flex-col gap-1 overflow-y-auto pr-1"
       role="listbox"
     >
       {none ? (
