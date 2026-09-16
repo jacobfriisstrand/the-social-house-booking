@@ -21,8 +21,18 @@ export async function getWifiSettings(
     .limit(1)
     .maybeSingle();
 
+  const row =
+    data ??
+    ({
+      setting_wifi_network: messages.shell.footer.network,
+      setting_wifi_password: messages.shell.footer.password,
+    } as Pick<
+      Database["public"]["Tables"]["settings"]["Row"],
+      "setting_wifi_network" | "setting_wifi_password"
+    >);
+
   return {
-    network: data?.setting_wifi_network ?? messages.shell.footer.network,
-    password: data?.setting_wifi_password ?? messages.shell.footer.password,
+    network: row.setting_wifi_network,
+    password: row.setting_wifi_password,
   };
 }

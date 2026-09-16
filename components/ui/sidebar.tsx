@@ -154,6 +154,9 @@ function SidebarProvider({
   );
 }
 
+// Generated shadcn source, kept intact like the rest of components/ui (see
+// biome.jsonc).
+// fallow-ignore-next-line complexity
 function Sidebar({
   side = "left",
   variant = "sidebar",
@@ -506,6 +509,9 @@ const sidebarMenuButtonVariants = cva(
   }
 );
 
+// Generated shadcn source, kept intact like the rest of components/ui (see
+// biome.jsonc).
+// fallow-ignore-next-line complexity
 function SidebarMenuButton({
   render,
   isActive = false,

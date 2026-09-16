@@ -85,6 +85,9 @@ export function CreateCompanySheet() {
       toast.add({ title: state.error, type: "error" });
       applyFieldErrors(form, state.fieldErrors ?? {});
     }
+  }, [state, form]);
+
+  useEffect(() => {
     if (state.status !== "created") {
       return;
     }
