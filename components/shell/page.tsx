@@ -18,7 +18,8 @@ export function PageHeader({
       <div className="flex items-center gap-2">
         <SidebarTrigger
           aria-label={messages.shell.openMenu}
-          className="md:hidden"
+          className="md:hidden [&_svg]:size-5"
+          size="icon-lg"
         />
         <h1 className="font-semibold text-xl">{title}</h1>
       </div>
