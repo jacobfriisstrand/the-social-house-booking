@@ -5,7 +5,6 @@
 // session and RLS; only the Auth admin API needs the service-role client
 // (allowlist entry 5, docs/agents/supabase.md).
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import {
@@ -24,7 +23,11 @@ import {
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 
-export type CreateCompanyState = FormState<CreateCompanyValues>;
+export type CreateCompanyState =
+  | FormState<CreateCompanyValues>
+  // Created: the sheet closes and refreshes the list; a failed first invite
+  // sends the list the ?invite=failed alert, as before.
+  | { inviteFailed: boolean; status: "created" };
 export type AdminCompanyState = FormState<AdminCompanyValues>;
 export type ResendInvitationState = FormState<never>;
 
@@ -84,19 +87,20 @@ const insertCompany = async (
 // (#14, ADR-0008) and Mail 1 speaks to members. On failure the company
 // exists and admin re-sends from its sheet on the list, which shows the
 // failure.
-const inviteQuery = async (values: CreateCompanyValues): Promise<string> => {
+const didInviteFail = async (values: CreateCompanyValues): Promise<boolean> => {
   if (values.membershipStatus === "external") {
-    return "";
+    return false;
   }
   const invited = await createAdminClient().auth.admin.inviteUserByEmail(
     values.email
   );
-  return invited.error ? "?invite=failed" : "";
+  return Boolean(invited.error);
 };
 
 // Order matters (docs/handover): the auth user must exist before the row
 // (FK), and the row before the invite, because the Send Email Hook looks the
-// company up for the greeting and refuses otherwise.
+// company up for the greeting and refuses otherwise. Returns instead of
+// redirecting: the create sheet closes itself and refreshes the list.
 export async function createCompany(
   _prevState: CreateCompanyState,
   values: CreateCompanyValues
@@ -114,8 +118,9 @@ export async function createCompany(
   if (!inserted.ok) {
     return { error: inserted.error, status: "error" };
   }
-  const query = await inviteQuery(parsed.data);
-  redirect(`/admin/companies${query}`);
+  const inviteFailed = await didInviteFail(parsed.data);
+  revalidatePath("/admin/companies");
+  return { inviteFailed, status: "created" };
 }
 
 // Same call as the first invite; Auth issues a fresh single-use link. Fails

@@ -100,6 +100,7 @@ export const messages = {
     create: "Opret virksomhed",
     createDescription:
       "Et medlem får en invitation på mail og vælger selv sin adgangskode. En ekstern virksomhed opretter du uden invitation.",
+    created: "Virksomheden er oprettet",
     createSubmit: {
       external: "Opret virksomhed",
       member: "Opret og send invitation",

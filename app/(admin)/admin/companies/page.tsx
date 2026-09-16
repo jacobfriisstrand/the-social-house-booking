@@ -1,5 +1,5 @@
 import { CompanySheet } from "@/components/companies/company-sheet";
-import { CreateCompanyDialog } from "@/components/companies/create-company-dialog";
+import { CreateCompanySheet } from "@/components/companies/create-company-sheet";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +48,7 @@ export default async function AdminCompaniesPage({
         </Alert>
       ) : null}
       <PageHeader title={copy.title}>
-        <CreateCompanyDialog />
+        <CreateCompanySheet />
       </PageHeader>
       <PagePanel>
         {companies?.length ? (
