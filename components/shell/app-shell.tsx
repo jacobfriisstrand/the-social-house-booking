@@ -4,12 +4,13 @@
 // admin group only when the session carries the admin role, the content
 // column (mobile menu button, page content, footer line), and the
 // off-canvas sheet on phone. Visual rules: docs/design/DESIGN.md, "Shell".
-import { LogOutIcon, WifiIcon } from "lucide-react";
+import { CalendarPlusIcon, LogOutIcon, WifiIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { SearchDialog } from "@/components/bookings/search-dialog";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
 import type { WifiSettings } from "@/lib/settings/data";
@@ -58,7 +60,43 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   );
 }
 
-function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
+// "Book lokale" as a text button, and as an icon button on the collapsed
+// rail with the same height so collapsing does not shift the nav. On
+// phone the sidebar is a sheet: it closes as the dialog opens.
+function BookRoomButtons({ onOpen }: { onOpen: () => void }) {
+  const { setOpenMobile } = useSidebar();
+  const handleClick = useCallback(() => {
+    setOpenMobile(false);
+    onOpen();
+  }, [onOpen, setOpenMobile]);
+  return (
+    <>
+      <Button
+        className="w-full group-data-[collapsible=icon]:hidden"
+        onClick={handleClick}
+        size="lg"
+      >
+        {messages.shell.bookRoom}
+      </Button>
+      <Button
+        aria-label={messages.shell.bookRoom}
+        className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
+        onClick={handleClick}
+        size="icon"
+      >
+        <CalendarPlusIcon />
+      </Button>
+    </>
+  );
+}
+
+function ShellSidebar({
+  isAdmin,
+  onOpenSearch,
+}: {
+  isAdmin: boolean;
+  onOpenSearch: () => void;
+}) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -79,7 +117,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
       </SidebarHeader>
       <SidebarGroup>
         <SidebarGroupContent>
-          <SearchDialog />
+          <BookRoomButtons onOpen={onOpenSearch} />
         </SidebarGroupContent>
       </SidebarGroup>
       <SidebarContent>
@@ -156,15 +194,14 @@ export function AppShell({
   defaultOpen: boolean;
   wifi: WifiSettings;
 }) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <ShellSidebar isAdmin={isAdmin} />
+      <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
+      <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
       <SidebarInset>
         <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:px-4 md:py-3">
-          <SidebarTrigger
-            aria-label={messages.shell.openMenu}
-            className="self-start md:hidden"
-          />
           {children}
           <ShellFooter wifi={wifi} />
         </div>

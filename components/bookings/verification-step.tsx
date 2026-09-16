@@ -116,7 +116,7 @@ export function VerificationStep({
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
       <div className="flex flex-col gap-2">
-        <h2 className="font-medium text-2xl">{copy.title}</h2>
+        <h2 className="font-medium text-lg">{copy.title}</h2>
         <p>{copy.sentTo(hold.bookerEmail)}</p>
       </div>
       <FieldGroup>

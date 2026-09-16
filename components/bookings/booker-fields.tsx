@@ -21,7 +21,7 @@ export function BookerFields<Values extends BookerValues>({
   const c = control as unknown as Control<BookerValues>;
   return (
     <FieldGroup className="gap-4">
-      <h3 className="font-medium text-lg">
+      <h3 className="font-medium text-base">
         {messages.booking.dialog.bookerSection}
       </h3>
       <div className="grid gap-4 md:grid-cols-3">

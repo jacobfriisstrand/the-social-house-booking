@@ -4,7 +4,6 @@
 // start, end; "Søg" navigates to /rooms with the search in the URL and
 // every room that is free and holds the party comes back. Rendered by the shell, so it owns its two triggers
 // (text button, icon button on the rail).
-import { CalendarPlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { DatePicker } from "@/components/forms/date-picker";
@@ -16,11 +15,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useSidebar } from "@/components/ui/sidebar";
 import { dateToIso } from "@/lib/calendar-date";
 import {
   GRID_END_MINUTES,
@@ -160,46 +157,19 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
   );
 }
 
-export function SearchDialog() {
-  const [open, setOpen] = useState(false);
-  const { setOpenMobile } = useSidebar();
-  // On phone the trigger sits in the off-canvas sidebar sheet: close it
-  // as the dialog opens, or the dialog lands on top of the menu.
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      if (next) {
-        setOpenMobile(false);
-      }
-      setOpen(next);
-    },
-    [setOpenMobile]
-  );
-  const close = useCallback(() => setOpen(false), []);
+// Controlled by the shell, which keeps the dialog outside the sidebar:
+// on phone the sidebar is a sheet, and a dialog mounted inside it would
+// unmount with the sheet the moment it closes.
+export function SearchDialog({
+  onOpenChange,
+  open,
+}: {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
   return (
-    <Dialog onOpenChange={handleOpenChange} open={open}>
-      <DialogTrigger
-        render={
-          <Button
-            className="w-full group-data-[collapsible=icon]:hidden"
-            size="lg"
-          />
-        }
-      >
-        {messages.shell.bookRoom}
-      </DialogTrigger>
-      {/* Same height as the text button so collapsing does not shift the
-          nav. */}
-      <DialogTrigger
-        render={
-          <Button
-            aria-label={messages.shell.bookRoom}
-            className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
-            size="icon"
-          />
-        }
-      >
-        <CalendarPlusIcon />
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:overflow-y-auto max-md:rounded-none sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
