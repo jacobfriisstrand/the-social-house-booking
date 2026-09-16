@@ -1,0 +1,36 @@
+name: Release preflight (develop)
+
+on:
+  pull_request_target:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Development release preflight
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SEND_EMAIL_HOOK_SECRET: ${{ secrets.SEND_EMAIL_HOOK_SECRET }}
+    steps:
+      - name: Check out the pull request merge ref
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+
+      - uses: supabase/setup-cli@v3
+
+      - name: Verify Supabase access and pending migrations
+        run: >-
+          supabase db push
+          --dry-run
+          --project-ref "$SUPABASE_PROJECT_REF"
+          --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Verify Supabase configuration
+        run: supabase config diff --project-ref "$SUPABASE_PROJECT_REF"
