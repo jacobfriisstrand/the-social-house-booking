@@ -643,6 +643,30 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          setting_created_at: string
+          setting_id: number
+          setting_updated_at: string
+          setting_wifi_network: string
+          setting_wifi_password: string
+        }
+        Insert: {
+          setting_created_at?: string
+          setting_id?: number
+          setting_updated_at?: string
+          setting_wifi_network: string
+          setting_wifi_password: string
+        }
+        Update: {
+          setting_created_at?: string
+          setting_id?: number
+          setting_updated_at?: string
+          setting_wifi_network?: string
+          setting_wifi_password?: string
+        }
+        Relationships: []
+      }
       terms_acceptances: {
         Row: {
           terms_acceptance_accepted_at: string

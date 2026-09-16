@@ -4,6 +4,8 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { sidebarDefaultOpen } from "@/components/shell/sidebar-cookie";
 import { requireCompletedCompany } from "@/lib/auth/require-company";
+import { getWifiSettings } from "@/lib/settings/data";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function GatedCompanyLayout({
   children,
@@ -11,10 +13,12 @@ export default async function GatedCompanyLayout({
   children: React.ReactNode;
 }) {
   const session = await requireCompletedCompany();
+  const wifi = await getWifiSettings(await createClient());
   return (
     <AppShell
       defaultOpen={await sidebarDefaultOpen()}
       isAdmin={session.appRole === "admin"}
+      wifi={wifi}
     >
       {children}
     </AppShell>

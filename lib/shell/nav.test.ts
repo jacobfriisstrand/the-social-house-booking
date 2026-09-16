@@ -19,6 +19,7 @@ describe("shellAdminLinks", () => {
     expect(shellAdminLinks().map((link) => link.href)).toEqual([
       "/admin/rooms",
       "/admin/companies",
+      "/admin/settings",
     ]);
   });
 });

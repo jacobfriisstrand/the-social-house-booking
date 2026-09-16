@@ -27,6 +27,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
+import type { WifiSettings } from "@/lib/settings/data";
 import {
   isShellLinkActive,
   type ShellNavLink,
@@ -147,17 +148,17 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-function ShellFooter() {
+function ShellFooter({ wifi }: { wifi: WifiSettings }) {
   return (
     <footer className="flex items-center justify-end gap-2 text-muted-foreground text-xs">
       <span className="inline-flex">
         <WifiIcon aria-hidden="true" className="size-4" />
       </span>
-      <span>{messages.shell.footer.network}</span>
-      <Separator className="h-3.5 self-center" orientation="vertical" />
+      <span>{wifi.network}</span>
+      <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
       <span>{messages.shell.footer.passwordLabel}</span>
       <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-foreground">
-        {messages.shell.footer.password}
+        {wifi.password}
       </span>
     </footer>
   );
@@ -167,22 +168,24 @@ export function AppShell({
   children,
   isAdmin,
   defaultOpen,
+  wifi,
 }: {
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
+  wifi: WifiSettings;
 }) {
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <ShellSidebar isAdmin={isAdmin} />
       <SidebarInset>
-        <div className="flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
+        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
           <SidebarTrigger
             aria-label={messages.shell.openMenu}
             className="self-start md:hidden"
           />
           {children}
-          <ShellFooter />
+          <ShellFooter wifi={wifi} />
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -100,18 +100,18 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
 - The content panel is `bg-muted rounded-xl p-6` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
-- The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, `TheSocialHouseguest`, then "adgangskode" and `SocialHouse` in a mono chip. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
+- The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in a mono chip. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
 - Content column: `max-w-[1400px]`, padding `px-8 py-6` on desktop, `px-4 py-4` on phone.
 - Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button at the top left of the content.
 
 Decisions the shell (#55) records on top of these rules:
 
-- The nav shows only routes that exist; each later issue adds its own entry with its page. At the time of the shell: Hjem (`/`), member Bookinger (`/bookings`), admin Lokaler (`/admin/rooms`) and Virksomheder (`/admin/companies`), and Log ud. No stub pages, no dead links.
+- The nav shows only routes that exist; each later issue adds its own entry with its page. At the time of the shell: Hjem (`/`), member Bookinger (`/bookings`), admin Lokaler (`/admin/rooms`), Virksomheder (`/admin/companies`) and Indstillinger (`/admin/settings`), and Log ud. No stub pages, no dead links.
 - Member Bookinger is hidden for admins: they have no company, so the page would always be empty.
 - "Book lokale" renders disabled; #4 wires the click to the search dialog.
 - `/admin` redirects to `/` — one home for everyone, the day grid above.
 - The collapse state follows the shadcn block's `sidebar_state` cookie.
-- Footer line copy (`messages/da.ts`): network `TheSocialHouseguest`, password `SocialHouse`. Every viewer is a logged-in member, so the password in the bundle is intended.
+- Footer line copy: seeded in the settings table (`TheSocialHouseguest` / `SocialHouse`), editable by admins under Indstillinger; `messages/da.ts` carries the same values as the fallback. Every viewer is a logged-in member, so the password in the bundle is intended.
 - Paths stay English (`/rooms`, `/bookings`, `/admin/companies`); labels come from `messages/da.ts`.
 
 Login is outside the shell: a centred white card on the background with the logo, email, password and one primary button.
@@ -250,7 +250,7 @@ Below, three white cards with monthly bar charts since January of the current ye
 
 ### Other admin pages
 
-Lokaler, Virksomheder, Tilkøb, Rabatter, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
+Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
 
 ## Formatting
 
