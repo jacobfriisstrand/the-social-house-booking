@@ -4,7 +4,7 @@
 -- grants the vendor doc requires (docs/vendor/supabase/auth-custom-access-token-hook.md).
 
 begin;
-select plan(6);
+select plan(7);
 
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
   ('00000000-0000-0000-0000-000000000000', '55555555-5555-5555-5555-555555555001', 'authenticated', 'authenticated', 'hook-admin@tsh.test', 'x', now(), '{"app_role":"admin"}', '{}', now(), now()),
@@ -22,6 +22,9 @@ select function_privs_are(
   'public', 'custom_access_token_hook', array['jsonb'],
   'anon', '{}'::name[],
   'anon may not execute the hook');
+select ok(
+  pg_catalog.has_schema_privilege('supabase_auth_admin', 'public', 'USAGE'),
+  'supabase_auth_admin needs USAGE on public to call the hook');
 
 select is(
   public.custom_access_token_hook(
