@@ -60,7 +60,9 @@ interface SearchValues {
   to: string;
 }
 
-function SearchForm() {
+// onSearched closes the dialog: the shell survives the navigation, so the
+// dialog would otherwise stay open over the results.
+function SearchForm({ onSearched }: { onSearched: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState<SearchValues>(() => ({
     date: dateToIso(new Date()),
@@ -87,8 +89,9 @@ function SearchForm() {
           til: values.to,
         })}`
       );
+      onSearched();
     },
-    [router, values]
+    [onSearched, router, values]
   );
   const setDate = useCallback((date: string) => update({ date }), [update]);
   const setFrom = useCallback((from: string) => update({ from }), [update]);
@@ -158,6 +161,7 @@ function SearchForm() {
 
 export function SearchDialog() {
   const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger
@@ -188,7 +192,7 @@ export function SearchDialog() {
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
-        {open ? <SearchForm /> : null}
+        {open ? <SearchForm onSearched={close} /> : null}
       </DialogContent>
     </Dialog>
   );
