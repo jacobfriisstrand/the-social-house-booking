@@ -169,7 +169,7 @@ function ShellSidebar({
 
 function ShellFooter({ wifi }: { wifi: WifiSettings }) {
   return (
-    <footer className="flex items-center justify-end gap-2 text-muted-foreground text-xs">
+    <footer className="flex flex-wrap items-center justify-center gap-2 text-muted-foreground text-xs md:justify-end">
       <span className="inline-flex">
         <WifiIcon aria-hidden="true" className="size-4" />
       </span>
