@@ -49,6 +49,8 @@ On push to `develop` (GitHub Environment `development`) and `main` (GitHub Envir
 5. `supabase functions deploy send-email --no-verify-jwt`
 6. `npm run email:sync` with that environment's `RESEND_API_KEY`
 
+Pull requests targeting `develop` or `main` also run a release preflight against the matching GitHub Environment. It uses that environment's secrets to run `supabase db push --dry-run` and `supabase config diff`, catching invalid project access, database credentials, pending migration errors, and configuration errors before merge. Supabase does not provide a dry-run mode for function deployment or Resend template synchronization, so those steps remain covered by the post-merge release workflow.
+
 Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `SEND_EMAIL_HOOK_SECRET`, `RESEND_API_KEY`. Netlify then builds the site from the same commit.
 
 **Never** run steps 2–5 from a laptop against a cloud project.
