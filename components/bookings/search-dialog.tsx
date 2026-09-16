@@ -1,8 +1,9 @@
 "use client";
 
-// "Book lokale" (DESIGN.md "Book lokale", ADR-0009): room (default all),
-// date, start, end, participants, then "Søg" navigates to /rooms with the
-// search in the URL. Rendered by the shell, so it owns its two triggers
+// "Book lokale" (DESIGN.md "Book lokale", ADR-0009): participants first,
+// then room (default all, each labelled with its capacity and hidden when
+// too small), date, start, end; "Søg" navigates to /rooms with the search
+// in the URL. Rendered by the shell, so it owns its two triggers
 // (text button, icon button on the rail).
 import { CalendarPlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -64,6 +65,27 @@ interface SearchValues {
   to: string;
 }
 
+// Rooms that hold the party, labelled with their capacity, so the room is
+// never chosen blind; "Alle lokaler" stays first.
+const roomItems = (rooms: RoomOption[], participants: number) => [
+  { label: copy.allRooms, value: ALL_ROOMS },
+  ...rooms
+    .filter((room) => room.capacity >= participants)
+    .map((room) => ({
+      label: `${room.name} · ${messages.rooms.capacityChip(room.capacity)}`,
+      value: room.roomId,
+    })),
+];
+
+// A chosen room that no longer holds the party falls back to all rooms.
+const roomStillFits = (
+  rooms: RoomOption[],
+  room: string,
+  participants: number
+): boolean =>
+  room === ALL_ROOMS ||
+  rooms.some((r) => r.roomId === room && r.capacity >= participants);
+
 function SearchForm({ rooms }: { rooms: RoomOption[] }) {
   const router = useRouter();
   const [values, setValues] = useState<SearchValues>(() => ({
@@ -77,9 +99,15 @@ function SearchForm({ rooms }: { rooms: RoomOption[] }) {
     (patch: Partial<SearchValues>) =>
       setValues((current) => {
         const next = { ...current, ...patch };
-        return { ...next, to: endAfter(next.from, next.to) };
+        return {
+          ...next,
+          room: roomStillFits(rooms, next.room, next.participants)
+            ? next.room
+            : ALL_ROOMS,
+          to: endAfter(next.from, next.to),
+        };
       }),
-    []
+    [rooms]
   );
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -96,7 +124,6 @@ function SearchForm({ rooms }: { rooms: RoomOption[] }) {
     },
     [router, values]
   );
-
   const setRoom = useCallback((room: string) => update({ room }), [update]);
   const setDate = useCallback((date: string) => update({ date }), [update]);
   const setFrom = useCallback((from: string) => update({ from }), [update]);
@@ -109,21 +136,29 @@ function SearchForm({ rooms }: { rooms: RoomOption[] }) {
     [update]
   );
 
-  const roomItems = [
-    { label: copy.allRooms, value: ALL_ROOMS },
-    ...rooms.map((room) => ({ label: room.name, value: room.roomId })),
-  ];
-
   return (
     <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
       <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="search-participants">
+            {copy.participants}
+          </FieldLabel>
+          <Input
+            id="search-participants"
+            inputMode="numeric"
+            min={1}
+            onChange={setParticipants}
+            type="number"
+            value={values.participants}
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor="search-room">
             {messages.booking.fields.room}
           </FieldLabel>
           <ChoiceSelect
             id="search-room"
-            items={roomItems}
+            items={roomItems(rooms, values.participants)}
             onChange={setRoom}
             value={values.room}
           />
@@ -159,19 +194,6 @@ function SearchForm({ rooms }: { rooms: RoomOption[] }) {
             />
           </Field>
         </div>
-        <Field>
-          <FieldLabel htmlFor="search-participants">
-            {copy.participants}
-          </FieldLabel>
-          <Input
-            id="search-participants"
-            inputMode="numeric"
-            min={1}
-            onChange={setParticipants}
-            type="number"
-            value={values.participants}
-          />
-        </Field>
       </FieldGroup>
       <Button size="lg" type="submit">
         {copy.submit}

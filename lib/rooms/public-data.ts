@@ -76,6 +76,7 @@ export async function findPublicRoom(
 }
 
 export interface RoomOption {
+  capacity: number;
   name: string;
   roomId: string;
 }
@@ -86,10 +87,11 @@ export async function listRoomOptions(
 ): Promise<RoomOption[]> {
   const { data } = await supabase
     .from("rooms")
-    .select("room_id, room_name")
+    .select("room_id, room_name, room_capacity")
     .eq("room_is_active", true)
     .order("room_name");
   return (data ?? []).map((room) => ({
+    capacity: room.room_capacity,
     name: room.room_name,
     roomId: room.room_id,
   }));

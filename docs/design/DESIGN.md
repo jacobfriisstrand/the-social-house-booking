@@ -47,14 +47,16 @@ Poppins, loaded in `app/layout.tsx` with weights 400 to 900. Geist Mono for book
 
 | Role | Size | Weight | Colour | Example |
 |---|---|---|---|---|
-| Page title (h1) | 28px / `text-3xl` | 600 | foreground | "Administrer lokaler" |
-| Section title (h2) | 22px / `text-2xl` | 500 | foreground | "Lokaler" above the rooms carousel |
-| Card title (h3) | 18px / `text-lg` | 500 | foreground | "Room of Relations" on a room card |
-| Body | 14px / `text-sm` | 400 | foreground | descriptions, table cells |
-| Label, hint | 12px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
+| Page title (h1) | 26px / `text-3xl` | 600 | foreground | "Administrer lokaler" |
+| Section title (h2) | 21px / `text-2xl` | 500 | foreground | "Lokaler" above the rooms carousel |
+| Card title (h3) | 17px / `text-lg` | 500 | foreground | "Room of Relations" on a room card |
+| Body | 13px / `text-sm` | 400 | foreground | descriptions, table cells |
+| Label, hint | 11px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
 | Group header | 11px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
-| Value, price | 16px to 20px | 500 | foreground | "800 kr/time" |
-| Big number | 28px / `text-3xl` | 600 | foreground | statistic tiles |
+| Value, price | 15px to 18px | 500 | foreground | "800 kr/time" |
+| Big number | 26px / `text-3xl` | 600 | foreground | statistic tiles |
+
+The scale is 0.9 of Tailwind's defaults, set once in the `@theme` block of globals.css (`text-xs` 11px, `text-sm` 13px, `text-base` 15px, `text-lg` 17px, `text-xl` 18px, `text-2xl` 21px, `text-3xl` 26px). Decided 2026-09-16 in #4: the default scale read too large at the 0.22rem density.
 
 No eyebrows. The old front page put "THE DAILY" over "Booking overview"; the rule now is one bold title and nothing above it. The uppercase small style is reserved for sidebar group headers.
 
@@ -99,9 +101,9 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style.
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
-- The content panel is `bg-muted rounded-xl p-6` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
+- The content panel is `bg-muted rounded-xl p-3` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
 - The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in a mono chip. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
-- Content column: `max-w-[1400px]`, padding `px-8 py-6` on desktop, `px-4 py-4` on phone.
+- Content column: `max-w-[1400px]`, padding `px-4 py-3` on desktop, `px-2 py-2` on phone, `gap-3` between title, panel and footer line (halved 2026-09-16 in #4).
 - Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button at the top left of the content.
 
 Decisions the shell (#55) records on top of these rules:

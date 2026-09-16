@@ -20,7 +20,7 @@ export function PageHeader({
 
 export function PagePanel({ children }: { children?: ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col gap-6 rounded-xl bg-muted p-6">
+    <div className="flex flex-1 flex-col gap-6 rounded-xl bg-muted p-3">
       {children}
     </div>
   );

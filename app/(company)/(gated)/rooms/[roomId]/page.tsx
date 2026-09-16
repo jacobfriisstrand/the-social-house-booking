@@ -148,7 +148,7 @@ export default async function RoomPage({
     <>
       <PageHeader title={room.name} />
       <PagePanel>
-        <Card>
+        <Card className="max-md:mb-32">
           <CardContent className="grid gap-8 lg:grid-cols-[2fr_3fr]">
             <div className="order-2 lg:order-1">
               <RoomInfo room={room} />
@@ -158,7 +158,9 @@ export default async function RoomPage({
             </div>
           </CardContent>
         </Card>
-        <div className="sticky bottom-4 z-10 mt-auto flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm max-md:fixed max-md:inset-x-4">
+        {/* Sticky bar on desktop; a fixed full-width footer on phone, with
+            the card above keeping clear of it (DESIGN.md "Book lokale" 4). */}
+        <div className="sticky bottom-4 z-10 mt-auto flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:rounded-none max-md:border-x-0 max-md:border-b-0">
           <span className="font-medium">{room.name}</span>
           <PriceRow
             discountPercent={discountPercent}

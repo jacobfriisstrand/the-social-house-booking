@@ -169,7 +169,7 @@ export function AppShell({
     <SidebarProvider defaultOpen={defaultOpen}>
       <ShellSidebar isAdmin={isAdmin} rooms={rooms} />
       <SidebarInset>
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
+        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:px-4 md:py-3">
           <SidebarTrigger
             aria-label={messages.shell.openMenu}
             className="self-start md:hidden"
