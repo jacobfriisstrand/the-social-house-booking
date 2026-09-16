@@ -1,6 +1,11 @@
 // Shared by the company's hold (#2) and admin's direct booking (#14): the
-// room lookup, the insert row with its price snapshot, the step type both
-// flows chain on, and the Postgres error code an unavailable slot raises.
+// room lookup, the insert row with its price snapshot, the frozen price
+// overview (#6) read back from that snapshot, the step type both flows
+// chain on, and the Postgres error code an unavailable slot raises.
+import {
+  type PriceOverviewModel,
+  priceOverview,
+} from "@/lib/domain/price-overview";
 import { buildSnapshot } from "@/lib/domain/snapshot";
 import { hoursBetween } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
@@ -86,3 +91,32 @@ export const newBookingRow = (
     booking_start_at: input.startAt,
   };
 };
+
+// The columns a price overview is read from: the snapshot only. Later
+// reads of a confirmed booking never recompute from live room or company
+// prices (#6, ADR-0005).
+export interface BookingPriceRow {
+  booking_addon_total_ore: number;
+  booking_discount_percent: number;
+  booking_end_at: string;
+  booking_expected_total_ore: number;
+  booking_room_price_ore: number;
+  booking_start_at: string;
+}
+
+// The frozen overview of a booking, from its snapshot columns. The total
+// is the stored booking_expected_total_ore; room price, discount and
+// hours are the frozen inputs the snapshot was built from.
+export const bookingPriceOverview = (
+  row: BookingPriceRow
+): PriceOverviewModel =>
+  priceOverview({
+    addOnsOre: row.booking_addon_total_ore,
+    discountPercent: row.booking_discount_percent,
+    hours: hoursBetween(
+      new Date(row.booking_start_at),
+      new Date(row.booking_end_at)
+    ),
+    roomHourlyPriceOre: row.booking_room_price_ore,
+    totalOre: row.booking_expected_total_ore,
+  });

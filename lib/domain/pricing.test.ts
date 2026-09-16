@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { discountAmountOre, memberPriceOre, roomTotalOre } from "./pricing";
+import {
+  discountAmountOre,
+  memberPriceOre,
+  roomTotalOre,
+  savingsOre,
+} from "./pricing";
 
 describe("roomTotalOre", () => {
   it("multiplies hourly price by hours", () => {
@@ -67,5 +72,30 @@ describe("discountAmountOre", () => {
     expect(discountAmountOre(price, pct) + memberPriceOre(price, pct)).toBe(
       price
     );
+  });
+});
+
+describe("savingsOre", () => {
+  it("is the normal room price minus the member price", () => {
+    // 800 kr/h × 3h = 2400 kr; 50 % → 1200 kr member, 1200 kr saved
+    expect(savingsOre(240_000, 50)).toBe(120_000);
+  });
+
+  it("saves nothing without a discount", () => {
+    expect(savingsOre(240_000, 0)).toBe(0);
+  });
+
+  it("saves the full room price at 100% discount", () => {
+    expect(savingsOre(240_000, 100)).toBe(240_000);
+  });
+
+  it("adds up with the member price even on the half-up edge", () => {
+    // 10005 øre at 10 %: discountAmountOre rounds 1000.5 up to 1001, but the
+    // savings must equal normal − member (10005 − 9005 = 1000) so the
+    // overview never shows a krone more saved than was paid less.
+    expect(memberPriceOre(10_005, 10)).toBe(9005);
+    expect(discountAmountOre(10_005, 10)).toBe(1001);
+    expect(savingsOre(10_005, 10)).toBe(1000);
+    expect(savingsOre(10_005, 10) + memberPriceOre(10_005, 10)).toBe(10_005);
   });
 });

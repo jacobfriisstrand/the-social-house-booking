@@ -66,6 +66,13 @@ export const messages = {
       room: "Lokale",
       startAt: "Start",
     },
+    price: {
+      addOns: "Tilkøb",
+      exclVat: "ekskl. moms",
+      memberDiscount: (percent: number) => `Medlemsrabat (${percent} %)`,
+      room: "Lokale",
+      total: "Total",
+    },
     verification: {
       codeSent: "Vi har sendt en ny kode",
       confirm: "Bekræft booking",
