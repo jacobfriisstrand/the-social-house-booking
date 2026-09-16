@@ -35,3 +35,9 @@ grant execute
 revoke execute
   on function public.custom_access_token_hook(jsonb)
   from authenticated, anon, public;
+
+-- GoAuth runs the hook as supabase_auth_admin.  Supabase local stacks grant
+-- USAGE on public by default; the cloud bootstrap may not.  Without it the
+-- hook fails with "permission denied for schema public" and sign-in returns
+-- "wrong email or password" (2026-09-16 prod incident).
+grant usage on schema public to supabase_auth_admin;
