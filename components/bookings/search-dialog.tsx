@@ -170,7 +170,7 @@ export function SearchDialog({
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:overflow-y-auto max-md:rounded-none sm:max-w-md">
+      <DialogContent className="max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:content-start max-md:overflow-y-auto max-md:rounded-none sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>
