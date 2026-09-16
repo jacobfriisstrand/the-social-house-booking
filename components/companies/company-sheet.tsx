@@ -40,7 +40,12 @@ export function CompanySheet({ company }: { company: CompanyRow }) {
           <SheetTitle>{company.company_display_name}</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
-          <ResendInvitationButton companyId={company.company_id} />
+          {/* Re-inviting is only meaningful before the company has used the
+              invite: once its master data is filled in, Auth refuses a new
+              invite and the flow is "Glemt adgangskode". */}
+          {company.company_master_data_completed_at ? null : (
+            <ResendInvitationButton companyId={company.company_id} />
+          )}
           <CompanyForm defaultValues={companyToAdminValues(company)} />
         </div>
       </SheetContent>
