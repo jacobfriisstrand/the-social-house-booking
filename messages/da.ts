@@ -90,7 +90,6 @@ export const messages = {
     unauthorizedTitle: "Ikke autoriseret",
   },
   companies: {
-    back: "Tilbage til virksomheder",
     columns: {
       discount: "Rabat",
       displayName: "Visningsnavn",
@@ -101,6 +100,7 @@ export const messages = {
     create: "Opret virksomhed",
     createDescription:
       "Et medlem får en invitation på mail og vælger selv sin adgangskode. En ekstern virksomhed opretter du uden invitation.",
+    created: "Virksomheden er oprettet",
     createSubmit: {
       external: "Opret virksomhed",
       member: "Opret og send invitation",
@@ -366,5 +366,37 @@ export const messages = {
     submit: "Gem adgangskode",
     submitting: "Gemmer …",
     title: "Vælg adgangskode",
+  },
+  settings: {
+    errors: {
+      required: "Feltet skal udfyldes.",
+      saveFailed: "Indstillingerne kunne ikke gemmes. Prøv igen.",
+      wifiNetworkMax: "Netværksnavnet må højst være 32 tegn.",
+      wifiPasswordMax: "Adgangskoden må højst være 63 tegn.",
+    },
+    saved: "Indstillingerne er gemt",
+    saving: "Gemmer …",
+    submit: "Gem",
+    title: "Indstillinger",
+    wifiNetwork: "Wi-Fi netværk",
+    wifiPassword: "Wi-Fi adgangskode",
+    wifiSection: "Wi-Fi",
+  },
+  shell: {
+    adminGroup: "Admin",
+    bookings: "Bookinger",
+    bookRoom: "Book lokale",
+    companies: "Virksomheder",
+    footer: {
+      network: "TheSocialHouseguest",
+      password: "SocialHouse",
+      passwordLabel: "adgangskode",
+    },
+    home: "Hjem",
+    menuSheetDescription: "Navigationsmenu",
+    menuSheetTitle: "Menu",
+    openMenu: "Åbn menu",
+    settings: "Indstillinger",
+    toggleSidebar: "Vis eller skjul sidepanel",
   },
 } as const;

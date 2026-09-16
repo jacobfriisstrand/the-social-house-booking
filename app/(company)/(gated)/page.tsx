@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { NotAuthorizedAlert } from "@/components/not-authorized-alert";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { messages } from "@/messages/da";
 
-// Dashboard placeholder: content only. Layout, page title, and the muted
-// panel belong to the app shell (#55).
+// Hjem: the day grid from #12 renders on the panel. The shell (#55) owns
+// the sidebar, the title, the panel and the footer line.
 export default async function HomePage({
   searchParams,
 }: {
@@ -12,13 +12,10 @@ export default async function HomePage({
   const params = await searchParams;
 
   return (
-    <main>
+    <>
       {params.unauthorized ? <NotAuthorizedAlert /> : null}
-      <nav>
-        <Link className="underline-offset-4 hover:underline" href="/company">
-          {messages.company.masterDataLink}
-        </Link>
-      </nav>
-    </main>
+      <PageHeader title={messages.shell.home} />
+      <PagePanel />
+    </>
   );
 }

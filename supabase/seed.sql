@@ -183,4 +183,10 @@ insert into public.room_addons (room_addon_room_id, room_addon_addon_id) values
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d1'),
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d3');
 
+-- Site-wide settings (#55 footer, single row per settings.sql): the Wi-Fi
+-- credentials the shell footer shows until an admin edits them.
+insert into public.settings (setting_wifi_network, setting_wifi_password)
+values ('TheSocialHouseguest', 'SocialHouse')
+on conflict (setting_id) do nothing;
+
 commit;

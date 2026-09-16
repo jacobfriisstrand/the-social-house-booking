@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PageHeader, PagePanel } from "@/components/shell/page";
 import { isDevelopment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -26,8 +27,13 @@ export default async function DevBookingPage() {
     .order("room_name");
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-10">
-      <DevBookingForm rooms={rooms ?? []} />
-    </main>
+    <>
+      <PageHeader title={messages.booking.demo.title} />
+      <PagePanel>
+        <div className="mx-auto w-full max-w-md">
+          <DevBookingForm rooms={rooms ?? []} />
+        </div>
+      </PagePanel>
+    </>
   );
 }
