@@ -8,6 +8,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
+import { PriceOverview } from "@/components/bookings/price-overview";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { useFormAction } from "@/components/forms/use-form-action";
@@ -131,6 +132,9 @@ export function VerificationStep({
           name="code"
         />
       </FieldGroup>
+      {/* The frozen price overview (#6): exactly what confirmation bills,
+          read from the hold's snapshot columns, not recomputed. */}
+      <PriceOverview model={hold.price} />
       <HoldCountdown secondsLeft={secondsLeft} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <PendingButton
