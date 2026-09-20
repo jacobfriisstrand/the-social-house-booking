@@ -32,7 +32,7 @@ const adminErrors = messages.booking.admin.errors;
 
 export type AdminBookingState =
   | Exclude<FormState<AdminBookingValues>, { status: "success" }>
-  | { bookingNumber: string; status: "created" };
+  | { bookingId: string; bookingNumber: string; status: "created" };
 
 interface BookingCompany {
   company_discount_percent: number;
@@ -120,7 +120,7 @@ async function createConfirmedBooking(
     await expireBooking(supabase, bookingId);
     return errorState(error);
   }
-  return { bookingNumber, status: "created" };
+  return { bookingId, bookingNumber, status: "created" };
 }
 
 export async function createAdminBooking(

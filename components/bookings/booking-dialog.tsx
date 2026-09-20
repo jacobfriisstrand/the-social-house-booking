@@ -3,7 +3,7 @@
 // The booking dialog (DESIGN.md "Booking dialog", #4): large, full-screen
 // on phone; header with the room name, a stats band, then the form. "Book
 // nu" swaps the body to the verification step (#2); success closes the
-// dialog and toasts.
+// dialog, toasts, and goes to the booking-complete page.
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
@@ -84,14 +84,23 @@ export function BookingDialog({
     },
     [onOpenChange]
   );
-  const close = useCallback(() => {
-    handleOpenChange(false);
-    router.refresh();
-  }, [handleOpenChange, router]);
+  const complete = useCallback(
+    (bookingId: string) => {
+      handleOpenChange(false);
+      router.push(`/bookings/${bookingId}/confirmed`);
+    },
+    [handleOpenChange, router]
+  );
   const handleHeld = useCallback(
     (hold: Hold) => setPhase({ hold, kind: "verify" }),
     []
   );
+  const heldBookingId = phase.kind === "verify" ? phase.hold.bookingId : null;
+  const handleConfirmed = useCallback(() => {
+    if (heldBookingId) {
+      complete(heldBookingId);
+    }
+  }, [complete, heldBookingId]);
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
@@ -106,14 +115,14 @@ export function BookingDialog({
         {phase.kind === "verify" ? (
           <VerificationStep
             hold={phase.hold}
-            onConfirmed={close}
+            onConfirmed={handleConfirmed}
             onResent={handleHeld}
           />
         ) : (
           <BookingForm
             initialDate={initialDate}
             initialPeriods={initialPeriods}
-            onCreated={close}
+            onCreated={complete}
             onHeld={handleHeld}
             prefill={prefill}
             room={room}

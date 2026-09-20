@@ -128,7 +128,7 @@ function useDayPeriods(
 }
 
 interface ResultHandlers {
-  onCreated: () => void;
+  onCreated: (bookingId: string) => void;
   onHeld: (hold: Hold) => void;
 }
 
@@ -149,7 +149,7 @@ function useBookingResult(
         title: messages.booking.admin.created(state.bookingNumber),
         type: "success",
       });
-      onCreated();
+      onCreated(state.bookingId);
     }
   }, [state, onCreated, onHeld]);
   useActionError(state, form);

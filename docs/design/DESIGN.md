@@ -179,7 +179,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom.
 
-**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
+**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen, stacked above dialogs and sheets (`z-100`) so a result raised from inside a dialog is never hidden behind its backdrop. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
 **Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence.
 
@@ -227,7 +227,7 @@ Under the panel a one-line sentence in body text: "Dit møde starter onsdag 02/0
 
 Then two columns: "Tilkøb" as checkboxes with price chips left; the price summary right as a muted panel with rows "Lokale", "Tilkøb", "Subtotal", the discount line in success ("Medlemsrabat (50 %)", negative amount), and "Total" bold at 20px with "ekskl. moms" in 12px muted after it. A terms checkbox ("Jeg accepterer bookingbetingelserne", linked) sits above a full-width primary "Book nu".
 
-"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, the six-digit code in a shadcn `InputOTP` (one continuous row of six slots, 60px tall with `border-secondary` so the cells read clearly, centred, no separator, digits only), the hold countdown in muted text centred directly under the code, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog and toasts "Booking bekræftet".
+"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, the six-digit code in a shadcn `InputOTP` (one continuous row of six slots, 60px tall with `border-secondary` so the cells read clearly, centred, no separator, digits only), the hold countdown in muted text centred directly under the code, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog, toasts "Booking bekræftet" and goes to the booking-complete page at `/bookings/[bookingId]/confirmed`: a centred card with a success check, "Tak for din booking", the booking number in mono, room, date, time, participants, booker and the expected total excl. VAT, then "Se bookinger" (primary, members) and "Book et lokale mere". An admin's booking for a company lands on the same page.
 
 ### Bookinger (member)
 
