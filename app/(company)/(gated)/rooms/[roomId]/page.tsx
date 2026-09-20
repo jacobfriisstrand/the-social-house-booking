@@ -146,7 +146,7 @@ function RoomBreadcrumb({ name, query }: { name: string; query: Query }) {
   const search = parseRoomSearch(query);
   return (
     <Breadcrumb>
-      <BreadcrumbList>
+      <BreadcrumbList className="text-xs">
         <BreadcrumbItem>
           <BreadcrumbLink
             render={<Link href={`/rooms${roomSearchQuery(search ?? {})}`} />}
@@ -194,8 +194,12 @@ export default async function RoomPage({
 
   return (
     <>
-      <PageHeader title={room.name} />
-      <RoomBreadcrumb name={room.name} query={query} />
+      {/* Title and breadcrumb are one block: tighter than the column's
+          gap between title, panel and footer line. */}
+      <div className="flex flex-col gap-1">
+        <PageHeader title={room.name} />
+        <RoomBreadcrumb name={room.name} query={query} />
+      </div>
       <PagePanel>
         {/* Desktop: card and bar share one grid cell, so the bar lies on
             the card's bottom edge as part of the content and the photos
