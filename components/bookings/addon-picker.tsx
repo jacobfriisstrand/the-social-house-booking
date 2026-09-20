@@ -2,6 +2,12 @@
 
 import { useCallback } from "react";
 import { formatAddonPrice } from "@/components/rooms/addon-price";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -23,6 +29,30 @@ interface AddonPickerProps {
 }
 
 const copy = messages.booking.dialog;
+
+// "Læs om House Host": the add-on's description folds out under its row,
+// so the list stays short until someone wants the details. The trigger's
+// chevron sits right after the text instead of at the far edge.
+function AddonAbout({
+  description,
+  name,
+}: {
+  description: string;
+  name: string;
+}) {
+  return (
+    <Accordion>
+      <AccordionItem value="about">
+        <AccordionTrigger className="justify-start! flex-none! gap-1 py-1 font-normal text-muted-foreground text-xs **:data-[slot=accordion-trigger-icon]:ml-0!">
+          {copy.readAbout(name)}
+        </AccordionTrigger>
+        <AccordionContent className="whitespace-pre-line text-muted-foreground">
+          {description}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
 
 function AddonRow({
   addon,
@@ -49,7 +79,7 @@ function AddonRow({
           </Badge>
         </FieldLabel>
         {addon.description ? (
-          <FieldDescription>{addon.description}</FieldDescription>
+          <AddonAbout description={addon.description} name={addon.name} />
         ) : null}
       </FieldContent>
     </Field>

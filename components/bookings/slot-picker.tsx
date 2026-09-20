@@ -167,8 +167,11 @@ export function SlotPicker({
   );
   return (
     <div className="grid gap-6 rounded-lg border bg-card p-4 md:grid-cols-[auto_1fr_1fr]">
+      {/* Full width below md, so the days are large tap targets; the
+          calendar's natural width from md up, next to the start list. */}
       <Calendar
         aria-label={copy.calendarLabel}
+        classNames={{ root: "w-full md:w-fit" }}
         disabled={[{ before: now }, { after: bookingHorizonEnd(now) }]}
         locale={da}
         mode="single"

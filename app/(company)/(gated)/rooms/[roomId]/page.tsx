@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookRoom } from "@/components/bookings/book-room";
+import { ExpandableText } from "@/components/expandable-text";
 import { formatAddonPrice } from "@/components/rooms/addon-price";
 import { PriceRow } from "@/components/rooms/price-row";
 import { RoomPhotoCarousel } from "@/components/rooms/room-photo-carousel";
@@ -97,9 +98,15 @@ function RoomInfo({ room }: { room: PublicRoom }) {
     <div className="flex flex-col gap-4">
       <RoomChips room={room} />
       <Separator />
-      {room.description ? <p className="text-sm">{room.description}</p> : null}
+      {room.description ? (
+        <ExpandableText className="text-sm" text={room.description} />
+      ) : null}
       {room.practicalNotes ? (
-        <p className="text-muted-foreground text-sm">{room.practicalNotes}</p>
+        <ExpandableText
+          className="text-muted-foreground text-sm"
+          lines={3}
+          text={room.practicalNotes}
+        />
       ) : null}
       <Separator />
       <h2 className="font-medium text-lg">{messages.rooms.addonsSection}</h2>

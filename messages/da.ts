@@ -53,6 +53,7 @@ export const messages = {
       priceRoom: "Lokale",
       priceSubtotal: "Subtotal",
       priceTotal: "Total",
+      readAbout: (name: string) => `Læs om ${name}`,
       slotStatus: {
         blocked: "Optaget",
         closed: "Lukket",
@@ -137,6 +138,8 @@ export const messages = {
     more: "Mere",
     nextSlide: "Næste billede",
     previousSlide: "Forrige billede",
+    readLess: "Læs mindre",
+    readMore: "Læs mere",
     signOut: "Log ud",
     unauthorized: "Du har ikke adgang til at se den side du forsøgte at tilgå.",
     unauthorizedTitle: "Ikke autoriseret",

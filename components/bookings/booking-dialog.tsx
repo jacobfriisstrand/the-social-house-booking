@@ -104,7 +104,9 @@ export function BookingDialog({
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:content-start max-md:rounded-none sm:max-w-5xl">
+      {/* A large dialog: a slower fade with a slight rise reads smoother
+          than the default quick zoom, opening and closing. */}
+      <DialogContent className="data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4 max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 duration-300 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:content-start max-md:rounded-none sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle className="text-xl">{room.name}</DialogTitle>
           <DialogDescription className="sr-only">

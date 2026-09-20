@@ -127,6 +127,8 @@ Login is outside the shell: a centred white card on the background with the logo
 
 **Empty state.** A white bordered card, `py-16`, centred: card-title line, one body sentence, optional secondary button. "Ingen kommende bookinger" / "Du har ingen kommende bookinger lige nu."
 
+**Long text.** A description that may run long is held to a few lines (4 for a room description, 3 for practical notes) with a soft fade at the cut, and gets a "Læs mere" / "Læs mindre" text button under it, foreground colour, underlined. It folds out by animating its height (300ms, off under reduced motion). The button shows only when the text is actually cut off. One component: `components/expandable-text.tsx`. In the booking dialog an add-on's description folds out from a shadcn `Accordion` trigger under its row: "Læs om House Host".
+
 **Chips.** `Badge` variant outline with `rounded-full bg-secondary/40 px-2 py-0.5 text-xs` and a 16px icon: "1 - 12 personer", "25 m²". Used on room cards and the room detail page. Not clickable.
 
 ## Components
@@ -177,7 +179,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Tables.** shadcn `Table` inside a `Card` with no padding, header row 12px muted, cells `p-2`, rows `h-12` with a border between. Numeric columns right-aligned with `tabular-nums`. Booking number in mono. Below `md` every wide table scrolls horizontally inside its card with the first column sticky; nothing stacks into cards. Selection checkboxes on the left when bulk actions exist (admin bookings). Totals row in the invoicing view is `font-medium` on a muted ground.
 
-**Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom.
+**Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom; there the dialog's close button is a larger tap target (about 45px, 21px icon), and the booking dialog's calendar fills the width so the days are large tap targets. Dialogs fade and zoom in and out over 200ms, ease-out; the large booking dialog takes 300ms with a slight rise. Under reduced motion dialogs appear and disappear without animation.
 
 **Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen, stacked above dialogs and sheets (`z-100`) so a result raised from inside a dialog is never hidden behind its backdrop. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
