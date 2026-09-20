@@ -9,7 +9,9 @@
 import { captureException } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { requireOwnCompany } from "@/lib/auth/require-company";
+import type { AddOnLine } from "@/lib/domain/addons";
 import type { CompanyRow } from "@/lib/domain/company-master-data";
+import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import {
   canResendCode,
   holdExpiry,
@@ -33,15 +35,18 @@ import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { escapeHtml } from "@/supabase/functions/send-email/handler";
 import {
-  type BookableRoom,
+  findRoomAndAddOns,
+  releasePendingBooking,
+  writeAddOnLines,
+} from "./addon-lines";
+import {
+  bookingPriceOverview,
   EXCLUSION_VIOLATION,
-  expireBooking,
-  findBookableRoom,
-  insertBooking,
-  insertBookingAddons,
-  newBookingRow,
+  insertPendingBooking,
+  readBookingPriceRow,
   type SessionClient,
   type Step,
+  slotFailureMessage,
 } from "./new-booking";
 import {
   generateVerificationCode,
@@ -51,12 +56,14 @@ import {
 
 const { errors } = messages.booking;
 
-// What the verification step needs about a live hold; nothing else leaves
-// the server.
+// What the verification step needs about a live hold: the booker's email
+// and the frozen price overview (#6) rendered from the row's snapshot
+// columns; nothing else leaves the server.
 export interface Hold {
   bookerEmail: string;
   bookingId: string;
   holdExpiresAt: string;
+  price: PriceOverviewModel;
 }
 
 export type HoldState =
@@ -71,6 +78,7 @@ interface LiveHold {
   bookerEmail: string;
   bookingId: string;
   bookingNumber: string;
+  price: PriceOverviewModel;
 }
 
 const fail = (error: string): Step<never> => ({
@@ -90,7 +98,8 @@ async function requireBookingCompany(): Promise<CompanyRow> {
 
 // The booking as the company may see it (RLS), only while the hold is
 // live. A malformed id, another company's booking, a confirmed one, and a
-// dead hold all read as "no hold".
+// dead hold all read as "no hold". The overview comes from the snapshot
+// columns (ADR-0005), so a resent code shows the same frozen price.
 async function findLiveHold(
   supabase: SessionClient,
   bookingId: unknown
@@ -101,7 +110,9 @@ async function findLiveHold(
   }
   const { data } = await supabase
     .from("bookings")
-    .select("booking_id, booking_number, booking_booker_email")
+    .select(
+      "booking_id, booking_number, booking_booker_email, booking_room_price_ore, booking_discount_percent, booking_addon_total_ore, booking_expected_total_ore, booking_start_at, booking_end_at"
+    )
     .eq("booking_id", parsed.data.bookingId)
     .eq("booking_status", "pending_verification")
     .gt("booking_hold_expires_at", new Date().toISOString())
@@ -113,10 +124,18 @@ async function findLiveHold(
     bookerEmail: data.booking_booker_email,
     bookingId: data.booking_id,
     bookingNumber: data.booking_number,
+    price: bookingPriceOverview(data),
   };
 }
 
-const releaseHold = expireBooking;
+// Frees the room: the exclusion constraint and calendar_entries ignore
+// expired rows (#24).
+async function releaseHold(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<void> {
+  await releasePendingBooking(supabase, bookingId);
+}
 
 // Stores a new hashed code and sends Mail 2 to the booker, greeting the
 // company (Bilag 1 "Emails"). Throws on either failure.
@@ -177,37 +196,56 @@ const heldState = (hold: LiveHold, expiresAt: Date): HoldState => ({
     bookerEmail: hold.bookerEmail,
     bookingId: hold.bookingId,
     holdExpiresAt: expiresAt.toISOString(),
+    price: hold.price,
   },
   status: "held",
 });
 
-// The pending_verification row (newBookingRow carries the snapshot) and
-// its add-on rows. The database rejects an overlapping slot, so no
-// separate availability query runs first.
+// The pending_verification row (insertPendingBooking carries the snapshot)
+// with its add-on lines (#7): the lines are written while the booking is
+// pending — the frozen add-on rows (ADR-0005) — and Postgres moves the
+// booking's add-on and expected totals by their sum
+// (booking_addons_sync_totals). The database rejects an overlapping slot,
+// so no separate availability query runs first. The overview is read back
+// from the snapshot columns afterwards, so the verification step shows
+// exactly what was frozen, not a recomputation.
 async function insertHold(
   supabase: SessionClient,
   company: CompanyRow,
   input: CreateHoldValues,
-  room: BookableRoom,
+  roomHourlyPriceOre: number,
+  lines: AddOnLine[],
   expiresAt: Date
 ): Promise<Step<LiveHold>> {
-  const inserted = await insertBooking(supabase, {
-    ...newBookingRow(input, company.company_discount_percent, room),
-    booking_company_id: company.company_id,
-    booking_hold_expires_at: expiresAt.toISOString(),
-    booking_status: "pending_verification",
-  });
+  const inserted = await insertPendingBooking(
+    supabase,
+    company,
+    input,
+    roomHourlyPriceOre,
+    { booking_hold_expires_at: expiresAt.toISOString() }
+  );
   if (!inserted.ok) {
-    return inserted;
+    return fail(slotFailureMessage(inserted.error));
   }
-  const { bookingId, bookingNumber } = inserted.value;
-  if (!(await insertBookingAddons(supabase, bookingId, room.addons))) {
+  const { bookingId } = inserted;
+  if (!(await writeAddOnLines(supabase, bookingId, lines))) {
+    // No lines, no booking: release the hold so the room does not sit
+    // blocked on a row the booker cannot complete.
     await releaseHold(supabase, bookingId);
+    return fail(errors.createFailed);
+  }
+  const snapshot = await readBookingPriceRow(supabase, bookingId);
+  if (!snapshot) {
     return fail(errors.createFailed);
   }
   return {
     ok: true,
-    value: { bookerEmail: input.bookerEmail, bookingId, bookingNumber },
+    value: {
+      bookerEmail: input.bookerEmail,
+      bookingId,
+      bookingNumber: inserted.bookingNumber,
+      price: bookingPriceOverview(snapshot),
+    },
   };
 }
 
@@ -226,7 +264,10 @@ async function issueFirstCode(
   return heldState(hold, expiresAt);
 }
 
-// "Book nu": the hold, then the first code.
+// "Book nu": the hold, then the first code. The selected add-ons are
+// re-checked against the room's active ones (#7) — the ids come from a
+// form, so a stale or forged id fails here rather than pricing a booking
+// with an add-on the room does not offer.
 export async function createHold(
   _prevState: HoldState,
   values: CreateHoldValues
@@ -237,16 +278,17 @@ export async function createHold(
     return invalidFormState(parsed.error, errors.createFailed);
   }
   const supabase = await createClient();
-  const room = await findBookableRoom(supabase, parsed.data);
-  if (!room.ok) {
-    return room.state;
+  const validated = await findRoomAndAddOns(supabase, parsed.data);
+  if (!validated.ok) {
+    return validated.state;
   }
   const expiresAt = holdExpiry(new Date());
   const hold = await insertHold(
     supabase,
     company,
     parsed.data,
-    room.value,
+    validated.roomHourlyPriceOre,
+    validated.lines,
     expiresAt
   );
   if (!hold.ok) {

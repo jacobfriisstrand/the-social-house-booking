@@ -2,6 +2,7 @@
 // admin layout guards the routes, the policies guard the rows.
 
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { type AddonDetail, listAddonDetails } from "@/lib/addons/data";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type OpeningHourRow =
@@ -30,14 +31,9 @@ export interface RoomDetail {
   specialDays: SpecialClosingDayRow[];
 }
 
-export interface AddonOption {
-  addonId: string;
-  description: string | null;
-  isActive: boolean;
-  name: string;
-  priceOre: number;
-  pricingModel: "fixed" | "per_participant";
-}
+// The room form reads the same catalogue rows as the admin catalogue page,
+// so it uses the same shape. `description` is unused there but harmless.
+export type AddonOption = AddonDetail;
 
 // Public URL for a storage path — room-images is a public bucket
 // (migration 20260910170748_room_images_bucket.sql).
@@ -118,22 +114,8 @@ export async function listRoomDetails(
   }));
 }
 
-export async function listAddons(
-  supabase: SupabaseClient<Database>
-): Promise<AddonOption[]> {
-  const { data, error } = await supabase
-    .from("addons")
-    .select("*")
-    .order("addon_name");
-  if (error) {
-    throw new Error(`could not list add-ons: ${error.message}`);
-  }
-  return data.map((addon) => ({
-    addonId: addon.addon_id,
-    description: addon.addon_description,
-    isActive: addon.addon_is_active,
-    name: addon.addon_name,
-    priceOre: addon.addon_price_ore,
-    pricingModel: addon.addon_pricing_model,
-  }));
-}
+// The room form needs every add-on, active or not: a previously linked
+// add-on stays visible with its history (deactivated rows get a disabled
+// switch and a tooltip). The booking flow still offers active add-ons
+// only (listRoomAddOns filters addons.addon_is_active).
+export const listAddons = listAddonDetails;

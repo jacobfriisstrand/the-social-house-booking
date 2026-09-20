@@ -284,11 +284,9 @@ Example
 
 A company books a room 10:00–14:00 for ten participants and orders lunch. The system shows House Host at a standard price of 1,000 kr excl. VAT. Ali can then contact the company about setup, lunch and special needs.
 
-To keep version 1.0 simple, House Service and House Host are created as ordinary add-ons with description and price.
+To keep version 1.0 simple, House Service and House Host are created as ordinary add-ons with description and price; guidance about when House Host fits is part of the description.
 
-The system can show guidance text about when House Host is recommended.
-
-> **Decision (ADR-0015):** Confirmed — House Service and House Host are ordinary add-ons with description and price, plus optional guidance text. No automatic recommendation or pre-selection in v1.0.
+> **Decision (ADR-0015):** Confirmed — House Service and House Host are ordinary add-ons with description and price, with guidance living in the description. No separate guidance text, no special flags, and no automatic recommendation or pre-selection in v1.0.
 
 ## Catering and hospitality
 

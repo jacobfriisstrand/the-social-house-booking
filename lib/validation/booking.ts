@@ -1,4 +1,4 @@
-// Booking schemas (#2, #4), shared by the client forms and the server
+// Booking schemas (#2, #4, #7), shared by the client forms and the server
 // actions; the action re-parses on the server, always (docs/agents/ui.md).
 // Times are ISO strings with an explicit offset (ADR-0021). The booking
 // window (30-minute grid, minimum length, future start, 12-month horizon)
@@ -14,7 +14,6 @@ import { messages } from "@/messages/da";
 
 const { errors } = messages.booking;
 const SHORT_MAX = 200;
-const ADDONS_MAX = 20;
 const SIX_DIGITS = new RegExp(`^\\d{${VERIFICATION_CODE_LENGTH}}$`);
 
 const required = z
@@ -33,11 +32,8 @@ export const bookerFields = {
   bookerPhone: required,
 };
 
-// Room, period, headcount, add-ons and the terms: what any booking needs
-// besides the booker.
-export const bookingFields = {
-  ...bookerFields,
-  addonIds: z.array(z.guid()).max(ADDONS_MAX),
+// Room, period and headcount: what any booking needs besides the booker.
+const slotFields = {
   endAt: instant,
   participantCount: z
     .number(errors.participantsInvalid)
@@ -45,9 +41,33 @@ export const bookingFields = {
     .min(1, errors.participantsInvalid),
   roomId: z.guid(),
   startAt: instant,
-  termsAccepted: z
-    .boolean()
-    .refine((accepted) => accepted, errors.termsRequired),
+};
+
+// A checkbox that must be ticked. A boolean with a refinement rather than
+// z.literal(true): the parse still cannot produce false, and a form can
+// start from an unticked box without fighting the type.
+const mustAccept = (message: string) =>
+  z.boolean().refine((accepted) => accepted, message);
+
+// Selected add-ons and the catering rule (#7, Bilag 1 "Forplejning og
+// hospitality"): catering is ordered only through The Social House and the
+// booker must actively accept it — an unchecked checkbox fails the parse,
+// so the acceptance timestamp is only ever written from a parsed true.
+export const addOnFields = {
+  addOnIds: z.array(z.guid()).max(50),
+  cateringAccepted: mustAccept(errors.cateringAcceptRequired),
+};
+
+// The booking terms (DESIGN.md "Booking dialog"); #15 records the version.
+const termsFields = {
+  termsAccepted: mustAccept(errors.termsRequired),
+};
+
+const bookingFields = {
+  ...bookerFields,
+  ...slotFields,
+  ...addOnFields,
+  ...termsFields,
 };
 
 const windowErrors: Record<

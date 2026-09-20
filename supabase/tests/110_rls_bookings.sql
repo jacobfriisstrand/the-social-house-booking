@@ -20,14 +20,15 @@ insert into public.rooms (room_id, room_name, room_capacity, room_hourly_price_o
   ('44444444-4444-4444-4444-444444444001', 'Room of Power', 12, 800000);
 
 insert into public.addons (addon_id, addon_name, addon_price_ore, addon_pricing_model) values
-  ('55555555-5555-5555-5555-555555555001', 'Lunch', 22500, 'per_participant');
+  ('55555555-5555-5555-5555-555555555001', 'Lunch', 22500, 'per_participant'),
+  ('55555555-5555-5555-5555-555555555002', 'Ekstra skærm', 50000, 'fixed');
 
 insert into public.bookings (booking_id, booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values
   ('66666666-6666-6666-6666-666666666001', 'B-TEST-0001', '22222222-2222-2222-2222-222222222001', '44444444-4444-4444-4444-444444444001', timestamptz '2026-10-01 09:00+02', timestamptz '2026-10-01 11:00+02', 8, 'Peter', 'peter@rituals.dk', '+45 2010 2030', 1600000),
   ('66666666-6666-6666-6666-666666666002', 'B-TEST-0002', '22222222-2222-2222-2222-222222222002', '44444444-4444-4444-4444-444444444001', timestamptz '2026-10-02 09:00+02', timestamptz '2026-10-02 11:00+02', 4, 'Anne', 'anne@nordicevents.dk', '+45 3020 3040', 800000);
 
-insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_price_ore) values
-  ('66666666-6666-6666-6666-666666666001', '55555555-5555-5555-5555-555555555001', 180000);
+insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values
+  ('66666666-6666-6666-6666-666666666001', '55555555-5555-5555-5555-555555555001', 22500, 8, 180000);
 
 insert into public.outbound_emails (outbound_email_id, outbound_email_kind, outbound_email_to, outbound_email_company_id, outbound_email_booking_id) values
   ('77777777-7777-7777-7777-777777777001', 'booking-confirmation', 'peter@rituals.dk', '22222222-2222-2222-2222-222222222001', '66666666-6666-6666-6666-666666666001'),
@@ -43,7 +44,7 @@ select is((select booking_number ~ '^B-[0-9]{4}-[0-9]{4}$' from public.bookings)
 select is((select count(*) from public.booking_addons), 1::bigint, 'company reads its own booking add-ons');
 select is((select count(*) from public.outbound_emails), 1::bigint, 'company reads only its own send-log rows');
 select lives_ok(
-  'update public.booking_addons set booking_addon_price_ore = 190000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001''',
+  'update public.booking_addons set booking_addon_unit_price_ore = 23750, booking_addon_total_ore = 190000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001''',
   'company updates its own booking add-on');
 select is((select outbound_email_kind from public.outbound_emails), 'booking-confirmation', 'company send-log row is its own');
 select lives_ok(
@@ -54,7 +55,7 @@ select throws_ok(
   '42501', null,
   'company cannot create a booking for another company');
 select throws_ok(
-  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_price_ore) values (''66666666-6666-6666-6666-666666666002'', ''55555555-5555-5555-5555-555555555001'', 1)',
+  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666002'', ''55555555-5555-5555-5555-555555555002'', 1, 1, 1)',
   '42501', null,
   'company cannot add add-ons to a foreign booking');
 delete from public.bookings where true;

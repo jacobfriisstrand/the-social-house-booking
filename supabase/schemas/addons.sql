@@ -1,8 +1,16 @@
 -- Add-ons are never discounted (ADR-0007/ADR-0011); fixed or per-participant.
--- House Service and House Host are ordinary add-ons (ADR-0015).
+-- House Service and House Host are ordinary add-ons, seeded into every
+-- environment (ADR-0015); theirs is the same description-price-model shape
+-- as any other add-on.
 
 create type public.addon_pricing_model as enum ('fixed', 'per_participant');
 
+-- Fixed (addon_pricing_model 'fixed') prices the whole booking, whatever
+-- the headcount (extra screen). Per-participant multiplies by
+-- booking_participant_count (lunch, ADR-0011). The House Host base price
+-- here is never edited; a per-booking adjustment lives on the booking's
+-- add-on line only. addon_sort_order is the display order in the booking
+-- flow and the admin catalogue; the admin drags rows to reorder.
 create table public.addons (
   addon_id uuid primary key default gen_random_uuid(),
   addon_name text not null,
@@ -11,7 +19,8 @@ create table public.addons (
   addon_pricing_model public.addon_pricing_model not null,
   addon_is_active boolean not null default true,
   addon_created_at timestamptz not null default now(),
-  addon_updated_at timestamptz not null default now()
+  addon_updated_at timestamptz not null default now(),
+  addon_sort_order integer
 );
 
 -- Which add-ons each room offers.

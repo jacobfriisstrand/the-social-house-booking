@@ -16,6 +16,7 @@ import {
 } from "react";
 import {
   type Control,
+  type FieldErrors,
   type UseFormReturn,
   useController,
   useForm,
@@ -37,36 +38,35 @@ import {
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import { getRoomDayPeriods } from "@/lib/bookings/availability-actions";
 import type { BookingViewer } from "@/lib/bookings/viewer";
-import { totalAddOnsOre } from "@/lib/domain/addons";
+import { type AddOn, addonLines, linesTotalOre } from "@/lib/domain/addons";
 import { endOptions, type Period, startSlots } from "@/lib/domain/availability";
 import type {
   SpecialClosingDay,
   WeeklyOpeningHour,
 } from "@/lib/domain/opening-hours";
 import {
-  discountAmountOre,
-  memberPriceOre,
-  roomTotalOre,
-} from "@/lib/domain/pricing";
+  type PriceOverviewModel,
+  priceOverview,
+} from "@/lib/domain/price-overview";
+import { buildSnapshot } from "@/lib/domain/snapshot";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
-import type { PublicAddon } from "@/lib/rooms/public-data";
 import {
   adminBookingSchema,
   bookingFormSchema,
 } from "@/lib/validation/booking";
 import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
-import { AddonPicker } from "./addon-picker";
+import { AddOnCheckboxList, CateringAcceptance } from "./addon-selection";
 import { BookerFields } from "./booker-fields";
-import { type PriceLines, PriceSummary } from "./price-summary";
+import { PriceOverview } from "./price-overview";
 import { SlotPicker } from "./slot-picker";
 
 const copy = messages.booking.dialog;
 const DEFAULT_PARTICIPANTS = 2;
 
 export interface DialogRoom {
-  addons: PublicAddon[];
+  addons: AddOn[];
   capacity: number;
   hourlyPriceOre: number;
   location: string | null;
@@ -93,10 +93,11 @@ const defaultValues = (
   room: DialogRoom,
   prefill: RoomPrefill
 ): BookingFormValues => ({
-  addonIds: [],
+  addOnIds: [],
   bookerEmail: "",
   bookerName: "",
   bookerPhone: "",
+  cateringAccepted: false,
   companyId: "",
   endAt: prefillInstant(prefill.dato, prefill.til),
   participantCount: prefill.personer ?? DEFAULT_PARTICIPANTS,
@@ -158,39 +159,33 @@ function useBookingResult(
 const hoursOf = (startAt: string, endAt: string): number =>
   startAt && endAt ? hoursBetween(new Date(startAt), new Date(endAt)) : 0;
 
-const selectedAddOns = (room: DialogRoom, addonIds: string[]) =>
-  room.addons
-    .filter((addon) => addonIds.includes(addon.addonId))
-    .map((addon) => ({
-      kind: addon.pricingModel,
-      name: addon.name,
-      priceOre: addon.priceOre,
-    }));
+const selectedAddOns = (room: DialogRoom, addOnIds: string[]): AddOn[] =>
+  room.addons.filter((addOn) => addOnIds.includes(addOn.addonId));
 
-const priceLines = (
+// The price overview before there is a hold: the same arithmetic the
+// snapshot uses (lines at full price, discount on the room only), from the
+// prices on the page. Once "Book nu" creates the hold, the verification
+// step shows the frozen overview instead (#6).
+const livePriceOverview = (
   room: DialogRoom,
   values: Pick<
     BookingFormValues,
-    "addonIds" | "endAt" | "participantCount" | "startAt"
+    "addOnIds" | "endAt" | "participantCount" | "startAt"
   >,
   discountPercent: number
-): PriceLines => {
-  const roomOre = roomTotalOre(
-    room.hourlyPriceOre,
-    hoursOf(values.startAt, values.endAt)
-  );
-  const addonsOre = totalAddOnsOre(
-    selectedAddOns(room, values.addonIds),
-    values.participantCount || 0
-  );
-  return {
-    addonsOre,
-    discountOre: discountAmountOre(roomOre, discountPercent),
+): PriceOverviewModel => {
+  const input = {
+    addOnsOre: linesTotalOre(
+      addonLines(
+        selectedAddOns(room, values.addOnIds),
+        values.participantCount || 0
+      )
+    ),
     discountPercent,
-    roomOre,
-    subtotalOre: roomOre + addonsOre,
-    totalOre: memberPriceOre(roomOre, discountPercent) + addonsOre,
+    hours: hoursOf(values.startAt, values.endAt),
+    roomHourlyPriceOre: room.hourlyPriceOre,
   };
+  return priceOverview({ ...input, totalOre: buildSnapshot(input).totalOre });
 };
 
 const summarySentence = (startAt: string, endAt: string): string =>
@@ -357,6 +352,39 @@ function useBookingSubmit(
   return { pending, submit };
 }
 
+// Add-ons left, the price overview right, then the catering rule, which
+// must be actively accepted (#7, Bilag 1 "Forplejning og hospitality").
+function ExtrasSection({
+  addOns,
+  control,
+  errors,
+  price,
+}: {
+  addOns: AddOn[];
+  control: Control<BookingFormValues>;
+  errors: FieldErrors<BookingFormValues>;
+  price: PriceOverviewModel;
+}) {
+  return (
+    <>
+      <div className="grid gap-6 md:grid-cols-2">
+        <AddOnCheckboxList
+          addOns={addOns}
+          control={control}
+          error={errors.addOnIds?.message}
+          name="addOnIds"
+        />
+        <PriceOverview model={price} />
+      </div>
+      <CateringAcceptance
+        control={control}
+        error={errors.cateringAccepted?.message}
+        name="cateringAccepted"
+      />
+    </>
+  );
+}
+
 interface BookingFormProps extends ResultHandlers {
   initialDate: string;
   initialPeriods: SerializedPeriod[];
@@ -380,23 +408,19 @@ export function BookingForm({
     defaultValues: defaultValues(room, prefill),
     resolver: zodResolver(schema),
   });
-  const { control, setValue } = form;
+  const { control, formState } = form;
   const slot = useSlotSelection(room, form, initialDate, initialPeriods);
   const { pending, submit } = useBookingSubmit(viewer, form, {
     onCreated,
     onHeld,
   });
-  const [participantCount, addonIds, companyId] = useWatch({
+  const [participantCount, addOnIds, companyId] = useWatch({
     control,
-    name: ["participantCount", "addonIds", "companyId"],
+    name: ["participantCount", "addOnIds", "companyId"],
   });
-  const handleAddonsChange = useCallback(
-    (next: string[]) => setValue("addonIds", next),
-    [setValue]
-  );
-  const lines = priceLines(
+  const price = livePriceOverview(
     room,
-    { addonIds, endAt: slot.endAt, participantCount, startAt: slot.startAt },
+    { addOnIds, endAt: slot.endAt, participantCount, startAt: slot.startAt },
     discountFor(viewer, companyId)
   );
 
@@ -426,14 +450,12 @@ export function BookingForm({
         ) : null}
       </SlotPicker>
       <p className="text-sm">{summarySentence(slot.startAt, slot.endAt)}</p>
-      <div className="grid gap-6 md:grid-cols-2">
-        <AddonPicker
-          addons={room.addons}
-          onChange={handleAddonsChange}
-          value={addonIds}
-        />
-        <PriceSummary lines={lines} />
-      </div>
+      <ExtrasSection
+        addOns={room.addons}
+        control={control}
+        errors={formState.errors}
+        price={price}
+      />
       <BookerFields control={control} />
       <TermsField control={control} />
       <PendingButton

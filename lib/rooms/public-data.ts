@@ -3,6 +3,7 @@
 // RLS: rooms, images, opening hours and add-ons are member-readable.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toSpecialDays, toWeekly } from "@/lib/bookings/availability";
+import type { AddOn } from "@/lib/domain/addons";
 import type {
   SpecialClosingDay,
   WeeklyOpeningHour,
@@ -10,16 +11,8 @@ import type {
 import type { Database } from "@/lib/supabase/database.types";
 import { type AddonOption, listAddons, listRoomDetails } from "./data";
 
-export interface PublicAddon {
-  addonId: string;
-  description: string | null;
-  name: string;
-  priceOre: number;
-  pricingModel: "fixed" | "per_participant";
-}
-
 export interface PublicRoom {
-  addons: PublicAddon[];
+  addons: AddOn[];
   capacity: number;
   description: string | null;
   hourlyPriceOre: number;
@@ -32,7 +25,7 @@ export interface PublicRoom {
   weekly: WeeklyOpeningHour[];
 }
 
-const publicAddon = (addon: AddonOption): PublicAddon => ({
+const publicAddon = (addon: AddonOption): AddOn => ({
   addonId: addon.addonId,
   description: addon.description,
   name: addon.name,

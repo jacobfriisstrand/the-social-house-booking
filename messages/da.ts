@@ -1,11 +1,76 @@
 // Danish UI copy (ADR-0016), keyed by feature (docs/agents/ui.md).
 // Components import from here; no Danish string literals in components.
 export const messages = {
+  // The add-on catalogue (admin, #7): Bilag 1 "Add-ons" — name,
+  // description, price excl. VAT, fixed vs per-participant, active. The
+  // pricing model is stated on every surface; add-ons are never discounted
+  // (ADR-0007) and House Service/House Host are ordinary add-ons, seeded
+  // into every environment (ADR-0015).
+  addons: {
+    activate: "Aktiver",
+    activeColumn: "Status",
+    activeLabel: "Aktiv",
+    basicSection: "Grundoplysninger",
+    createButton: "Opret tilkøb",
+    createTitle: "Nyt tilkøb",
+    deactivate: "Deaktiver",
+    descriptionColumn: "Beskrivelse",
+    editLabel: "Rediger",
+    editTitle: "Rediger tilkøb",
+    emptyDescription: "Opret det første tilkøb for at koble det til lokaler.",
+    emptyTitle: "Ingen tilkøb",
+    errors: {
+      nameMin: "Angiv et navn.",
+      priceMin: "Prisen skal være 0 eller mere.",
+      priceWholeKroner: "Prisen skal være et helt antal kroner.",
+      reorderFailed: "Rækkefølgen kunne ikke gemmes. Prøv igen.",
+      saveFailed: "Tilvalget kunne ikke gemmes. Prøv igen.",
+      statusFailed: "Statussen kunne ikke ændres. Prøv igen.",
+      tooLong: "Teksten er for lang.",
+    },
+    fields: {
+      description: "Beskrivelse",
+      isActive: "Aktiv",
+      name: "Navn",
+      price: "Pris ekskl. moms (kr.)",
+      pricingModel: "Prissætning",
+      pricingModelFixed:
+        "Ét fast beløb for hele bookingen, uanset antal deltagere",
+      pricingModelFixedShort: "Fast pris",
+      pricingModelPerParticipant:
+        "Prisen ganges med antallet af deltagere på bookingen",
+      pricingModelPerParticipantShort: "Pr. deltager",
+    },
+    nameColumn: "Navn",
+    priceColumn: "Pris",
+    pricingColumn: "Prissætning",
+    saved: "Tilvalget er gemt",
+    saving: "Gemmer …",
+    sortOrderDragHandle: "Træk for at sortere",
+    statusUpdated: "Status er opdateret",
+    submit: "Gem",
+    title: "Tilkøb",
+  },
   admin: {
     companiesLink: "Virksomheder",
     homeTitle: "Administration",
   },
   booking: {
+    // Selected add-ons (#7, Bilag 1 "Tilvalg"): prices excl. VAT, never
+    // discounted (ADR-0007). House Service and House Host are plain
+    // add-ons; any guidance lives in their description (ADR-0015).
+    addOns: {
+      catering: {
+        accept:
+          "Jeg har læst reglerne og accepterer, at forplejning bestilles gennem The Social House.",
+        rule: "Kaffe, te, vand, frokost, anden forplejning og hospitality bestilles gennem The Social House. Det er ikke tilladt at medbringe egne mad- og drikkevarer, ekstern catering eller eksternt hospitalitypersonale, medmindre andet er aftalt med os på forhånd.",
+        title: "Forplejning og hospitality",
+      },
+      empty: "Dette lokale har ingen tilkøb.",
+      fixed: "Fast pris",
+      perParticipant: "pr. deltager",
+      title: "Tilkøb",
+    },
     admin: {
       created: (bookingNumber: string) =>
         `Bookingen ${bookingNumber} er oprettet og bekræftet.`,
@@ -38,8 +103,6 @@ export const messages = {
     confirmed: "Booking bekræftet",
     dialog: {
       addonFree: "Gratis",
-      addonsEmpty: "Lokalet har ingen tilkøb.",
-      addonsTitle: "Tilkøb",
       bookerSection: "Ansvarlig booker",
       calendarLabel: "Vælg dato",
       endLabel: "Sluttidspunkt",
@@ -47,12 +110,7 @@ export const messages = {
       location: "Placering",
       noStartSlots: "Ingen ledige starttidspunkter den dag.",
       participantsHint: (max: number) => `Maks. ${max}`,
-      priceAddons: "Tilkøb",
-      priceDiscount: (percent: number) => `Medlemsrabat (${percent} %)`,
       pricePerHour: "Pris pr. time",
-      priceRoom: "Lokale",
-      priceSubtotal: "Subtotal",
-      priceTotal: "Total",
       readAbout: (name: string) => `Læs om ${name}`,
       slotStatus: {
         blocked: "Optaget",
@@ -69,8 +127,11 @@ export const messages = {
       terms: "Jeg accepterer bookingbetingelserne",
     },
     errors: {
-      addonInvalid: "Et af de valgte tilkøb findes ikke for lokalet.",
+      addOnInvalid:
+        "Et af de valgte tilkøb hører ikke til dette lokale. Fjern det og prøv igen.",
       beyondHorizon: "Der kan bookes op til 12 måneder frem.",
+      cateringAcceptRequired:
+        "Du skal acceptere reglerne for forplejning, før du kan booke.",
       codeConsumed: "Koden er allerede brugt. Send en ny kode.",
       codeExpired: "Koden er udløbet. Send en ny kode.",
       codeFormat: "Indtast de seks cifre fra mailen.",
@@ -107,6 +168,13 @@ export const messages = {
       participantCount: "Antal deltagere",
       room: "Lokale",
       startAt: "Start",
+    },
+    price: {
+      addOns: "Tilkøb",
+      exclVat: "ekskl. moms",
+      memberDiscount: (percent: number) => `Medlemsrabat (${percent} %)`,
+      room: "Lokale",
+      total: "Total",
     },
     search: {
       date: "Dato",
@@ -302,13 +370,21 @@ export const messages = {
     description: "Booking af mødelokaler i The Social House",
     title: "The Social House",
   },
+  notFound: {
+    backHome: "Gå til forsiden",
+    description: "Adressen er forkert, eller siden er blevet flyttet.",
+    title: "Siden findes ikke",
+  },
   rooms: {
     activate: "Aktiver",
     activateFailed: "Statussen kunne ikke ændres. Prøv igen.",
     activeColumn: "Status",
     activeLabel: "Aktiv",
     activeUpdated: "Status er opdateret",
+    addonInactiveHint:
+      "Dette tilkøb er deaktiveret og kan ikke knyttes til lokaler.",
     addonsSection: "Tilkøb",
+    addonsSectionHint: 'Opret nye tilkøb under "Tilkøb".',
     basicSection: "Grundoplysninger",
     book: "Book nu",
     capacityChip: (capacity: number) => `1 - ${capacity} personer`,
@@ -433,12 +509,14 @@ export const messages = {
     title: "Vælg adgangskode",
   },
   settings: {
+    copyPassword: "Klik for at kopiere adgangskoden",
     errors: {
       required: "Feltet skal udfyldes.",
       saveFailed: "Indstillingerne kunne ikke gemmes. Prøv igen.",
       wifiNetworkMax: "Netværksnavnet må højst være 32 tegn.",
       wifiPasswordMax: "Adgangskoden må højst være 63 tegn.",
     },
+    passwordCopied: "Adgangskode kopieret",
     saved: "Indstillingerne er gemt",
     saving: "Gemmer …",
     submit: "Gem",

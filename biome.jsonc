@@ -75,8 +75,10 @@
         "rules": {
           "a11y": {
             "noLabelWithoutControl": "off",
+            "noNoninteractiveElementInteractions": "off",
             "useAriaPropsForRole": "off",
             "useFocusableInteractive": "off",
+            "useKeyWithClickEvents": "off",
             "useSemanticElements": "off"
           },
           "correctness": {

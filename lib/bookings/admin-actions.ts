@@ -8,6 +8,7 @@
 // snapshot uses the company's discount, which is 0 for an external company
 // (companies_external_no_discount). Mail 4 and Mail 8 are wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
+import type { AddOnLine } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AdminBookingValues,
@@ -16,15 +17,16 @@ import {
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import {
-  type BookableRoom,
-  EXCLUSION_VIOLATION,
-  expireBooking,
-  findBookableRoom,
-  insertBooking,
-  insertBookingAddons,
-  newBookingRow,
+  findRoomAndAddOns,
+  releasePendingBooking,
+  writeAddOnLines,
+} from "./addon-lines";
+import {
+  confirmPendingBooking,
+  insertPendingBooking,
   type SessionClient,
   type Step,
+  slotFailureMessage,
 } from "./new-booking";
 
 const { errors } = messages.booking;
@@ -38,11 +40,6 @@ interface BookingCompany {
   company_discount_percent: number;
   company_id: string;
 }
-
-const errorState = (error: string): AdminBookingState => ({
-  error,
-  status: "error",
-});
 
 const fail = (error: string): Step<never> => ({
   ok: false,
@@ -71,56 +68,63 @@ async function findBookingCompany(
   return { ok: true, value: data };
 }
 
-// Status → confirmed. The room-free trigger re-runs on the status change;
-// a collision here means a House Event landed meanwhile.
-async function confirmBooking(
-  supabase: SessionClient,
-  bookingId: string
-): Promise<string | null> {
-  const confirmed = await supabase
-    .from("bookings")
-    .update({ booking_status: "confirmed" })
-    .eq("booking_id", bookingId)
-    .eq("booking_status", "pending_verification")
-    .select("booking_id");
-  if (confirmed.error) {
-    return confirmed.error.code === EXCLUSION_VIOLATION
-      ? errors.slotTaken
-      : errors.createFailed;
-  }
-  return confirmed.data.length === 0 ? errors.createFailed : null;
-}
-
-// Inserted pending (no hold expiry) so the add-on snapshot rows can be
-// written, then confirmed; a failure at any step frees the room again.
-async function createConfirmedBooking(
+// Confirmed on insert: the room-free trigger and the no-overlap constraint
+// are the availability check, so an unavailable slot fails the insert. The
+// add-on lines (#7) must exist before the status becomes confirmed — they
+// are part of the price snapshot (ADR-0005) and the add-on freeze trigger
+// blocks writes on confirmed bookings — so the row is inserted pending,
+// the lines are written, and the same action confirms it at once
+// (ADR-0023): no code, no hold the company ever sees. A failed confirm
+// releases the room.
+async function insertConfirmedBooking(
   supabase: SessionClient,
   company: BookingCompany,
   input: AdminBookingValues,
-  room: BookableRoom
+  roomHourlyPriceOre: number,
+  lines: AddOnLine[]
 ): Promise<AdminBookingState> {
-  const inserted = await insertBooking(supabase, {
-    ...newBookingRow(input, company.company_discount_percent, room),
-    booking_company_id: company.company_id,
-    booking_status: "pending_verification",
-  });
-  if (!inserted.ok) {
-    return inserted.state;
-  }
-  const { bookingId, bookingNumber } = inserted.value;
-  const addonsWritten = await insertBookingAddons(
+  const inserted = await insertPendingBooking(
     supabase,
-    bookingId,
-    room.addons
+    company,
+    input,
+    roomHourlyPriceOre,
+    {}
   );
-  const error = addonsWritten
-    ? await confirmBooking(supabase, bookingId)
-    : errors.createFailed;
-  if (error) {
-    await expireBooking(supabase, bookingId);
-    return errorState(error);
+  if (!inserted.ok) {
+    return {
+      error: slotFailureMessage(inserted.error),
+      status: "error",
+    };
   }
-  return { bookingId, bookingNumber, status: "created" };
+  const { bookingId } = inserted;
+  if (!(await writeAddOnLines(supabase, bookingId, lines))) {
+    await releaseBooking(supabase, bookingId);
+    return { error: errors.createFailed, status: "error" };
+  }
+  const confirmed = await confirmPendingBooking(supabase, bookingId);
+  if (confirmed) {
+    // The confirm re-runs the room-free triggers; a House Event added
+    // meanwhile dooms the booking, so the room is released.
+    await releaseBooking(supabase, bookingId);
+    return {
+      error: slotFailureMessage(confirmed),
+      status: "error",
+    };
+  }
+  return {
+    bookingId,
+    bookingNumber: inserted.bookingNumber,
+    status: "created",
+  };
+}
+
+// Frees the room: the exclusion constraint and calendar_entries ignore
+// expired rows (#24).
+async function releaseBooking(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<void> {
+  await releasePendingBooking(supabase, bookingId);
 }
 
 export async function createAdminBooking(
@@ -137,14 +141,17 @@ export async function createAdminBooking(
   if (!company.ok) {
     return company.state;
   }
-  const room = await findBookableRoom(supabase, parsed.data);
-  if (!room.ok) {
-    return room.state;
+  // The same room-and-add-on check as the company flow (#7): the room must
+  // be bookable and the ids must belong to it.
+  const validated = await findRoomAndAddOns(supabase, parsed.data);
+  if (!validated.ok) {
+    return validated.state;
   }
-  return createConfirmedBooking(
+  return insertConfirmedBooking(
     supabase,
     company.value,
     parsed.data,
-    room.value
+    validated.roomHourlyPriceOre,
+    validated.lines
   );
 }

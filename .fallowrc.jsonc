@@ -41,6 +41,10 @@
     },
     { "file": "components/ui/card.tsx", "exports": ["CardAction"] },
     {
+      "file": "components/ui/input-group.tsx",
+      "exports": ["InputGroupText", "InputGroupTextarea"]
+    },
+    {
       "file": "components/ui/dialog.tsx",
       "exports": [
         "DialogClose",

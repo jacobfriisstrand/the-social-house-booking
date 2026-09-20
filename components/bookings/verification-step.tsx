@@ -14,6 +14,7 @@ import {
   useController,
   useForm,
 } from "react-hook-form";
+import { PriceOverview } from "@/components/bookings/price-overview";
 import { PendingButton } from "@/components/forms/pending-button";
 import { useFormAction } from "@/components/forms/use-form-action";
 import {
@@ -193,6 +194,9 @@ export function VerificationStep({
         <CodeField control={form.control} disabled={expired} />
         <HoldCountdown secondsLeft={secondsLeft} />
       </FieldGroup>
+      {/* The frozen price overview (#6): exactly what confirmation bills,
+          read from the hold's snapshot columns, not recomputed. */}
+      <PriceOverview model={hold.price} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <PendingButton
           disabled={disabled}

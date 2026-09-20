@@ -10,6 +10,7 @@ import {
   HouseIcon,
   type LucideIcon,
   SettingsIcon,
+  ShoppingBagIcon,
 } from "lucide-react";
 import { messages } from "@/messages/da";
 
@@ -49,6 +50,11 @@ export function shellAdminLinks(): ShellNavLink[] {
       href: "/admin/companies",
       icon: Building2Icon,
       label: messages.shell.companies,
+    },
+    {
+      href: "/admin/addons",
+      icon: ShoppingBagIcon,
+      label: messages.addons.title,
     },
     {
       href: "/admin/settings",

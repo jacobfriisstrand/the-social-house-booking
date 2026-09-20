@@ -74,7 +74,7 @@ function AddonList({ room }: { room: PublicRoom }) {
   if (room.addons.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        {messages.booking.dialog.addonsEmpty}
+        {messages.booking.addOns.empty}
       </p>
     );
   }
