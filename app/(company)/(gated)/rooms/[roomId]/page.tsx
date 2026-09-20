@@ -197,9 +197,11 @@ export default async function RoomPage({
       <RoomBreadcrumb name={room.name} query={query} />
       <PageHeader title={room.name} />
       <PagePanel>
-        <Card>
+        {/* overflow-visible: the card's default clip would stop the info
+            column from sticking while the photos scroll (desktop). */}
+        <Card className="overflow-visible">
           <CardContent className="grid gap-8 lg:grid-cols-[2fr_3fr]">
-            <div className="order-2 lg:order-1">
+            <div className="order-2 lg:sticky lg:top-3 lg:order-1 lg:self-start">
               <RoomInfo room={room} />
             </div>
             <div className="order-1 lg:order-2">
