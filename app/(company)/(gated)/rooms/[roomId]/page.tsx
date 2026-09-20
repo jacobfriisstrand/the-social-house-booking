@@ -201,7 +201,7 @@ export default async function RoomPage({
             column from sticking while the photos scroll (desktop). */}
         <Card className="overflow-visible">
           <CardContent className="grid gap-8 lg:grid-cols-[2fr_3fr]">
-            <div className="order-2 lg:sticky lg:top-3 lg:order-1 lg:self-start">
+            <div className="order-2 lg:sticky lg:top-8 lg:order-1 lg:self-start">
               <RoomInfo room={room} />
             </div>
             <div className="order-1 lg:order-2">
