@@ -51,6 +51,10 @@
     },
     { "file": "components/ui/empty.tsx", "exports": ["EmptyContent"] },
     {
+      "file": "components/ui/input-otp.tsx",
+      "exports": ["InputOTPSeparator"]
+    },
+    {
       "file": "components/ui/popover.tsx",
       "exports": ["PopoverDescription", "PopoverHeader", "PopoverTitle"]
     },

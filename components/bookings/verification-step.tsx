@@ -6,12 +6,27 @@
 // dialog once "Book nu" has created the hold; until then the development
 // page under app/(public)/demo/booking does.
 import { zodResolver } from "@hookform/resolvers/zod";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { type UseFormReturn, useForm } from "react-hook-form";
+import {
+  type Control,
+  type UseFormReturn,
+  useController,
+  useForm,
+} from "react-hook-form";
 import { PendingButton } from "@/components/forms/pending-button";
-import { TextField } from "@/components/forms/text-field";
 import { useFormAction } from "@/components/forms/use-form-action";
-import { FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/toast";
 import { type Hold, resendCode, verifyCode } from "@/lib/bookings/actions";
 import { VERIFICATION_CODE_LENGTH } from "@/lib/domain/verification";
@@ -81,6 +96,60 @@ function HoldCountdown({ secondsLeft }: { secondsLeft: number }) {
   );
 }
 
+const slotIndexes = Array.from(
+  { length: VERIFICATION_CODE_LENGTH },
+  (_, index) => index
+);
+
+// The six-digit code in shadcn's InputOTP, one continuous row of large
+// slots, centred: digits only, paste fills every slot, and the browser can
+// offer the code from the mail.
+function CodeField({
+  control,
+  disabled,
+}: {
+  control: Control<VerifyCodeValues>;
+  disabled: boolean;
+}) {
+  const { field, fieldState } = useController({ control, name: "code" });
+  return (
+    <Field className="items-center" data-invalid={fieldState.invalid}>
+      <FieldLabel className="w-full justify-center" htmlFor="field-code">
+        {messages.booking.fields.code}
+      </FieldLabel>
+      <InputOTP
+        aria-invalid={fieldState.invalid}
+        autoComplete="one-time-code"
+        containerClassName="justify-center"
+        disabled={disabled}
+        id="field-code"
+        inputMode="numeric"
+        maxLength={VERIFICATION_CODE_LENGTH}
+        name={field.name}
+        onBlur={field.onBlur}
+        onChange={field.onChange}
+        pattern={REGEXP_ONLY_DIGITS}
+        ref={field.ref}
+        value={field.value}
+      >
+        <InputOTPGroup>
+          {slotIndexes.map((slot) => (
+            <InputOTPSlot
+              aria-invalid={fieldState.invalid}
+              className="size-14 font-mono text-2xl"
+              index={slot}
+              key={slot}
+            />
+          ))}
+        </InputOTPGroup>
+      </InputOTP>
+      {fieldState.invalid ? (
+        <FieldError className="text-center" errors={[fieldState.error]} />
+      ) : null}
+    </Field>
+  );
+}
+
 interface VerificationStepProps {
   hold: Hold;
   onConfirmed: () => void;
@@ -120,16 +189,7 @@ export function VerificationStep({
         <p>{copy.sentTo(hold.bookerEmail)}</p>
       </div>
       <FieldGroup>
-        <TextField
-          autoComplete="one-time-code"
-          className="text-center font-mono text-2xl tracking-[0.5em]"
-          control={form.control}
-          disabled={expired}
-          inputMode="numeric"
-          label={messages.booking.fields.code}
-          maxLength={VERIFICATION_CODE_LENGTH}
-          name="code"
-        />
+        <CodeField control={form.control} disabled={expired} />
       </FieldGroup>
       <HoldCountdown secondsLeft={secondsLeft} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
