@@ -1,12 +1,22 @@
 import { MapPinIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookRoom } from "@/components/bookings/book-room";
 import { formatAddonPrice } from "@/components/rooms/addon-price";
 import { PriceRow } from "@/components/rooms/price-row";
+import { RoomPhotoCarousel } from "@/components/rooms/room-photo-carousel";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { requireSession } from "@/lib/auth/require-session";
@@ -16,7 +26,11 @@ import { cphDate } from "@/lib/domain/opening-hours";
 import { formatKroner } from "@/lib/format";
 import { findPublicRoom, type PublicRoom } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
-import { parseRoomPrefill } from "@/lib/validation/room-search";
+import {
+  parseRoomPrefill,
+  parseRoomSearch,
+  roomSearchQuery,
+} from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
 
 export const metadata: Metadata = {
@@ -100,18 +114,52 @@ function RoomPhotos({ room }: { room: PublicRoom }) {
     return <div className="aspect-video w-full rounded-lg bg-muted" />;
   }
   return (
-    <div className="flex flex-col gap-4">
-      {room.images.map((src) => (
-        <Image
-          alt={alt}
-          className="w-full rounded-lg object-cover"
-          height={IMAGE_HEIGHT}
-          key={src}
-          src={src}
-          width={IMAGE_WIDTH}
-        />
-      ))}
-    </div>
+    <>
+      {/* Stacked on tablet and desktop; a carousel on phone, so the photos
+          do not push the room's details off the first screen. */}
+      <RoomPhotoCarousel
+        className="rounded-lg md:hidden"
+        images={room.images}
+        name={room.name}
+      />
+      <div className="hidden flex-col gap-4 md:flex">
+        {room.images.map((src) => (
+          <Image
+            alt={alt}
+            className="w-full rounded-lg object-cover"
+            height={IMAGE_HEIGHT}
+            key={src}
+            src={src}
+            width={IMAGE_WIDTH}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+type Query = Record<string, string | string[] | undefined>;
+
+// Back to the rooms: the search results when the visitor came from a
+// search (the query is kept), the full list otherwise.
+function RoomBreadcrumb({ name, query }: { name: string; query: Query }) {
+  const search = parseRoomSearch(query);
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink
+            render={<Link href={`/rooms${roomSearchQuery(search ?? {})}`} />}
+          >
+            {search ? messages.rooms.freeTitle : messages.rooms.listTitle}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{name}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
 
@@ -146,9 +194,10 @@ export default async function RoomPage({
 
   return (
     <>
+      <RoomBreadcrumb name={room.name} query={query} />
       <PageHeader title={room.name} />
       <PagePanel>
-        <Card className="max-md:mb-32">
+        <Card>
           <CardContent className="grid gap-8 lg:grid-cols-[2fr_3fr]">
             <div className="order-2 lg:order-1">
               <RoomInfo room={room} />
@@ -158,10 +207,11 @@ export default async function RoomPage({
             </div>
           </CardContent>
         </Card>
-        {/* Sticky bar on desktop; a fixed full-width footer on phone, with
-            the card above keeping clear of it (DESIGN.md "Book lokale" 4). */}
-        <div className="sticky bottom-4 z-10 mt-auto flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:rounded-none max-md:border-x-0 max-md:border-b-0">
-          <span className="font-medium">{room.name}</span>
+        {/* The bar is the panel's bottom edge on every size: flush with the
+            panel (its padding cancelled), sticky to the viewport bottom
+            while the panel scrolls, and at rest above the footer line. */}
+        <div className="sticky bottom-0 z-10 -mx-3 mt-auto -mb-3 flex items-center justify-between gap-4 rounded-b-xl border-t bg-card p-4 shadow-sm">
+          <span className="font-medium max-md:hidden">{room.name}</span>
           <PriceRow
             discountPercent={discountPercent}
             hourlyPriceOre={room.hourlyPriceOre}

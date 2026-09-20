@@ -117,8 +117,10 @@ export const messages = {
     },
   },
   common: {
+    breadcrumb: "Brødkrumme",
     closeSheet: "Luk",
     loading: "Indlæser …",
+    more: "Mere",
     nextSlide: "Næste billede",
     previousSlide: "Forrige billede",
     signOut: "Log ud",

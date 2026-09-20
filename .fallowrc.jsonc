@@ -32,6 +32,10 @@
     },
     { "file": "components/ui/alert.tsx", "exports": ["AlertAction"] },
     {
+      "file": "components/ui/breadcrumb.tsx",
+      "exports": ["BreadcrumbEllipsis"]
+    },
+    {
       "file": "components/ui/attachment.tsx",
       "exports": ["AttachmentGroup"]
     },

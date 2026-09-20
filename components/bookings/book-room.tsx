@@ -17,7 +17,7 @@ export function BookRoom({ defaultOpen, ...dialog }: BookRoomProps) {
   const show = useCallback(() => setOpen(true), []);
   return (
     <>
-      <Button className="max-md:w-full" onClick={show} size="lg" type="button">
+      <Button onClick={show} size="lg" type="button">
         {messages.rooms.book}
       </Button>
       <BookingDialog {...dialog} onOpenChange={setOpen} open={open} />

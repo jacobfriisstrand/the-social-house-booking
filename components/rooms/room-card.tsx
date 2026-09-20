@@ -4,19 +4,12 @@
 // round ghost arrows, name, capacity and location chips, the price row.
 // The card opens the room detail page.
 import { MapPinIcon, UsersIcon } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { messages } from "@/messages/da";
 import { PriceRow } from "./price-row";
+import { RoomPhotoCarousel } from "./room-photo-carousel";
 
 export interface RoomCardRoom {
   capacity: number;
@@ -33,45 +26,11 @@ interface RoomCardProps {
   room: RoomCardRoom;
 }
 
-const IMAGE_WIDTH = 640;
-const IMAGE_HEIGHT = 400;
-
 function RoomPhotos({ room }: { room: RoomCardRoom }) {
-  const alt = messages.rooms.imageAlt.replace("{name}", room.name);
   if (room.images.length === 0) {
     return <div className="aspect-video w-full rounded-t-xl bg-muted" />;
   }
-  return (
-    <Carousel aria-label={room.name} opts={{ loop: true }}>
-      <CarouselContent className="ml-0">
-        {room.images.map((src) => (
-          <CarouselItem className="pl-0" key={src}>
-            <Image
-              alt={alt}
-              className="aspect-video w-full object-cover"
-              height={IMAGE_HEIGHT}
-              src={src}
-              width={IMAGE_WIDTH}
-            />
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      {room.images.length > 1 ? (
-        <>
-          <CarouselPrevious
-            className="absolute right-12 bottom-2 left-auto rounded-full bg-card/80"
-            size="icon"
-            variant="ghost"
-          />
-          <CarouselNext
-            className="absolute right-2 bottom-2 rounded-full bg-card/80"
-            size="icon"
-            variant="ghost"
-          />
-        </>
-      ) : null}
-    </Carousel>
-  );
+  return <RoomPhotoCarousel images={room.images} name={room.name} />;
 }
 
 export function RoomCard({ discountPercent, href, room }: RoomCardProps) {
