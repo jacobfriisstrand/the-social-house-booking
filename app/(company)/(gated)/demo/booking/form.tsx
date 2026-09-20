@@ -10,11 +10,15 @@ import {
 } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { z } from "zod";
+import type { AddOnView } from "@/components/bookings/addon-selection";
 import {
+  AddOnAndCateringFields,
   BookerSlotFields,
+  devAddOnFields,
   devSlotFields,
   NativeSelectField,
   toInstants,
+  useClearAddOnsOnRoomChange,
 } from "@/components/bookings/dev-fields";
 import { VerificationStep } from "@/components/bookings/verification-step";
 import { applyFieldErrors } from "@/components/forms/field-errors";
@@ -29,15 +33,22 @@ import {
 import { FieldGroup } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { createHold, type Hold, type HoldState } from "@/lib/bookings/actions";
-import { bookerFields } from "@/lib/validation/booking";
+import { bookerFields, type CreateHoldValues } from "@/lib/validation/booking";
 import { messages } from "@/messages/da";
 
 const copy = messages.booking;
 
 // The harness fields live in components/bookings/dev-fields.tsx, shared
 // with the admin harness (#14); #4 deletes all of it. The field names match
-// createHoldSchema so server field errors land on the right inputs.
-const devFormSchema = z.object({ ...bookerFields, ...devSlotFields });
+// createHoldSchema so server field errors land on the right inputs; the
+// add-on and catering fields are the real flow's (#7) — devAddOnFields
+// holds them in the client shape, with cateringAccepted a refined boolean
+// so the checkbox starts unchecked; the server schema requires exactly true.
+const devFormSchema = z.object({
+  ...bookerFields,
+  ...devSlotFields,
+  ...devAddOnFields,
+});
 type DevFormValues = z.infer<typeof devFormSchema>;
 
 interface RoomOption {
@@ -70,18 +81,22 @@ function useHoldResult(
 const firstRoomId = (rooms: RoomOption[]): string => rooms[0]?.room_id ?? "";
 
 function HoldForm({
+  addOnsByRoomId,
   onHeld,
   rooms,
 }: {
+  addOnsByRoomId: Record<string, AddOnView[]>;
   onHeld: (hold: Hold) => void;
   rooms: RoomOption[];
 }) {
   const [state, formAction, pending] = useActionState(createHold, initialState);
   const form = useForm<DevFormValues>({
     defaultValues: {
+      addOnIds: [],
       bookerEmail: "",
       bookerName: "",
       bookerPhone: "",
+      cateringAccepted: false,
       endAt: "",
       participantCount: 2,
       roomId: firstRoomId(rooms),
@@ -91,9 +106,15 @@ function HoldForm({
   });
 
   useHoldResult(state, form, onHeld);
+  useClearAddOnsOnRoomChange(form);
 
   const submit = form.handleSubmit((values) =>
-    startTransition(() => formAction(toInstants(values)))
+    startTransition(() =>
+      // The client schema types cateringAccepted as a refined boolean; the
+      // action re-parses with createHoldSchema, which requires exactly
+      // true, so the cast only narrows that one field.
+      formAction(toInstants(values) as CreateHoldValues)
+    )
   );
 
   return (
@@ -109,6 +130,7 @@ function HoldForm({
           }))}
         />
         <BookerSlotFields control={form.control} />
+        <AddOnAndCateringFields addOnsByRoomId={addOnsByRoomId} form={form} />
       </FieldGroup>
       <PendingButton
         idleLabel={copy.demo.submit}
@@ -121,7 +143,13 @@ function HoldForm({
 }
 
 // Three states, in order: the form, the verification step, done.
-export function DevBookingForm({ rooms }: { rooms: RoomOption[] }) {
+export function DevBookingForm({
+  addOnsByRoomId,
+  rooms,
+}: {
+  addOnsByRoomId: Record<string, AddOnView[]>;
+  rooms: RoomOption[];
+}) {
   const [hold, setHold] = useState<Hold | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const handleConfirmed = useCallback(() => setConfirmed(true), []);
@@ -138,7 +166,13 @@ export function DevBookingForm({ rooms }: { rooms: RoomOption[] }) {
       />
     );
   } else {
-    body = <HoldForm onHeld={setHold} rooms={rooms} />;
+    body = (
+      <HoldForm
+        addOnsByRoomId={addOnsByRoomId}
+        onHeld={setHold}
+        rooms={rooms}
+      />
+    );
   }
 
   return (

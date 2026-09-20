@@ -8,6 +8,7 @@
 // snapshot uses the company's discount, which is 0 for an external company
 // (companies_external_no_discount). Mail 4 and Mail 8 are wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
+import type { AddOnLine } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AdminBookingValues,
@@ -16,11 +17,16 @@ import {
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import {
-  EXCLUSION_VIOLATION,
-  findBookableRoom,
-  newBookingRow,
+  findRoomAndAddOns,
+  releasePendingBooking,
+  writeAddOnLines,
+} from "./addon-lines";
+import {
+  confirmPendingBooking,
+  insertPendingBooking,
   type SessionClient,
   type Step,
+  slotFailureMessage,
 } from "./new-booking";
 
 const { errors } = messages.booking;
@@ -63,34 +69,58 @@ async function findBookingCompany(
 }
 
 // Confirmed on insert: the room-free trigger and the no-overlap constraint
-// are the availability check, so an unavailable slot fails the insert.
+// are the availability check, so an unavailable slot fails the insert. The
+// add-on lines (#7) must exist before the status becomes confirmed — they
+// are part of the price snapshot (ADR-0005) and the add-on freeze trigger
+// blocks writes on confirmed bookings — so the row is inserted pending,
+// the lines are written, and the same action confirms it at once
+// (ADR-0023): no code, no hold the company ever sees. A failed confirm
+// releases the room.
 async function insertConfirmedBooking(
   supabase: SessionClient,
   company: BookingCompany,
   input: AdminBookingValues,
-  roomHourlyPriceOre: number
+  roomHourlyPriceOre: number,
+  lines: AddOnLine[]
 ): Promise<AdminBookingState> {
-  const inserted = await supabase
-    .from("bookings")
-    .insert({
-      ...newBookingRow(
-        input,
-        company.company_discount_percent,
-        roomHourlyPriceOre
-      ),
-      booking_company_id: company.company_id,
-      booking_status: "confirmed",
-    })
-    .select("booking_number")
-    .single();
-  if (inserted.error) {
-    const taken = inserted.error.code === EXCLUSION_VIOLATION;
+  const inserted = await insertPendingBooking(
+    supabase,
+    company,
+    input,
+    roomHourlyPriceOre,
+    {}
+  );
+  if (!inserted.ok) {
     return {
-      error: taken ? errors.slotTaken : errors.createFailed,
+      error: slotFailureMessage(inserted.error),
       status: "error",
     };
   }
-  return { bookingNumber: inserted.data.booking_number, status: "created" };
+  const { bookingId } = inserted;
+  if (!(await writeAddOnLines(supabase, bookingId, lines))) {
+    await releaseBooking(supabase, bookingId);
+    return { error: errors.createFailed, status: "error" };
+  }
+  const confirmed = await confirmPendingBooking(supabase, bookingId);
+  if (confirmed) {
+    // The confirm re-runs the room-free triggers; a House Event added
+    // meanwhile dooms the booking, so the room is released.
+    await releaseBooking(supabase, bookingId);
+    return {
+      error: slotFailureMessage(confirmed),
+      status: "error",
+    };
+  }
+  return { bookingNumber: inserted.bookingNumber, status: "created" };
+}
+
+// Frees the room: the exclusion constraint and calendar_entries ignore
+// expired rows (#24).
+async function releaseBooking(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<void> {
+  await releasePendingBooking(supabase, bookingId);
 }
 
 export async function createAdminBooking(
@@ -107,14 +137,17 @@ export async function createAdminBooking(
   if (!company.ok) {
     return company.state;
   }
-  const room = await findBookableRoom(supabase, parsed.data);
-  if (!room.ok) {
-    return room.state;
+  // The same room-and-add-on check as the company flow (#7): the room must
+  // be bookable and the ids must belong to it.
+  const validated = await findRoomAndAddOns(supabase, parsed.data);
+  if (!validated.ok) {
+    return validated.state;
   }
   return insertConfirmedBooking(
     supabase,
     company.value,
     parsed.data,
-    room.value
+    validated.roomHourlyPriceOre,
+    validated.lines
   );
 }

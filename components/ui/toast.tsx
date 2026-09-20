@@ -27,7 +27,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       className={cn(
-        "pointer-events-none fixed top-4 right-4 left-4 z-50 mx-auto w-auto max-w-sm outline-none sm:left-auto sm:w-full",
+        "pointer-events-none fixed top-4 right-4 left-4 z-[100] mx-auto w-auto max-w-sm outline-none sm:left-auto sm:w-full",
         className
       )}
       data-slot="toast-viewport"

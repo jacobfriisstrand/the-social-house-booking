@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PageHeader, PagePanel } from "@/components/shell/page";
+import { addOnsByRoomId } from "@/lib/bookings/addon-lines";
 import { isDevelopment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -26,12 +27,20 @@ export default async function DevBookingPage() {
     .eq("room_is_active", true)
     .order("room_name");
 
+  // The room's offered add-ons (#7), keyed by room for the form's room
+  // select; a room without rows shows the empty copy.
+  const roomRows = rooms ?? [];
+  const addOns = await addOnsByRoomId(
+    supabase,
+    roomRows.map((room) => room.room_id)
+  );
+
   return (
     <>
       <PageHeader title={messages.booking.demo.title} />
       <PagePanel>
         <div className="mx-auto w-full max-w-md">
-          <DevBookingForm rooms={rooms ?? []} />
+          <DevBookingForm addOnsByRoomId={addOns} rooms={roomRows} />
         </div>
       </PagePanel>
     </>

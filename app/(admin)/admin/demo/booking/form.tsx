@@ -4,11 +4,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { z } from "zod";
+import type { AddOnView } from "@/components/bookings/addon-selection";
 import {
+  AddOnAndCateringFields,
   BookerSlotFields,
+  devAddOnFields,
   devSlotFields,
   NativeSelectField,
   toInstants,
+  useClearAddOnsOnRoomChange,
 } from "@/components/bookings/dev-fields";
 import { applyFieldErrors } from "@/components/forms/field-errors";
 import { PendingButton } from "@/components/forms/pending-button";
@@ -25,14 +29,20 @@ import {
   type AdminBookingState,
   createAdminBooking,
 } from "@/lib/bookings/admin-actions";
-import { bookerFields } from "@/lib/validation/booking";
+import {
+  type AdminBookingValues,
+  bookerFields,
+} from "@/lib/validation/booking";
 import { messages } from "@/messages/da";
 
 const copy = messages.booking;
 
+// The catering checkbox's client schema is a refined boolean so it starts
+// unchecked; the server schema requires exactly true (#7).
 const devFormSchema = z.object({
   ...bookerFields,
   ...devSlotFields,
+  ...devAddOnFields,
   companyId: z.string().min(1, copy.errors.required),
 });
 type DevFormValues = z.infer<typeof devFormSchema>;
@@ -91,9 +101,11 @@ const defaultValues = (
   companies: CompanyOption[],
   rooms: RoomOption[]
 ): DevFormValues => ({
+  addOnIds: [],
   bookerEmail: "",
   bookerName: "",
   bookerPhone: "",
+  cateringAccepted: false,
   companyId: firstCompanyId(companies),
   endAt: "",
   participantCount: 2,
@@ -102,9 +114,11 @@ const defaultValues = (
 });
 
 export function AdminBookingForm({
+  addOnsByRoomId,
   companies,
   rooms,
 }: {
+  addOnsByRoomId: Record<string, AddOnView[]>;
   companies: CompanyOption[];
   rooms: RoomOption[];
 }) {
@@ -118,9 +132,15 @@ export function AdminBookingForm({
   });
 
   useBookingResult(state, form);
+  useClearAddOnsOnRoomChange(form);
 
   const submit = form.handleSubmit((values) =>
-    startTransition(() => formAction(toInstants(values)))
+    startTransition(() =>
+      // The client schema types cateringAccepted as a refined boolean; the
+      // action re-parses with adminBookingSchema, which requires exactly
+      // true, so the cast only narrows that one field.
+      formAction(toInstants(values) as AdminBookingValues)
+    )
   );
 
   return (
@@ -145,6 +165,10 @@ export function AdminBookingForm({
               options={roomOptions(rooms)}
             />
             <BookerSlotFields control={form.control} />
+            <AddOnAndCateringFields
+              addOnsByRoomId={addOnsByRoomId}
+              form={form}
+            />
           </FieldGroup>
           <PendingButton
             idleLabel={copy.admin.submit}

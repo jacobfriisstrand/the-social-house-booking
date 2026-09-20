@@ -38,7 +38,13 @@ import {
   AttachmentTrigger,
 } from "@/components/ui/attachment";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Empty,
   EmptyHeader,
@@ -55,6 +61,12 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatKroner } from "@/lib/format";
 import { type RoomFormState, saveRoom } from "@/lib/rooms/actions";
 import type { AddonOption } from "@/lib/rooms/data";
@@ -165,7 +177,10 @@ interface AddonRowProps {
   control: Control<RoomFormValues>;
 }
 
-// One add-on with its price as a hint; switch on = added to the room.
+// One add-on with its price as a hint; switch on = added to the room. A
+// deactivated add-on still shows (its link history stays visible) but the
+// switch is disabled, with a tooltip explaining why — the room can no
+// longer be given a deactivated add-on.
 function AddonRow({ addon, control }: AddonRowProps) {
   const { field } = useController({ control, name: "addonIds" });
   const checked = field.value.includes(addon.addonId);
@@ -181,17 +196,32 @@ function AddonRow({ addon, control }: AddonRowProps) {
     [addon.addonId, field]
   );
 
+  const switchId = `room-addon-${addon.addonId}`;
+  const inactive = !addon.isActive;
+  const switchButton = (
+    <Switch
+      checked={checked}
+      disabled={inactive}
+      id={switchId}
+      onCheckedChange={handleCheckedChange}
+    />
+  );
+
   return (
     <Field orientation="horizontal">
-      <Switch
-        checked={checked}
-        id={`room-addon-${addon.addonId}`}
-        onCheckedChange={handleCheckedChange}
-      />
-      <FieldLabel
-        className="font-normal"
-        htmlFor={`room-addon-${addon.addonId}`}
-      >
+      {inactive ? (
+        <Tooltip>
+          <TooltipTrigger render={<span className="inline-flex" />}>
+            {switchButton}
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            {messages.rooms.addonInactiveHint}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        switchButton
+      )}
+      <FieldLabel className="font-normal" htmlFor={switchId}>
         {addon.name}
         <span className="text-muted-foreground text-xs">
           {addonPriceLabel(addon)}
@@ -1054,17 +1084,24 @@ export function RoomForm({
       <Card>
         <CardHeader>
           <CardTitle>{messages.rooms.addonsSection}</CardTitle>
+          <CardAction>
+            <p className="text-muted-foreground text-sm">
+              {messages.rooms.addonsSectionHint}
+            </p>
+          </CardAction>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2">
-            {addons.map((addon) => (
-              <AddonRow
-                addon={addon}
-                control={form.control}
-                key={addon.addonId}
-              />
-            ))}
-          </div>
+          <TooltipProvider delay={0}>
+            <div className="flex flex-col gap-2">
+              {addons.map((addon) => (
+                <AddonRow
+                  addon={addon}
+                  control={form.control}
+                  key={addon.addonId}
+                />
+              ))}
+            </div>
+          </TooltipProvider>
         </CardContent>
       </Card>
 

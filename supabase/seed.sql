@@ -147,33 +147,42 @@ insert into public.room_opening_hours (
   ('00000000-0000-0000-0000-0000000000c2', 5, '09:00', '17:00', false),
   ('00000000-0000-0000-0000-0000000000c2', 6, '09:00', '17:00', true);
 
+-- House Service and House Host also ship from migration
+-- 20260917120000_seed_house_addons.sql; the on conflict guard keeps this
+-- insert from colliding with it on `db reset`.
 insert into public.addons (
-  addon_id, addon_name, addon_description, addon_price_ore, addon_pricing_model
+  addon_id, addon_name, addon_description, addon_price_ore, addon_pricing_model,
+  addon_sort_order
 ) values
   (
     '00000000-0000-0000-0000-0000000000d1',
     'House Service',
-    'The Social House gør lokalet klar og rydder op efter mødet. For små møder: maks. 5 deltagere, maks. 4 timer og ingen forplejning.',
-    50000, 'fixed'
+    'The Social House gør lokalet klar og rydder op efter mødet. Kaffe, te og vand, som I bestiller, serveres og ryddes bort. Til mindre møder uden forplejning: højst 5 deltagere og højst 4 timer.',
+    50000, 'fixed',
+    1
   ),
   (
     '00000000-0000-0000-0000-0000000000d2',
     'House Host',
-    'Vært tilstede under mødet: forberedelse, servering af forplejning og praktisk hjælp. Anbefales ved over 5 deltagere, forplejning eller møder over 4 timer.',
-    100000, 'fixed'
+    'Vært til stede under mødet: forberedelse og opsætning, servering af bestilt forplejning, praktisk hjælp og koordinering af særlige ønsker. Standardprisen er 1.000 kr ekskl. moms pr. mødedag. Anbefales ved mere end 5 deltagere, frokost eller anden forplejning, møder over 4 timer eller særlig opsætning. Over 15 deltagere eller komplekse behov: pris og briefing aftales særskilt.',
+    100000, 'fixed',
+    2
   ),
   (
     '00000000-0000-0000-0000-0000000000d3',
     'Lunch',
     'Leveret sandwichmenu med tilbehør. Beregnes pr. deltager.',
-    22500, 'per_participant'
+    22500, 'per_participant',
+    3
   ),
   (
     '00000000-0000-0000-0000-0000000000d4',
     'Ekstra skærm',
     'Ekstra 55" skærm i lokalet til præsentation.',
-    50000, 'fixed'
-  );
+    50000, 'fixed',
+    4
+  )
+on conflict (addon_id) do nothing;
 
 insert into public.room_addons (room_addon_room_id, room_addon_addon_id) values
   ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d1'),
