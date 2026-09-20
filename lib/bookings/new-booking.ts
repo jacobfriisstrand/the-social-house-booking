@@ -63,8 +63,12 @@ type BookingInsert = Omit<
 >;
 
 // The row for a new booking: booker, slot, and the price snapshot
-// (ADR-0005) from the company's discount; add-ons arrive with #7. Status,
-// hold expiry and company are the caller's.
+// (ADR-0005) from the company's discount. The add-on lines arrive right
+// after the insert and Postgres moves booking_addon_total_ore and
+// booking_expected_total_ore by their sum (booking_addons_sync_totals), so
+// the snapshot starts at member price + 0 and ends at member price + the
+// lines. Status, hold expiry, catering acceptance and company are the
+// caller's.
 export const newBookingRow = (
   input: CreateHoldValues,
   discountPercent: number,
@@ -104,6 +108,9 @@ export interface BookingPriceRow {
   booking_start_at: string;
 }
 
+const SNAPSHOT_COLUMNS =
+  "booking_addon_total_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_room_price_ore, booking_start_at";
+
 // The frozen overview of a booking, from its snapshot columns. The total
 // is the stored booking_expected_total_ore; room price, discount and
 // hours are the frozen inputs the snapshot was built from.
@@ -120,3 +127,18 @@ export const bookingPriceOverview = (
     roomHourlyPriceOre: row.booking_room_price_ore,
     totalOre: row.booking_expected_total_ore,
   });
+
+// The snapshot columns of one booking, read back after the add-on lines
+// are written so the overview includes them (the sync trigger has updated
+// the totals by then). Null when the row is gone or not readable (RLS).
+export async function readBookingPriceRow(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<BookingPriceRow | null> {
+  const { data } = await supabase
+    .from("bookings")
+    .select(SNAPSHOT_COLUMNS)
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+  return data;
+}

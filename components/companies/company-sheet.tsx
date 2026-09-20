@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -21,13 +21,16 @@ import { ResendInvitationButton } from "./resend-invitation-button";
 // dedicated page, no navigation. Content mounts only while open.
 export function CompanySheet({ company }: { company: CompanyRow }) {
   const [open, setOpen] = useState(false);
+  const close = useCallback((): void => {
+    setOpen(false);
+  }, []);
 
   return (
     <Sheet onOpenChange={setOpen} open={open}>
       <SheetTrigger
         render={
           <Button
-            className="h-auto px-0 py-0 font-medium underline-offset-4 hover:bg-transparent hover:underline"
+            className="inline-block h-auto max-w-full truncate px-0 py-0 font-medium underline-offset-4 hover:bg-transparent hover:underline"
             type="button"
             variant="ghost"
           />
@@ -46,7 +49,10 @@ export function CompanySheet({ company }: { company: CompanyRow }) {
           {company.company_master_data_completed_at ? null : (
             <ResendInvitationButton companyId={company.company_id} />
           )}
-          <CompanyForm defaultValues={companyToAdminValues(company)} />
+          <CompanyForm
+            defaultValues={companyToAdminValues(company)}
+            onSaved={close}
+          />
         </div>
       </SheetContent>
     </Sheet>

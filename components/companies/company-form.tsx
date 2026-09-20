@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -27,16 +28,20 @@ const labels = messages.companyFields;
 const copy = messages.companies;
 
 // Admin review and correction of every field, including the login email.
+// onSaved lets a parent (the company sheet) close itself once a save lands;
+// the success toast is fired here by useFormAction.
 export function CompanyForm({
   defaultValues,
+  onSaved,
 }: {
   defaultValues: AdminCompanyValues;
+  onSaved?: () => void;
 }) {
   const form = useForm<AdminCompanyValues>({
     defaultValues,
     resolver: zodResolver(adminCompanySchema),
   });
-  const { pending, submit } = useFormAction({
+  const { pending, state, submit } = useFormAction({
     action: updateCompany,
     form,
     successMessage: copy.saved,
@@ -45,6 +50,12 @@ export function CompanyForm({
     control: form.control,
     name: "membershipStatus",
   });
+
+  useEffect(() => {
+    if (state.status === "success") {
+      onSaved?.();
+    }
+  }, [state, onSaved]);
 
   return (
     <form className="flex flex-col gap-6" onSubmit={submit}>

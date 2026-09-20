@@ -37,12 +37,23 @@ const slotFields = {
   startAt: instant,
 };
 
+// Selected add-ons and the catering rule (#7, Bilag 1 "Forplejning og
+// hospitality"): catering is ordered only through The Social House and the
+// booker must actively accept it — an unchecked checkbox fails the parse,
+// so the acceptance timestamp is only ever written from a parsed true.
+export const addOnFields = {
+  addOnIds: z.array(z.guid()).max(50),
+  cateringAccepted: z.literal(true, {
+    error: errors.cateringAcceptRequired,
+  }),
+};
+
 const endAfterStart = (values: { endAt: string; startAt: string }) =>
   new Date(values.endAt) > new Date(values.startAt);
 const endAfterStartError = { message: errors.endBeforeStart, path: ["endAt"] };
 
 export const createHoldSchema = z
-  .object({ ...bookerFields, ...slotFields })
+  .object({ ...bookerFields, ...slotFields, ...addOnFields })
   .refine(endAfterStart, endAfterStartError);
 
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
@@ -50,7 +61,12 @@ export type CreateHoldValues = z.infer<typeof createHoldSchema>;
 // Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
 // which company, and confirmed at once without a verification code.
 export const adminBookingSchema = z
-  .object({ ...bookerFields, ...slotFields, companyId: z.guid() })
+  .object({
+    ...bookerFields,
+    ...slotFields,
+    ...addOnFields,
+    companyId: z.guid(),
+  })
   .refine(endAfterStart, endAfterStartError);
 
 export type AdminBookingValues = z.infer<typeof adminBookingSchema>;

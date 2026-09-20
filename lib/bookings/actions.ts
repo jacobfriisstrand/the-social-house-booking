@@ -9,6 +9,7 @@
 import { captureException } from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { requireOwnCompany } from "@/lib/auth/require-company";
+import type { AddOnLine } from "@/lib/domain/addons";
 import type { CompanyRow } from "@/lib/domain/company-master-data";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import {
@@ -33,11 +34,13 @@ import {
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { escapeHtml } from "@/supabase/functions/send-email/handler";
+import { lineInserts, listRoomAddOns, selectAddOnLines } from "./addon-lines";
 import {
   bookingPriceOverview,
   EXCLUSION_VIOLATION,
   findBookableRoom,
   newBookingRow,
+  readBookingPriceRow,
   type SessionClient,
   type Step,
 } from "./new-booking";
@@ -198,15 +201,20 @@ const heldState = (hold: LiveHold, expiresAt: Date): HoldState => ({
   status: "held",
 });
 
-// The pending_verification row (newBookingRow carries the snapshot). The
-// database rejects an overlapping slot, so no separate availability query
-// runs first. The overview is read back from the snapshot columns, so the
-// verification step shows exactly what was frozen, not a recomputation.
+// The pending_verification row (newBookingRow carries the snapshot) with
+// its add-on lines (#7): the lines are written while the booking is
+// pending — the frozen add-on rows (ADR-0005) — and Postgres moves the
+// booking's add-on and expected totals by their sum
+// (booking_addons_sync_totals). The database rejects an overlapping slot,
+// so no separate availability query runs first. The overview is read back
+// from the snapshot columns afterwards, so the verification step shows
+// exactly what was frozen, not a recomputation.
 async function insertHold(
   supabase: SessionClient,
   company: CompanyRow,
   input: CreateHoldValues,
   roomHourlyPriceOre: number,
+  lines: AddOnLine[],
   expiresAt: Date
 ): Promise<Step<LiveHold>> {
   const inserted = await supabase
@@ -217,13 +225,14 @@ async function insertHold(
         company.company_discount_percent,
         roomHourlyPriceOre
       ),
+      // The schema requires active acceptance (addOnFields); the parse
+      // cannot produce false here.
+      booking_catering_accepted_at: new Date().toISOString(),
       booking_company_id: company.company_id,
       booking_hold_expires_at: expiresAt.toISOString(),
       booking_status: "pending_verification",
     })
-    .select(
-      "booking_id, booking_number, booking_room_price_ore, booking_discount_percent, booking_addon_total_ore, booking_expected_total_ore, booking_start_at, booking_end_at"
-    )
+    .select("booking_id, booking_number")
     .single();
   if (inserted.error) {
     return fail(
@@ -232,13 +241,29 @@ async function insertHold(
         : errors.createFailed
     );
   }
+  const bookingId = inserted.data.booking_id;
+  if (lines.length > 0) {
+    const written = await supabase
+      .from("booking_addons")
+      .insert(lineInserts(bookingId, lines));
+    if (written.error) {
+      // No lines, no booking: release the hold so the room does not sit
+      // blocked on a row the booker cannot complete.
+      await releaseHold(supabase, bookingId);
+      return fail(errors.createFailed);
+    }
+  }
+  const snapshot = await readBookingPriceRow(supabase, bookingId);
+  if (!snapshot) {
+    return fail(errors.createFailed);
+  }
   return {
     ok: true,
     value: {
       bookerEmail: input.bookerEmail,
-      bookingId: inserted.data.booking_id,
+      bookingId,
       bookingNumber: inserted.data.booking_number,
-      price: bookingPriceOverview(inserted.data),
+      price: bookingPriceOverview(snapshot),
     },
   };
 }
@@ -258,7 +283,10 @@ async function issueFirstCode(
   return heldState(hold, expiresAt);
 }
 
-// "Book nu": the hold, then the first code.
+// "Book nu": the hold, then the first code. The selected add-ons are
+// re-checked against the room's active ones (#7) — the ids come from a
+// form, so a stale or forged id fails here rather than pricing a booking
+// with an add-on the room does not offer.
 export async function createHold(
   _prevState: HoldState,
   values: CreateHoldValues
@@ -273,12 +301,26 @@ export async function createHold(
   if (!room.ok) {
     return room.state;
   }
+  const roomAddOns = await listRoomAddOns(supabase, parsed.data.roomId);
+  const selection = selectAddOnLines(
+    roomAddOns,
+    parsed.data.addOnIds,
+    parsed.data.participantCount
+  );
+  if (!selection.ok) {
+    return {
+      error: selection.error,
+      fieldErrors: { addOnIds: [selection.error] },
+      status: "error",
+    };
+  }
   const expiresAt = holdExpiry(new Date());
   const hold = await insertHold(
     supabase,
     company,
     parsed.data,
     room.value,
+    selection.lines,
     expiresAt
   );
   if (!hold.ok) {

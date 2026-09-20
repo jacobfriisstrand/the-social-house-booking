@@ -56,15 +56,31 @@ create table public.bookings (
   booking_invoiced_by uuid references auth.users (id),
   booking_created_at timestamptz not null default now(),
   booking_updated_at timestamptz not null default now(),
+  -- Catering rule (Bilag 1 "Forplejning og hospitality", #7): the flow
+  -- requires active acceptance; the confirmation mail (#11, Mail 4) repeats
+  -- the rule. Null never happens through the app — the schema requires the
+  -- checkbox — but the column stays nullable so fixtures and admin SQL do
+  -- not have to fake an instant.
+  booking_catering_accepted_at timestamptz,
   check (booking_end_at > booking_start_at)
 );
 
--- Add-ons selected on a booking; unit price frozen at snapshot time.
+-- Add-ons selected on a booking (#7). One line per add-on (composite key).
+-- The line is written once, while the booking is pending, and is then part
+-- of the price snapshot (ADR-0005): booking_addon_unit_price_ore is the
+-- frozen per-unit price — the catalogue price, or the admin's House Host
+-- adjustment, which lives only here and never edits the catalogue
+-- (addons.sql). Quantity is the headcount for a per-participant add-on and
+-- 1 for a fixed one; the total is unit × quantity, checked below.
 create table public.booking_addons (
   booking_addon_booking_id uuid not null references public.bookings (booking_id) on delete cascade,
   booking_addon_addon_id uuid not null references public.addons (addon_id),
-  booking_addon_price_ore integer not null check (booking_addon_price_ore >= 0),
-  primary key (booking_addon_booking_id, booking_addon_addon_id)
+  booking_addon_unit_price_ore integer not null check (booking_addon_unit_price_ore >= 0),
+  booking_addon_quantity integer not null check (booking_addon_quantity > 0),
+  booking_addon_total_ore integer not null check (booking_addon_total_ore >= 0),
+  primary key (booking_addon_booking_id, booking_addon_addon_id),
+  constraint booking_addon_total_check
+    check (booking_addon_total_ore = booking_addon_unit_price_ore * booking_addon_quantity)
 );
 
 -- Availability lookups are by room and time.
@@ -339,3 +355,98 @@ create trigger booking_addons_snapshot_immutable
   before insert or update or delete on public.booking_addons
   for each row
   execute function public.enforce_addon_snapshot_immutable();
+
+-- Line values (#7, ADR-0011): quantity is the headcount for a
+-- per-participant add-on and 1 for a fixed one. Checked in Postgres so
+-- every write path obeys it; the line total is guarded by the
+-- booking_addon_total_check constraint. A per-participant line must be
+-- written after the booking row carries the participant count it belongs
+-- to (the natural order: booking first, then its lines), so changing the
+-- headcount means updating bookings first, then the lines.
+create or replace function public.enforce_addon_line_values()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_model public.addon_pricing_model;
+  v_participant_count integer;
+begin
+  select a.addon_pricing_model into v_model
+  from public.addons a
+  where a.addon_id = new.booking_addon_addon_id;
+
+  select b.booking_participant_count into v_participant_count
+  from public.bookings b
+  where b.booking_id = new.booking_addon_booking_id;
+
+  if v_model = 'per_participant'
+    and new.booking_addon_quantity is distinct from v_participant_count
+  then
+    raise exception
+      'a per-participant add-on''s quantity must equal the booking''s participant count'
+      using errcode = 'P0001';
+  end if;
+
+  if v_model = 'fixed' and new.booking_addon_quantity is distinct from 1 then
+    raise exception 'a fixed add-on''s quantity must be 1'
+      using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger booking_addons_line_values
+  before insert or update of booking_addon_addon_id, booking_addon_quantity
+  on public.booking_addons
+  for each row
+  execute function public.enforce_addon_line_values();
+
+-- The booking's frozen add-on total (ADR-0005) is the sum of its line
+-- totals, and the expected total is the member price plus that sum.
+-- Maintained here, not in the application, so every writer of
+-- booking_addons — hold creation, an admin's House Host adjustment, a
+-- participant-count change before confirmation — leaves the snapshot
+-- columns consistent. The expected total moves by the delta only: the
+-- member price part is rounded in TypeScript (lib/domain/pricing.ts) and
+-- is not recomputed here. Runs as invoker: a writer of a booking's lines
+-- already owns the booking under RLS.
+create or replace function public.sync_booking_addon_totals()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_booking_id uuid;
+  v_stored_total integer;
+  v_line_sum integer;
+begin
+  if tg_op = 'DELETE' then
+    v_booking_id := old.booking_addon_booking_id;
+  else
+    v_booking_id := new.booking_addon_booking_id;
+  end if;
+
+  select b.booking_addon_total_ore into v_stored_total
+  from public.bookings b
+  where b.booking_id = v_booking_id;
+
+  select coalesce(sum(a.booking_addon_total_ore), 0) into v_line_sum
+  from public.booking_addons a
+  where a.booking_addon_booking_id = v_booking_id;
+
+  if v_line_sum is distinct from v_stored_total then
+    update public.bookings b
+    set booking_addon_total_ore = v_line_sum,
+        booking_expected_total_ore =
+          b.booking_expected_total_ore + (v_line_sum - v_stored_total)
+    where b.booking_id = v_booking_id;
+  end if;
+
+  return null;
+end;
+$$;
+
+create trigger booking_addons_sync_totals
+  after insert or update or delete on public.booking_addons
+  for each row
+  execute function public.sync_booking_addon_totals();

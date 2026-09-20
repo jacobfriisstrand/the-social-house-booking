@@ -8,6 +8,7 @@
 // snapshot uses the company's discount, which is 0 for an external company
 // (companies_external_no_discount). Mail 4 and Mail 8 are wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
+import type { AddOnLine } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AdminBookingValues,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/validation/booking";
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
+import { lineInserts, listRoomAddOns, selectAddOnLines } from "./addon-lines";
 import {
   EXCLUSION_VIOLATION,
   findBookableRoom,
@@ -63,12 +65,19 @@ async function findBookingCompany(
 }
 
 // Confirmed on insert: the room-free trigger and the no-overlap constraint
-// are the availability check, so an unavailable slot fails the insert.
+// are the availability check, so an unavailable slot fails the insert. The
+// add-on lines (#7) must exist before the status becomes confirmed — they
+// are part of the price snapshot (ADR-0005) and the add-on freeze trigger
+// blocks writes on confirmed bookings — so the row is inserted pending,
+// the lines are written, and the same action confirms it at once
+// (ADR-0023): no code, no hold the company ever sees. A failed confirm
+// releases the room.
 async function insertConfirmedBooking(
   supabase: SessionClient,
   company: BookingCompany,
   input: AdminBookingValues,
-  roomHourlyPriceOre: number
+  roomHourlyPriceOre: number,
+  lines: AddOnLine[]
 ): Promise<AdminBookingState> {
   const inserted = await supabase
     .from("bookings")
@@ -78,10 +87,11 @@ async function insertConfirmedBooking(
         company.company_discount_percent,
         roomHourlyPriceOre
       ),
+      booking_catering_accepted_at: new Date().toISOString(),
       booking_company_id: company.company_id,
-      booking_status: "confirmed",
+      booking_status: "pending_verification",
     })
-    .select("booking_number")
+    .select("booking_id, booking_number")
     .single();
   if (inserted.error) {
     const taken = inserted.error.code === EXCLUSION_VIOLATION;
@@ -90,7 +100,45 @@ async function insertConfirmedBooking(
       status: "error",
     };
   }
+  const bookingId = inserted.data.booking_id;
+  if (lines.length > 0) {
+    const written = await supabase
+      .from("booking_addons")
+      .insert(lineInserts(bookingId, lines));
+    if (written.error) {
+      await releaseBooking(supabase, bookingId);
+      return { error: errors.createFailed, status: "error" };
+    }
+  }
+  const confirmed = await supabase
+    .from("bookings")
+    .update({ booking_status: "confirmed" })
+    .eq("booking_id", bookingId)
+    .eq("booking_status", "pending_verification");
+  if (confirmed.error) {
+    // The confirm re-runs the room-free triggers; a House Event added
+    // meanwhile dooms the booking, so the room is released.
+    await releaseBooking(supabase, bookingId);
+    const taken = confirmed.error.code === EXCLUSION_VIOLATION;
+    return {
+      error: taken ? errors.slotTaken : errors.createFailed,
+      status: "error",
+    };
+  }
   return { bookingNumber: inserted.data.booking_number, status: "created" };
+}
+
+// Frees the room: the exclusion constraint and calendar_entries ignore
+// expired rows (#24).
+async function releaseBooking(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<void> {
+  await supabase
+    .from("bookings")
+    .update({ booking_status: "expired" })
+    .eq("booking_id", bookingId)
+    .eq("booking_status", "pending_verification");
 }
 
 export async function createAdminBooking(
@@ -111,10 +159,26 @@ export async function createAdminBooking(
   if (!room.ok) {
     return room.state;
   }
+  // The same add-on re-check as the company flow (#7): the ids are
+  // re-validated against the room's active add-ons.
+  const roomAddOns = await listRoomAddOns(supabase, parsed.data.roomId);
+  const selection = selectAddOnLines(
+    roomAddOns,
+    parsed.data.addOnIds,
+    parsed.data.participantCount
+  );
+  if (!selection.ok) {
+    return {
+      error: selection.error,
+      fieldErrors: { addOnIds: [selection.error] },
+      status: "error",
+    };
+  }
   return insertConfirmedBooking(
     supabase,
     company.value,
     parsed.data,
-    room.value
+    room.value,
+    selection.lines
   );
 }

@@ -4,11 +4,11 @@
 // admin group only when the session carries the admin role, the content
 // column (mobile menu button, page content, footer line), and the
 // off-canvas sheet on phone. Visual rules: docs/design/DESIGN.md, "Shell".
-import { CalendarPlusIcon, LogOutIcon, WifiIcon } from "lucide-react";
+import { CalendarPlusIcon, CopyIcon, LogOutIcon, WifiIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -25,7 +25,14 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
 import type { WifiSettings } from "@/lib/settings/data";
 import {
@@ -35,6 +42,24 @@ import {
   shellMainLinks,
 } from "@/lib/shell/nav";
 import { messages } from "@/messages/da";
+
+// On phone the sidebar is an off-canvas sheet; a route change must dismiss
+// it (picking a nav item on mobile should land on the page, not stay in the
+// open menu). The pathname watches the location, so programmatic navigation
+// closes it too, not just link clicks.
+function CloseMobileSidebarOnNavigate() {
+  const { setOpenMobile } = useSidebar();
+  const pathname = usePathname();
+
+  // The dependency is the point: re-run whenever the location changes, even
+  // though the body does not read the path.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional route-change effect.
+  useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
+
+  return null;
+}
 
 function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   const pathname = usePathname();
@@ -149,17 +174,57 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function ShellFooter({ wifi }: { wifi: WifiSettings }) {
+  const [copying, setCopying] = useState(false);
+
+  const handleCopy = useCallback(async (): Promise<void> => {
+    setCopying(true);
+    try {
+      await navigator.clipboard.writeText(wifi.password);
+      toast.add({ title: messages.settings.passwordCopied, type: "success" });
+    } finally {
+      setCopying(false);
+    }
+  }, [wifi.password]);
+
+  const copyButton = (
+    <Button
+      aria-label={messages.settings.copyPassword}
+      disabled={copying}
+      onClick={handleCopy}
+      size="icon-sm"
+      type="button"
+      variant="ghost"
+    >
+      <CopyIcon />
+    </Button>
+  );
+
   return (
-    <footer className="flex items-center justify-end gap-2 text-muted-foreground text-xs">
-      <span className="inline-flex">
-        <WifiIcon aria-hidden="true" className="size-4" />
-      </span>
-      <span>{wifi.network}</span>
-      <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
-      <span>{messages.shell.footer.passwordLabel}</span>
-      <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-foreground">
-        {wifi.password}
-      </span>
+    <footer className="flex justify-end gap-2 text-muted-foreground text-xs max-md:flex-col md:items-center md:gap-2">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex">
+          <WifiIcon aria-hidden="true" className="size-4" />
+        </span>
+        <span>{wifi.network}</span>
+      </div>
+      <Separator
+        className="my-auto h-3.5 self-center max-md:hidden"
+        orientation="vertical"
+      />
+      <div className="flex items-center gap-2">
+        <span>{messages.shell.footer.passwordLabel}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-foreground">
+            {wifi.password}
+          </span>
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              {copyButton}
+            </TooltipTrigger>
+            <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
+          </Tooltip>
+        </span>
+      </div>
     </footer>
   );
 }
@@ -177,6 +242,7 @@ export function AppShell({
 }) {
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
+      <CloseMobileSidebarOnNavigate />
       <ShellSidebar isAdmin={isAdmin} />
       <SidebarInset>
         <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
