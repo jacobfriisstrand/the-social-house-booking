@@ -197,37 +197,39 @@ export default async function RoomPage({
       <RoomBreadcrumb name={room.name} query={query} />
       <PageHeader title={room.name} />
       <PagePanel>
-        {/* On desktop the card fills the panel and nothing outside it
-            scrolls: the info column stays put and the photos scroll in
-            their own column. Below lg the panel scrolls as a whole. */}
-        <Card className="lg:min-h-0 lg:flex-1">
-          <CardContent className="grid gap-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[2fr_3fr] lg:grid-rows-[minmax(0,1fr)]">
-            <div className="order-2 lg:order-1 lg:min-h-0 lg:overflow-y-auto">
-              <RoomInfo room={room} />
-            </div>
-            <div className="order-1 lg:order-2 lg:min-h-0 lg:overflow-y-auto">
-              <RoomPhotos room={room} />
-            </div>
-          </CardContent>
-        </Card>
-        {/* The bar is the panel's bottom edge on every size: flush with the
-            panel (its padding cancelled), sticky while the content scrolls,
-            and at rest above the footer line. From tablet up the panel is
-            the scroll container, whose padding the sticky offset cancels. */}
-        <div className="sticky bottom-0 z-10 -mx-3 mt-auto -mb-3 flex items-center justify-between gap-4 rounded-b-xl border-t bg-card p-4 shadow-sm md:-bottom-3">
-          <span className="font-medium max-md:hidden">{room.name}</span>
-          <PriceRow
-            discountPercent={discountPercent}
-            hourlyPriceOre={room.hourlyPriceOre}
-          />
-          <BookRoom
-            defaultOpen={Boolean(prefill.dato)}
-            initialDate={initialDate}
-            initialPeriods={initialPeriods}
-            prefill={prefill}
-            room={room}
-            viewer={viewer}
-          />
+        {/* Desktop: card and bar share one grid cell, so the bar lies on
+            the card's bottom edge as part of the content and the photos
+            scroll behind it; the columns keep bottom room so the last
+            photo clears the bar. Nothing outside the card scrolls. Below
+            lg the two stack, and the bar is the panel's bottom edge:
+            sticky while the content scrolls, its padding cancelled (the
+            panel is the scroll container from md, hence the offset). */}
+        <div className="flex flex-1 flex-col gap-6 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)] lg:gap-0">
+          <Card className="lg:min-h-0 lg:[grid-area:1/1]">
+            <CardContent className="grid gap-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[2fr_3fr] lg:grid-rows-[minmax(0,1fr)]">
+              <div className="order-2 lg:order-1 lg:min-h-0 lg:overflow-y-auto lg:pb-24">
+                <RoomInfo room={room} />
+              </div>
+              <div className="order-1 lg:order-2 lg:min-h-0 lg:overflow-y-auto lg:pb-24">
+                <RoomPhotos room={room} />
+              </div>
+            </CardContent>
+          </Card>
+          <div className="sticky bottom-0 z-10 -mx-3 mt-auto -mb-3 flex items-center justify-between gap-4 rounded-b-xl border-t bg-card p-4 shadow-sm md:-bottom-3 lg:static lg:m-0 lg:self-end lg:[grid-area:1/1]">
+            <span className="font-medium max-md:hidden">{room.name}</span>
+            <PriceRow
+              discountPercent={discountPercent}
+              hourlyPriceOre={room.hourlyPriceOre}
+            />
+            <BookRoom
+              defaultOpen={Boolean(prefill.dato)}
+              initialDate={initialDate}
+              initialPeriods={initialPeriods}
+              prefill={prefill}
+              room={room}
+              viewer={viewer}
+            />
+          </div>
         </div>
       </PagePanel>
     </>
