@@ -88,7 +88,7 @@ function useResendCode(
 
 function HoldCountdown({ secondsLeft }: { secondsLeft: number }) {
   return (
-    <p className="text-muted-foreground text-sm">
+    <p className="text-center text-muted-foreground text-sm">
       {secondsLeft === 0
         ? copy.expired
         : copy.countdown(formatCountdown(secondsLeft))}
@@ -188,10 +188,11 @@ export function VerificationStep({
         <h2 className="font-medium text-lg">{copy.title}</h2>
         <p>{copy.sentTo(hold.bookerEmail)}</p>
       </div>
-      <FieldGroup>
+      {/* The countdown belongs to the code: centred directly under it. */}
+      <FieldGroup className="gap-2">
         <CodeField control={form.control} disabled={expired} />
+        <HoldCountdown secondsLeft={secondsLeft} />
       </FieldGroup>
-      <HoldCountdown secondsLeft={secondsLeft} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <PendingButton
           disabled={disabled}
