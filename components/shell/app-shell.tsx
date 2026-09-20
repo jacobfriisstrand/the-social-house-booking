@@ -199,7 +199,10 @@ export function AppShell({
       <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
       <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
       <SidebarInset>
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:px-4 md:py-3">
+        {/* From tablet up the column is exactly the viewport: title, panel
+            and footer line stay in view and the panel scrolls inside
+            (DESIGN.md "Shell"). Phone keeps the document scroll. */}
+        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:px-4 md:py-3">
           {children}
           <ShellFooter wifi={wifi} />
         </div>

@@ -197,22 +197,24 @@ export default async function RoomPage({
       <RoomBreadcrumb name={room.name} query={query} />
       <PageHeader title={room.name} />
       <PagePanel>
-        {/* overflow-visible: the card's default clip would stop the info
-            column from sticking while the photos scroll (desktop). */}
-        <Card className="overflow-visible">
-          <CardContent className="grid gap-8 lg:grid-cols-[2fr_3fr]">
-            <div className="order-2 lg:sticky lg:top-8 lg:order-1 lg:self-start">
+        {/* On desktop the card fills the panel and nothing outside it
+            scrolls: the info column stays put and the photos scroll in
+            their own column. Below lg the panel scrolls as a whole. */}
+        <Card className="lg:min-h-0 lg:flex-1">
+          <CardContent className="grid gap-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[2fr_3fr] lg:grid-rows-[minmax(0,1fr)]">
+            <div className="order-2 lg:order-1 lg:min-h-0 lg:overflow-y-auto">
               <RoomInfo room={room} />
             </div>
-            <div className="order-1 lg:order-2">
+            <div className="order-1 lg:order-2 lg:min-h-0 lg:overflow-y-auto">
               <RoomPhotos room={room} />
             </div>
           </CardContent>
         </Card>
         {/* The bar is the panel's bottom edge on every size: flush with the
-            panel (its padding cancelled), sticky to the viewport bottom
-            while the panel scrolls, and at rest above the footer line. */}
-        <div className="sticky bottom-0 z-10 -mx-3 mt-auto -mb-3 flex items-center justify-between gap-4 rounded-b-xl border-t bg-card p-4 shadow-sm">
+            panel (its padding cancelled), sticky while the content scrolls,
+            and at rest above the footer line. From tablet up the panel is
+            the scroll container, whose padding the sticky offset cancels. */}
+        <div className="sticky bottom-0 z-10 -mx-3 mt-auto -mb-3 flex items-center justify-between gap-4 rounded-b-xl border-t bg-card p-4 shadow-sm md:-bottom-3">
           <span className="font-medium max-md:hidden">{room.name}</span>
           <PriceRow
             discountPercent={discountPercent}
