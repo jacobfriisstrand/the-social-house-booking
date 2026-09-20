@@ -6,21 +6,19 @@ import {
   useActionState,
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { z } from "zod";
+import type { AddOnView } from "@/components/bookings/addon-selection";
 import {
-  AddOnCheckboxList,
-  type AddOnView,
-  CateringAcceptance,
-} from "@/components/bookings/addon-selection";
-import {
+  AddOnAndCateringFields,
   BookerSlotFields,
+  devAddOnFields,
   devSlotFields,
   NativeSelectField,
   toInstants,
+  useClearAddOnsOnRoomChange,
 } from "@/components/bookings/dev-fields";
 import { VerificationStep } from "@/components/bookings/verification-step";
 import { applyFieldErrors } from "@/components/forms/field-errors";
@@ -43,16 +41,13 @@ const copy = messages.booking;
 // The harness fields live in components/bookings/dev-fields.tsx, shared
 // with the admin harness (#14); #4 deletes all of it. The field names match
 // createHoldSchema so server field errors land on the right inputs; the
-// add-on and catering fields are the real flow's (#7). The client-side
-// catering schema is a boolean with a refine so the checkbox starts
-// unchecked; the server schema requires exactly true.
+// add-on and catering fields are the real flow's (#7) — devAddOnFields
+// holds them in the client shape, with cateringAccepted a refined boolean
+// so the checkbox starts unchecked; the server schema requires exactly true.
 const devFormSchema = z.object({
   ...bookerFields,
   ...devSlotFields,
-  addOnIds: z.array(z.guid()).max(50),
-  cateringAccepted: z.boolean().refine((accepted) => accepted, {
-    message: copy.errors.cateringAcceptRequired,
-  }),
+  ...devAddOnFields,
 });
 type DevFormValues = z.infer<typeof devFormSchema>;
 
@@ -85,19 +80,6 @@ function useHoldResult(
 
 const firstRoomId = (rooms: RoomOption[]): string => rooms[0]?.room_id ?? "";
 
-// Selected add-ons belong to a room: a room change drops the selection, so
-// the form never submits another room's add-on ids (#7).
-function useClearAddOnsOnRoomChange(form: UseFormReturn<DevFormValues>): void {
-  const previousRoomId = useRef(form.getValues("roomId"));
-  const roomId = form.watch("roomId");
-  useEffect(() => {
-    if (roomId !== previousRoomId.current) {
-      previousRoomId.current = roomId;
-      form.setValue("addOnIds", []);
-    }
-  }, [roomId, form]);
-}
-
 function HoldForm({
   addOnsByRoomId,
   onHeld,
@@ -126,11 +108,6 @@ function HoldForm({
   useHoldResult(state, form, onHeld);
   useClearAddOnsOnRoomChange(form);
 
-  const roomId = form.watch("roomId");
-  const addOns = addOnsByRoomId[roomId] ?? [];
-  const addOnError = form.formState.errors.addOnIds?.message;
-  const cateringError = form.formState.errors.cateringAccepted?.message;
-
   const submit = form.handleSubmit((values) =>
     startTransition(() =>
       // The client schema types cateringAccepted as a refined boolean; the
@@ -153,17 +130,7 @@ function HoldForm({
           }))}
         />
         <BookerSlotFields control={form.control} />
-        <AddOnCheckboxList
-          addOns={addOns}
-          control={form.control}
-          error={addOnError}
-          name="addOnIds"
-        />
-        <CateringAcceptance
-          control={form.control}
-          error={cateringError}
-          name="cateringAccepted"
-        />
+        <AddOnAndCateringFields addOnsByRoomId={addOnsByRoomId} form={form} />
       </FieldGroup>
       <PendingButton
         idleLabel={copy.demo.submit}

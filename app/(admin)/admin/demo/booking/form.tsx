@@ -1,19 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { z } from "zod";
+import type { AddOnView } from "@/components/bookings/addon-selection";
 import {
-  AddOnCheckboxList,
-  type AddOnView,
-  CateringAcceptance,
-} from "@/components/bookings/addon-selection";
-import {
+  AddOnAndCateringFields,
   BookerSlotFields,
+  devAddOnFields,
   devSlotFields,
   NativeSelectField,
   toInstants,
+  useClearAddOnsOnRoomChange,
 } from "@/components/bookings/dev-fields";
 import { applyFieldErrors } from "@/components/forms/field-errors";
 import { PendingButton } from "@/components/forms/pending-button";
@@ -38,15 +37,12 @@ import { messages } from "@/messages/da";
 
 const copy = messages.booking;
 
-// The client-side catering schema is a boolean with a refine so the
-// checkbox starts unchecked; the server schema requires exactly true (#7).
+// The catering checkbox's client schema is a refined boolean so it starts
+// unchecked; the server schema requires exactly true (#7).
 const devFormSchema = z.object({
   ...bookerFields,
   ...devSlotFields,
-  addOnIds: z.array(z.guid()).max(50),
-  cateringAccepted: z.boolean().refine((accepted) => accepted, {
-    message: copy.errors.cateringAcceptRequired,
-  }),
+  ...devAddOnFields,
   companyId: z.string().min(1, copy.errors.required),
 });
 type DevFormValues = z.infer<typeof devFormSchema>;
@@ -117,19 +113,6 @@ const defaultValues = (
   startAt: "",
 });
 
-// Selected add-ons belong to a room: a room change drops the selection, so
-// the form never submits another room's add-on ids (#7).
-function useClearAddOnsOnRoomChange(form: UseFormReturn<DevFormValues>): void {
-  const previousRoomId = useRef(form.getValues("roomId"));
-  const roomId = form.watch("roomId");
-  useEffect(() => {
-    if (roomId !== previousRoomId.current) {
-      previousRoomId.current = roomId;
-      form.setValue("addOnIds", []);
-    }
-  }, [roomId, form]);
-}
-
 export function AdminBookingForm({
   addOnsByRoomId,
   companies,
@@ -150,11 +133,6 @@ export function AdminBookingForm({
 
   useBookingResult(state, form);
   useClearAddOnsOnRoomChange(form);
-
-  const roomId = form.watch("roomId");
-  const addOns = addOnsByRoomId[roomId] ?? [];
-  const addOnError = form.formState.errors.addOnIds?.message;
-  const cateringError = form.formState.errors.cateringAccepted?.message;
 
   const submit = form.handleSubmit((values) =>
     startTransition(() =>
@@ -187,16 +165,9 @@ export function AdminBookingForm({
               options={roomOptions(rooms)}
             />
             <BookerSlotFields control={form.control} />
-            <AddOnCheckboxList
-              addOns={addOns}
-              control={form.control}
-              error={addOnError}
-              name="addOnIds"
-            />
-            <CateringAcceptance
-              control={form.control}
-              error={cateringError}
-              name="cateringAccepted"
+            <AddOnAndCateringFields
+              addOnsByRoomId={addOnsByRoomId}
+              form={form}
             />
           </FieldGroup>
           <PendingButton

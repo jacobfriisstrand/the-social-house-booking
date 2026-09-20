@@ -16,13 +16,17 @@ import {
 } from "@/lib/validation/booking";
 import { type FormState, invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
-import { lineInserts, listRoomAddOns, selectAddOnLines } from "./addon-lines";
 import {
-  EXCLUSION_VIOLATION,
-  findBookableRoom,
-  newBookingRow,
+  findRoomAndAddOns,
+  releasePendingBooking,
+  writeAddOnLines,
+} from "./addon-lines";
+import {
+  confirmPendingBooking,
+  insertPendingBooking,
   type SessionClient,
   type Step,
+  slotFailureMessage,
 } from "./new-booking";
 
 const { errors } = messages.booking;
@@ -79,53 +83,35 @@ async function insertConfirmedBooking(
   roomHourlyPriceOre: number,
   lines: AddOnLine[]
 ): Promise<AdminBookingState> {
-  const inserted = await supabase
-    .from("bookings")
-    .insert({
-      ...newBookingRow(
-        input,
-        company.company_discount_percent,
-        roomHourlyPriceOre
-      ),
-      booking_catering_accepted_at: new Date().toISOString(),
-      booking_company_id: company.company_id,
-      booking_status: "pending_verification",
-    })
-    .select("booking_id, booking_number")
-    .single();
-  if (inserted.error) {
-    const taken = inserted.error.code === EXCLUSION_VIOLATION;
+  const inserted = await insertPendingBooking(
+    supabase,
+    company,
+    input,
+    roomHourlyPriceOre,
+    {}
+  );
+  if (!inserted.ok) {
     return {
-      error: taken ? errors.slotTaken : errors.createFailed,
+      error: slotFailureMessage(inserted.error),
       status: "error",
     };
   }
-  const bookingId = inserted.data.booking_id;
-  if (lines.length > 0) {
-    const written = await supabase
-      .from("booking_addons")
-      .insert(lineInserts(bookingId, lines));
-    if (written.error) {
-      await releaseBooking(supabase, bookingId);
-      return { error: errors.createFailed, status: "error" };
-    }
+  const { bookingId } = inserted;
+  if (!(await writeAddOnLines(supabase, bookingId, lines))) {
+    await releaseBooking(supabase, bookingId);
+    return { error: errors.createFailed, status: "error" };
   }
-  const confirmed = await supabase
-    .from("bookings")
-    .update({ booking_status: "confirmed" })
-    .eq("booking_id", bookingId)
-    .eq("booking_status", "pending_verification");
-  if (confirmed.error) {
+  const confirmed = await confirmPendingBooking(supabase, bookingId);
+  if (confirmed) {
     // The confirm re-runs the room-free triggers; a House Event added
     // meanwhile dooms the booking, so the room is released.
     await releaseBooking(supabase, bookingId);
-    const taken = confirmed.error.code === EXCLUSION_VIOLATION;
     return {
-      error: taken ? errors.slotTaken : errors.createFailed,
+      error: slotFailureMessage(confirmed),
       status: "error",
     };
   }
-  return { bookingNumber: inserted.data.booking_number, status: "created" };
+  return { bookingNumber: inserted.bookingNumber, status: "created" };
 }
 
 // Frees the room: the exclusion constraint and calendar_entries ignore
@@ -134,11 +120,7 @@ async function releaseBooking(
   supabase: SessionClient,
   bookingId: string
 ): Promise<void> {
-  await supabase
-    .from("bookings")
-    .update({ booking_status: "expired" })
-    .eq("booking_id", bookingId)
-    .eq("booking_status", "pending_verification");
+  await releasePendingBooking(supabase, bookingId);
 }
 
 export async function createAdminBooking(
@@ -155,30 +137,17 @@ export async function createAdminBooking(
   if (!company.ok) {
     return company.state;
   }
-  const room = await findBookableRoom(supabase, parsed.data);
-  if (!room.ok) {
-    return room.state;
-  }
-  // The same add-on re-check as the company flow (#7): the ids are
-  // re-validated against the room's active add-ons.
-  const roomAddOns = await listRoomAddOns(supabase, parsed.data.roomId);
-  const selection = selectAddOnLines(
-    roomAddOns,
-    parsed.data.addOnIds,
-    parsed.data.participantCount
-  );
-  if (!selection.ok) {
-    return {
-      error: selection.error,
-      fieldErrors: { addOnIds: [selection.error] },
-      status: "error",
-    };
+  // The same room-and-add-on check as the company flow (#7): the room must
+  // be bookable and the ids must belong to it.
+  const validated = await findRoomAndAddOns(supabase, parsed.data);
+  if (!validated.ok) {
+    return validated.state;
   }
   return insertConfirmedBooking(
     supabase,
     company.value,
     parsed.data,
-    room.value,
-    selection.lines
+    validated.roomHourlyPriceOre,
+    validated.lines
   );
 }

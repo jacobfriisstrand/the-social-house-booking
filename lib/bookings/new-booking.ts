@@ -2,6 +2,7 @@
 // room lookup, the insert row with its price snapshot, the frozen price
 // overview (#6) read back from that snapshot, the step type both flows
 // chain on, and the Postgres error code an unavailable slot raises.
+import type { PostgrestError } from "@supabase/supabase-js";
 import {
   type PriceOverviewModel,
   priceOverview,
@@ -95,6 +96,65 @@ export const newBookingRow = (
     booking_start_at: input.startAt,
   };
 };
+
+// An unavailable slot raises the exclusion violation; any other insert
+// failure is a generic failure to the form.
+export const slotFailureMessage = (error: PostgrestError): string =>
+  error.code === EXCLUSION_VIOLATION ? errors.slotTaken : errors.createFailed;
+
+// The pending booking row both booking actions insert (#7, ADR-0023): the
+// snapshot (ADR-0005) from the company's discount and the active catering
+// acceptance (the parse cannot produce false). `extra` carries what
+// differs — the hold's expiry for the company flow, nothing for the admin,
+// which confirms at once.
+export async function insertPendingBooking(
+  supabase: SessionClient,
+  company: { company_discount_percent: number; company_id: string },
+  input: CreateHoldValues,
+  roomHourlyPriceOre: number,
+  extra: Pick<BookingInsert, "booking_hold_expires_at">
+): Promise<
+  | { bookingId: string; bookingNumber: string; ok: true }
+  | { error: PostgrestError; ok: false }
+> {
+  const inserted = await supabase
+    .from("bookings")
+    .insert({
+      ...newBookingRow(
+        input,
+        company.company_discount_percent,
+        roomHourlyPriceOre
+      ),
+      booking_catering_accepted_at: new Date().toISOString(),
+      booking_company_id: company.company_id,
+      booking_status: "pending_verification",
+      ...extra,
+    })
+    .select("booking_id, booking_number")
+    .single();
+  if (inserted.error) {
+    return { error: inserted.error, ok: false };
+  }
+  return {
+    bookingId: inserted.data.booking_id,
+    bookingNumber: inserted.data.booking_number,
+    ok: true,
+  };
+}
+
+// Confirms a pending booking in place. The update re-runs the room-free
+// triggers, so an error means a House Event took the room meanwhile.
+export async function confirmPendingBooking(
+  supabase: SessionClient,
+  bookingId: string
+): Promise<PostgrestError | null> {
+  const { error } = await supabase
+    .from("bookings")
+    .update({ booking_status: "confirmed" })
+    .eq("booking_id", bookingId)
+    .eq("booking_status", "pending_verification");
+  return error;
+}
 
 // The columns a price overview is read from: the snapshot only. Later
 // reads of a confirmed booking never recompute from live room or company

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 // Fields for the development-only booking harnesses (#2 company side, #14
 // admin side). Native controls: the product's dropdowns arrive with #4's
 // dialog, which deletes this file and both harness routes. Times are
@@ -10,9 +11,15 @@ import {
   type Control,
   type FieldValues,
   type Path,
+  type UseFormReturn,
   useController,
 } from "react-hook-form";
 import { z } from "zod";
+import {
+  AddOnCheckboxList,
+  type AddOnView,
+  CateringAcceptance,
+} from "@/components/bookings/addon-selection";
 import { TextField } from "@/components/forms/text-field";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -42,6 +49,77 @@ export const toInstants = <Values extends { endAt: string; startAt: string }>(
   endAt: new Date(values.endAt).toISOString(),
   startAt: new Date(values.startAt).toISOString(),
 });
+
+// Selected add-ons and the catering acceptance, as the harness forms hold
+// them (#7): the real flow's fields, in the client form's shape —
+// cateringAccepted is a boolean with a refine so the checkbox starts
+// unchecked; the server schema requires exactly true.
+export const devAddOnFields = {
+  addOnIds: z.array(z.guid()).max(50),
+  cateringAccepted: z.boolean().refine((accepted) => accepted, {
+    message: copy.errors.cateringAcceptRequired,
+  }),
+};
+
+// Selected add-ons belong to a room: a room change drops the selection, so
+// the form never submits another room's add-on ids (#7).
+export interface RoomSelectionValues {
+  addOnIds: string[];
+  roomId: string;
+}
+
+export function useClearAddOnsOnRoomChange<
+  Values extends RoomSelectionValues & FieldValues,
+>(form: UseFormReturn<Values>): void {
+  const scoped = form as unknown as UseFormReturn<RoomSelectionValues>;
+  const previousRoomId = useRef(scoped.getValues("roomId"));
+  const roomId = scoped.watch("roomId");
+  useEffect(() => {
+    if (roomId !== previousRoomId.current) {
+      previousRoomId.current = roomId;
+      scoped.setValue("addOnIds", []);
+    }
+  }, [roomId, scoped]);
+}
+
+// The add-on list and the catering rule, with each field's error — the
+// shared tail of both harness forms' field group.
+export interface AddOnHarnessValues {
+  addOnIds: string[];
+  cateringAccepted: boolean;
+  roomId: string;
+}
+
+export function AddOnAndCateringFields<
+  Values extends AddOnHarnessValues & FieldValues,
+>({
+  addOnsByRoomId,
+  form,
+}: {
+  addOnsByRoomId: Record<string, AddOnView[]>;
+  form: UseFormReturn<Values>;
+}) {
+  const scoped = form as unknown as UseFormReturn<AddOnHarnessValues>;
+  const roomId = scoped.watch("roomId");
+  const addOns = addOnsByRoomId[roomId] ?? [];
+  const addOnError = scoped.formState.errors.addOnIds?.message;
+  const cateringError = scoped.formState.errors.cateringAccepted?.message;
+  return (
+    <>
+      <AddOnCheckboxList
+        addOns={addOns}
+        control={scoped.control}
+        error={addOnError}
+        name="addOnIds"
+      />
+      <CateringAcceptance
+        control={scoped.control}
+        error={cateringError}
+        name="cateringAccepted"
+      />
+    </>
+  );
+}
 
 export function NativeSelectField<Values extends FieldValues>({
   control,

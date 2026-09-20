@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import type { AddOnView } from "@/components/bookings/addon-selection";
 import { PageHeader, PagePanel } from "@/components/shell/page";
-import { listRoomAddOns } from "@/lib/bookings/addon-lines";
+import { addOnsByRoomId } from "@/lib/bookings/addon-lines";
 import { isDevelopment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -37,13 +36,10 @@ export default async function AdminDemoBookingPage() {
   // The room's offered add-ons (#7), keyed by room for the form's room
   // select.
   const roomRows = rooms.data ?? [];
-  const addOnLists = await Promise.all(
-    roomRows.map((room) => listRoomAddOns(supabase, room.room_id))
+  const addOns = await addOnsByRoomId(
+    supabase,
+    roomRows.map((room) => room.room_id)
   );
-  const addOnsByRoomId: Record<string, AddOnView[]> = {};
-  for (const [index, room] of roomRows.entries()) {
-    addOnsByRoomId[room.room_id] = addOnLists[index] ?? [];
-  }
 
   return (
     <>
@@ -51,7 +47,7 @@ export default async function AdminDemoBookingPage() {
       <PagePanel>
         <div className="mx-auto w-full max-w-md">
           <AdminBookingForm
-            addOnsByRoomId={addOnsByRoomId}
+            addOnsByRoomId={addOns}
             companies={companies.data ?? []}
             rooms={roomRows}
           />

@@ -7,7 +7,13 @@
 // schema with the server action (lib/validation/addons.ts).
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect } from "react";
-import { type Control, useController, useForm } from "react-hook-form";
+import {
+  type Control,
+  type UseFormReturn,
+  useController,
+  useForm,
+} from "react-hook-form";
+import { applyFieldErrors } from "@/components/forms/field-errors";
 import { PendingButton } from "@/components/forms/pending-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,15 +45,27 @@ export interface AddonFormInitial {
   pricingModel: "fixed" | "per_participant";
 }
 
+// The create default; an edit carries the row's values. Whole kroner in
+// the form, integer øre stored (ADR-0019).
+const emptyFormValues: AddonFormValues = {
+  description: "",
+  isActive: true,
+  name: "",
+  priceKroner: 0,
+  pricingModel: "fixed",
+};
+
 function initialFormValues(initial: AddonFormInitial | null): AddonFormValues {
+  if (!initial) {
+    return emptyFormValues;
+  }
   return {
-    addonId: initial?.addonId ?? undefined,
-    description: initial?.description ?? "",
-    isActive: initial?.isActive ?? true,
-    name: initial?.name ?? "",
-    // Whole kroner in the form, integer øre stored (ADR-0019).
-    priceKroner: initial ? initial.priceOre / 100 : 0,
-    pricingModel: initial?.pricingModel ?? "fixed",
+    addonId: initial.addonId ?? undefined,
+    description: initial.description,
+    isActive: initial.isActive,
+    name: initial.name,
+    priceKroner: initial.priceOre / 100,
+    pricingModel: initial.pricingModel,
   };
 }
 
@@ -127,6 +145,23 @@ function FieldMessage({ message }: { message?: string }) {
   return <FieldError errors={[{ message }]} />;
 }
 
+// The action's failure: its field errors land on the inputs when there
+// are any, the toast shows the message otherwise.
+function showSaveError(
+  state: {
+    error: string;
+    fieldErrors?: Partial<Record<keyof AddonFormValues, string[]>>;
+  },
+  form: UseFormReturn<AddonFormValues>
+): void {
+  const { fieldErrors } = state;
+  if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
+    toast.add({ title: state.error, type: "error" });
+    return;
+  }
+  applyFieldErrors(form, fieldErrors);
+}
+
 export function AddonForm({
   initial,
   onSaved,
@@ -145,16 +180,10 @@ export function AddonForm({
     if (state.status === "success") {
       toast.add({ title: copy.saved, type: "success" });
       onSaved(state.addonId);
+      return;
     }
     if (state.status === "error") {
-      for (const [key, errs] of Object.entries(state.fieldErrors ?? {})) {
-        if ((errs as string[]).length > 0) {
-          form.setError(key as keyof AddonFormValues, { message: errs[0] });
-        }
-      }
-      if (Object.keys(state.fieldErrors ?? {}).length === 0) {
-        toast.add({ title: state.error, type: "error" });
-      }
+      showSaveError(state, form);
     }
   }, [state, form, onSaved]);
 

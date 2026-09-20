@@ -64,22 +64,33 @@ export async function saveAddon(
       messages.addons.errors.saveFailed
     );
   }
-  const supabase = await createClient();
-  const row = toDatabase(parsed.data);
   if (parsed.data.addonId) {
-    const { error } = await supabase
-      .from("addons")
-      .update({ ...row, addon_updated_at: new Date().toISOString() })
-      .eq("addon_id", parsed.data.addonId);
-    if (error) {
-      return FAIL_SAVE;
-    }
-    revalidateAddons();
-    return { addonId: parsed.data.addonId, status: "success" };
+    return await updateAddon(parsed.data);
   }
+  return await insertAddon(parsed.data);
+}
+
+async function updateAddon(values: AddonFormValues): Promise<AddonFormState> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("addons")
+    .update({
+      ...toDatabase(values),
+      addon_updated_at: new Date().toISOString(),
+    })
+    .eq("addon_id", values.addonId ?? "");
+  if (error) {
+    return FAIL_SAVE;
+  }
+  revalidateAddons();
+  return { addonId: values.addonId ?? "", status: "success" };
+}
+
+async function insertAddon(values: AddonFormValues): Promise<AddonFormState> {
+  const supabase = await createClient();
   const inserted = await supabase
     .from("addons")
-    .insert(row)
+    .insert(toDatabase(values))
     .select("addon_id")
     .single();
   if (inserted.error || !inserted.data) {
