@@ -136,7 +136,7 @@ function CodeField({
           {slotIndexes.map((slot) => (
             <InputOTPSlot
               aria-invalid={fieldState.invalid}
-              className="size-14 font-mono text-2xl"
+              className="h-17 w-14 border-secondary font-mono text-2xl"
               index={slot}
               key={slot}
             />

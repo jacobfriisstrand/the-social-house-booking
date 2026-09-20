@@ -227,7 +227,7 @@ Under the panel a one-line sentence in body text: "Dit møde starter onsdag 02/0
 
 Then two columns: "Tilkøb" as checkboxes with price chips left; the price summary right as a muted panel with rows "Lokale", "Tilkøb", "Subtotal", the discount line in success ("Medlemsrabat (50 %)", negative amount), and "Total" bold at 20px with "ekskl. moms" in 12px muted after it. A terms checkbox ("Jeg accepterer bookingbetingelserne", linked) sits above a full-width primary "Book nu".
 
-"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, the six-digit code in a shadcn `InputOTP` (one continuous row of six large slots, centred, no separator, digits only), a hold countdown in muted text, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog and toasts "Booking bekræftet".
+"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, the six-digit code in a shadcn `InputOTP` (one continuous row of six slots, 60px tall with `border-secondary` so the cells read clearly, centred, no separator, digits only), a hold countdown in muted text, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog and toasts "Booking bekræftet".
 
 ### Bookinger (member)
 
