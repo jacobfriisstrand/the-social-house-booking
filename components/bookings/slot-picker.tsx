@@ -26,6 +26,17 @@ const centreInList = (el: HTMLElement): void => {
   }
 };
 
+// Scrolls the list so its first bookable start time sits at the top. The
+// buttons are disabled unless available, so the first enabled option is it.
+const showFirstAvailable = (list: HTMLElement | null): void => {
+  const first = list?.querySelector<HTMLElement>(
+    '[role="option"]:not([disabled])'
+  );
+  if (list && first) {
+    list.scrollTop = first.offsetTop;
+  }
+};
+
 const statusLabel = (status: StartSlot["status"]): string | null =>
   status === "available" ? null : copy.slotStatus[status];
 
@@ -98,11 +109,23 @@ function StartList({
   startAt,
 }: Pick<SlotPickerProps, "loading" | "onStartChange" | "slots" | "startAt">) {
   const none = slots.every((slot) => slot.status !== "available");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // With no start chosen (a fresh dialog, or a new date, which remounts
+  // this list), show the first available start time once the day's
+  // bookings have loaded. A chosen start is centred by its own button.
+  useEffect(() => {
+    if (!loading && startAt === "") {
+      showFirstAvailable(listRef.current);
+    }
+  }, [loading, startAt]);
+
   return (
     <div
       aria-busy={loading}
       aria-label={copy.startListLabel}
       className="relative flex max-h-80 flex-col gap-1 overflow-y-auto pr-1"
+      ref={listRef}
       role="listbox"
     >
       {none ? (
@@ -154,7 +177,10 @@ export function SlotPicker({
       />
       <Field>
         <FieldLabel>{copy.startLabel}</FieldLabel>
+        {/* Keyed by date: a new day starts the list afresh, so it scrolls
+            to that day's first available start time. */}
         <StartList
+          key={date}
           loading={loading}
           onStartChange={onStartChange}
           slots={slots}
