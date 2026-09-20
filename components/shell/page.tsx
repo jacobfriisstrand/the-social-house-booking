@@ -1,7 +1,9 @@
 // Page header and content panel (docs/design/DESIGN.md, "Shell"): the shell
 // renders the sidebar and the footer line; each page renders its title with
 // at most one action, and its content on the muted panel. On phone the
-// menu button sits on the title row.
+// menu button sits on the title row, its glyph flush with the column's left
+// edge (the icon's own viewBox inset is what the small negative margin
+// cancels), so it lines up with whatever sits under the title.
 import type { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { messages } from "@/messages/da";
@@ -18,7 +20,7 @@ export function PageHeader({
       <div className="flex items-center gap-2">
         <SidebarTrigger
           aria-label={messages.shell.openMenu}
-          className="-ml-1 hover:bg-transparent active:translate-y-0 md:hidden [&_svg]:size-6"
+          className="-ml-0.5 justify-start px-0 hover:bg-transparent active:translate-y-0 md:hidden [&_svg]:size-6"
           size="icon-lg"
         />
         <h1 className="font-semibold text-xl">{title}</h1>
