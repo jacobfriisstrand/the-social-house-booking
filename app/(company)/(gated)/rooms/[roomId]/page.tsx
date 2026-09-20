@@ -194,8 +194,8 @@ export default async function RoomPage({
 
   return (
     <>
-      <RoomBreadcrumb name={room.name} query={query} />
       <PageHeader title={room.name} />
+      <RoomBreadcrumb name={room.name} query={query} />
       <PagePanel>
         {/* Desktop: card and bar share one grid cell, so the bar lies on
             the card's bottom edge as part of the content and the photos
