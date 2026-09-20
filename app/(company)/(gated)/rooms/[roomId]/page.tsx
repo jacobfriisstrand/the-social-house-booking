@@ -165,7 +165,8 @@ function RoomBreadcrumb({ name, query }: { name: string; query: Query }) {
 
 // The room detail page (DESIGN.md "Book lokale" step 4): info left, photos
 // right, one column on phone with photos first, and the sticky bar with
-// "Book nu". A pre-filled slot in the URL opens the booking dialog at once.
+// "Book nu". A slot in the URL (from a search) pre-fills the booking dialog,
+// which opens only when the visitor presses "Book nu".
 export default async function RoomPage({
   params,
   searchParams,
@@ -226,7 +227,6 @@ export default async function RoomPage({
               hourlyPriceOre={room.hourlyPriceOre}
             />
             <BookRoom
-              defaultOpen={Boolean(prefill.dato)}
               initialDate={initialDate}
               initialPeriods={initialPeriods}
               prefill={prefill}

@@ -16,7 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { dateToIso } from "@/lib/calendar-date";
 import {
@@ -29,7 +34,7 @@ import { roomSearchQuery } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
 
 const copy = messages.booking.search;
-const DEFAULT_PARTICIPANTS = 2;
+const DEFAULT_PARTICIPANTS = "2";
 
 const startItems = timeOptions(
   SLOT_MINUTES,
@@ -54,7 +59,9 @@ const endAfter = (start: string, end: string): string => {
 interface SearchValues {
   date: string;
   from: string;
-  participants: number;
+  // The field's text as typed: it may be empty while the number is being
+  // replaced, so it is only read as a number on submit.
+  participants: string;
   to: string;
 }
 
@@ -76,40 +83,47 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
       }),
     []
   );
+  const [submitted, setSubmitted] = useState(false);
+  const participantCount = Number.parseInt(values.participants, 10);
+  const participantsValid = participantCount >= 1;
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      setSubmitted(true);
+      if (!participantsValid) {
+        return;
+      }
       router.push(
         `/rooms${roomSearchQuery({
           dato: values.date,
           fra: values.from,
-          personer: values.participants,
+          personer: participantCount,
           til: values.to,
         })}`
       );
       onSearched();
     },
-    [onSearched, router, values]
+    [onSearched, participantCount, participantsValid, router, values]
   );
   const setDate = useCallback((date: string) => update({ date }), [update]);
   const setFrom = useCallback((from: string) => update({ from }), [update]);
   const setTo = useCallback((to: string) => update({ to }), [update]);
   const setParticipants = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) =>
-      update({
-        participants: Math.max(1, event.target.valueAsNumber || 1),
-      }),
+      update({ participants: event.target.value }),
     [update]
   );
+  const participantsInvalid = submitted && !participantsValid;
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit}>
       <FieldGroup>
-        <Field>
+        <Field data-invalid={participantsInvalid}>
           <FieldLabel htmlFor="search-participants">
             {copy.participants}
           </FieldLabel>
           <Input
+            aria-invalid={participantsInvalid}
             id="search-participants"
             inputMode="numeric"
             min={1}
@@ -117,6 +131,11 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
             type="number"
             value={values.participants}
           />
+          {participantsInvalid ? (
+            <FieldError>
+              {messages.booking.errors.participantsInvalid}
+            </FieldError>
+          ) : null}
         </Field>
         <Field>
           <FieldLabel htmlFor="search-date">{copy.date}</FieldLabel>

@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { messages } from "@/messages/da";
 import { BookingDialog, type BookingDialogProps } from "./booking-dialog";
 
-type BookRoomProps = Omit<BookingDialogProps, "onOpenChange" | "open"> & {
-  // Opens at once when the page was reached with a pre-filled slot (search
-  // results, an empty slot on the day grid).
-  defaultOpen: boolean;
-};
+type BookRoomProps = Omit<BookingDialogProps, "onOpenChange" | "open">;
 
-// "Book nu" on the room detail page, with the booking dialog it opens.
-export function BookRoom({ defaultOpen, ...dialog }: BookRoomProps) {
-  const [open, setOpen] = useState(defaultOpen);
+// "Book nu" on the room detail page, with the booking dialog it opens. The
+// dialog never opens by itself: arriving from a search shows the room
+// first, and "Book nu" then opens the dialog with the search pre-filled.
+export function BookRoom(dialog: BookRoomProps) {
+  const [open, setOpen] = useState(false);
   const show = useCallback(() => setOpen(true), []);
   return (
     <>

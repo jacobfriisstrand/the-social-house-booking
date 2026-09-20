@@ -38,9 +38,9 @@ export function roomSearchQuery(search: Partial<RoomSearch>): string {
   return text.length === 0 ? "" : `?${text}`;
 }
 
-// What the room detail page accepts to pre-fill and open the booking
-// dialog: any subset of the search, plus a bare date and start from an
-// empty slot on the day grid.
+// What the room detail page accepts to pre-fill the booking dialog: any
+// subset of the search, plus a bare date and start from an empty slot on
+// the day grid.
 export const roomPrefillSchema = roomSearchSchema.partial();
 
 export type RoomPrefill = z.infer<typeof roomPrefillSchema>;
