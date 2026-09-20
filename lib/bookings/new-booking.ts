@@ -1,8 +1,11 @@
 // Shared by the company's hold (#2) and admin's direct booking (#14): the
-// room lookup, the insert row with its price snapshot, the frozen price
-// overview (#6) read back from that snapshot, the step type both flows
-// chain on, and the Postgres error code an unavailable slot raises.
+// room lookup with the opening-hours fit (#4), the insert row with its
+// price snapshot, the frozen price overview (#6) read back from that
+// snapshot, the step type both flows chain on, and the Postgres error code
+// an unavailable slot raises.
 import type { PostgrestError } from "@supabase/supabase-js";
+import { bufferEndAt } from "@/lib/domain/buffer";
+import { bookingWithinOpeningHours } from "@/lib/domain/opening-hours";
 import {
   type PriceOverviewModel,
   priceOverview,
@@ -14,6 +17,7 @@ import type { createClient } from "@/lib/supabase/server";
 import type { CreateHoldValues } from "@/lib/validation/booking";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
+import { loadRoomOpening } from "./availability";
 
 const { errors } = messages.booking;
 
@@ -28,11 +32,55 @@ export type Step<T> =
   | { ok: true; value: T }
   | { ok: false; state: FormError<never> };
 
-// An active room with room for the participants; the hourly price is what
-// the snapshot needs.
+export interface BookableRoomInput {
+  endAt: string;
+  participantCount: number;
+  roomId: string;
+  startAt: string;
+}
+
+// The booking and its 30-minute buffer must fit the room's opening hours
+// (issue #4). The database does not know the hours, so this is the only
+// check; collisions are left to the exclusion constraint.
+async function fitsOpeningHours(
+  supabase: SessionClient,
+  input: BookableRoomInput
+): Promise<boolean> {
+  const opening = await loadRoomOpening(supabase, input.roomId);
+  return bookingWithinOpeningHours(
+    new Date(input.startAt),
+    bufferEndAt(new Date(input.endAt)),
+    opening.weekly,
+    opening.specialDays
+  );
+}
+
+// An active room with room for the participants, open for the period; the
+// hourly price is what the snapshot needs.
 export async function findBookableRoom(
   supabase: SessionClient,
-  input: { participantCount: number; roomId: string }
+  input: BookableRoomInput
+): Promise<Step<number>> {
+  const hourlyPrice = await findRoomPrice(supabase, input);
+  if (!hourlyPrice.ok) {
+    return hourlyPrice;
+  }
+  if (!(await fitsOpeningHours(supabase, input))) {
+    return {
+      ok: false,
+      state: {
+        error: errors.outsideOpeningHours,
+        fieldErrors: { startAt: [errors.outsideOpeningHours] },
+        status: "error",
+      },
+    };
+  }
+  return hourlyPrice;
+}
+
+async function findRoomPrice(
+  supabase: SessionClient,
+  input: BookableRoomInput
 ): Promise<Step<number>> {
   const room = await supabase
     .from("rooms")

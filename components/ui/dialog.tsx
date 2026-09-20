@@ -6,6 +6,7 @@ import type * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { messages } from "@/messages/da";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -30,7 +31,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       className={cn(
-        "data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-100 data-closed:animate-out data-open:animate-in supports-backdrop-filter:backdrop-blur-xs",
+        "data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-200 ease-out data-closed:animate-out data-open:animate-in supports-backdrop-filter:backdrop-blur-xs motion-reduce:data-closed:animate-none motion-reduce:data-open:animate-none",
         className
       )}
       data-slot="dialog-overlay"
@@ -52,7 +53,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          "data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground text-sm outline-none ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-open:animate-in sm:max-w-sm",
+          "data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground text-sm outline-none ring-1 ring-foreground/10 duration-200 ease-out data-closed:animate-out data-open:animate-in motion-reduce:data-closed:animate-none motion-reduce:data-open:animate-none sm:max-w-sm",
           className
         )}
         data-slot="dialog-content"
@@ -64,14 +65,16 @@ function DialogContent({
             data-slot="dialog-close"
             render={
               <Button
-                className="absolute top-2 right-2"
+                className="absolute top-2 right-2 max-md:size-13"
                 size="icon-sm"
                 variant="ghost"
               />
             }
           >
-            <XIcon />
-            <span className="sr-only">Close</span>
+            {/* Larger on phone, where dialogs are full-screen and this is
+                the only way out besides finishing. */}
+            <XIcon className="size-4 max-md:size-6" />
+            <span className="sr-only">{messages.common.closeSheet}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

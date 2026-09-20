@@ -3,7 +3,8 @@
 // Add-on selection for the booking flow (#7, Bilag 1 "Tilvalg"): one
 // checkbox per add-on with its price (fixed total or per participant,
 // ADR-0011) and description. House Service and House Host are plain
-// add-ons; any guidance lives in their description (ADR-0015). Below the
+// add-ons; any guidance lives in their description (ADR-0015), which folds
+// out from "Læs om <tilkøb>" so the list stays short (#4 review). Below the
 // list, the catering rule with its required acceptance checkbox: catering
 // is ordered only through The Social House, and the acceptance timestamp
 // is what Mail 4 (#11) repeats. The booking dialog (#4) reuses these
@@ -15,6 +16,14 @@ import {
   type Path,
   useController,
 } from "react-hook-form";
+import { formatAddonPrice } from "@/components/rooms/addon-price";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -24,7 +33,6 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import type { AddOnPricingModel } from "@/lib/domain/addons";
-import { formatKroner } from "@/lib/format";
 import { messages } from "@/messages/da";
 
 const copy = messages.booking.addOns;
@@ -38,12 +46,27 @@ export interface AddOnView {
   pricingModel: AddOnPricingModel;
 }
 
-// "+ 500 kr" / "+ 225 kr pr. deltager" (DESIGN.md room detail chips).
-function priceLabel(addOn: AddOnView): string {
-  const price = `+ ${formatKroner(addOn.priceOre)}`;
-  return addOn.pricingModel === "per_participant"
-    ? `${price} ${copy.perParticipant}`
-    : price;
+// "Læs om House Host": the description folds out under the row. The
+// trigger's chevron sits right after the text instead of at the far edge.
+function AddOnAbout({
+  description,
+  name,
+}: {
+  description: string;
+  name: string;
+}) {
+  return (
+    <Accordion className="pl-7">
+      <AccordionItem value="about">
+        <AccordionTrigger className="justify-start! flex-none! gap-1 py-1 font-normal text-muted-foreground text-xs **:data-[slot=accordion-trigger-icon]:ml-0!">
+          {messages.booking.dialog.readAbout(name)}
+        </AccordionTrigger>
+        <AccordionContent className="whitespace-pre-line text-muted-foreground">
+          {description}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
 }
 
 interface AddOnCheckboxListProps<Values extends FieldValues> {
@@ -59,7 +82,8 @@ interface AddOnRowProps {
   onChange: (addonId: string, checked: boolean) => void;
 }
 
-// One add-on row: the checkbox, the price chip, and the description.
+// One add-on row: the checkbox, the price chip ("+ 500 kr", "Gratis",
+// "+ 225 kr / person", DESIGN.md), and the fold-out description.
 function AddOnRow({ addOn, checked, onChange }: AddOnRowProps) {
   const id = `add-on-${addOn.addonId}`;
   const handleCheckedChange = useCallback(
@@ -79,15 +103,13 @@ function AddOnRow({ addOn, checked, onChange }: AddOnRowProps) {
         />
         <FieldLabel className="font-normal" htmlFor={id}>
           {addOn.name}
-          <span className="ml-2 text-muted-foreground text-xs tabular-nums">
-            {priceLabel(addOn)}
-          </span>
+          <Badge className="rounded-full bg-secondary/40" variant="outline">
+            {formatAddonPrice(addOn)}
+          </Badge>
         </FieldLabel>
       </div>
       {addOn.description ? (
-        <p className="pl-7 text-muted-foreground text-xs">
-          {addOn.description}
-        </p>
+        <AddOnAbout description={addOn.description} name={addOn.name} />
       ) : null}
     </Field>
   );

@@ -1,7 +1,5 @@
 "use client";
-
-import { cn } from "cn";
-import { CalendarIcon, CalendarXIcon, TrashIcon } from "lucide-react";
+import { CalendarXIcon, TrashIcon } from "lucide-react";
 import {
   startTransition,
   useActionState,
@@ -9,10 +7,9 @@ import {
   useEffect,
   useState,
 } from "react";
-import { da } from "react-day-picker/locale";
+import { DatePicker } from "@/components/forms/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -28,11 +25,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Field, FieldLabel } from "@/components/ui/field";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { timeOptions } from "@/lib/domain/time";
@@ -60,72 +52,6 @@ export interface SpecialClosingDayItem {
   isClosed: boolean;
   opens: string | null;
   roomSpecialClosingDayId: string;
-}
-
-// "2026-12-24" ↔ Date conversions for the calendar. A bare date string has
-// no timezone, so the round trip stays on local date parts (no UTC shift).
-function isoToDate(value: string): Date | undefined {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!(year && month && day)) {
-    return undefined;
-  }
-  return new Date(year, month - 1, day);
-}
-
-function dateToIso(date: Date): string {
-  const pad = (part: number): string => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-interface SpecialDayDatePickerProps {
-  onChange: (value: string) => void;
-  value: string;
-}
-
-// DESIGN.md date picker: Popover + Calendar, trigger shows the chosen date
-// as dd/mm/yyyy until one is picked.
-function SpecialDayDatePicker({ onChange, value }: SpecialDayDatePickerProps) {
-  const [open, setOpen] = useState(false);
-
-  const handleSelect = useCallback(
-    (selected: Date | undefined): void => {
-      if (selected) {
-        onChange(dateToIso(selected));
-        setOpen(false);
-      }
-    },
-    [onChange]
-  );
-
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger
-        render={
-          <Button
-            className={cn(
-              "max-w-fit",
-              value ? undefined : "text-muted-foreground"
-            )}
-            id="special-day-date"
-            type="button"
-            variant="outline"
-          />
-        }
-      >
-        <CalendarIcon data-icon="inline-start" />
-        {value ? formatDateString(value) : messages.rooms.chooseDate}
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
-        <Calendar
-          captionLayout="dropdown"
-          locale={da}
-          mode="single"
-          onSelect={handleSelect}
-          selected={value ? isoToDate(value) : undefined}
-        />
-      </PopoverContent>
-    </Popover>
-  );
 }
 
 interface SpecialDayRowProps {
@@ -281,7 +207,12 @@ export function SpecialClosingDays({
             <FieldLabel htmlFor="special-day-date">
               {messages.rooms.specialDayDate}
             </FieldLabel>
-            <SpecialDayDatePicker onChange={setDate} value={date} />
+            <DatePicker
+              id="special-day-date"
+              label={messages.rooms.chooseDate}
+              onChange={setDate}
+              value={date}
+            />
           </Field>
           <Field orientation="horizontal">
             {/* Switch on = the whole date is closed (the default); off =

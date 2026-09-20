@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { SearchDialog } from "@/components/bookings/search-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -83,7 +84,43 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   );
 }
 
-function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
+// "Book lokale" as a text button, and as an icon button on the collapsed
+// rail with the same height so collapsing does not shift the nav. On
+// phone the sidebar is a sheet: it closes as the dialog opens.
+function BookRoomButtons({ onOpen }: { onOpen: () => void }) {
+  const { setOpenMobile } = useSidebar();
+  const handleClick = useCallback(() => {
+    setOpenMobile(false);
+    onOpen();
+  }, [onOpen, setOpenMobile]);
+  return (
+    <>
+      <Button
+        className="w-full group-data-[collapsible=icon]:hidden"
+        onClick={handleClick}
+        size="lg"
+      >
+        {messages.shell.bookRoom}
+      </Button>
+      <Button
+        aria-label={messages.shell.bookRoom}
+        className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
+        onClick={handleClick}
+        size="icon"
+      >
+        <CalendarPlusIcon />
+      </Button>
+    </>
+  );
+}
+
+function ShellSidebar({
+  isAdmin,
+  onOpenSearch,
+}: {
+  isAdmin: boolean;
+  onOpenSearch: () => void;
+}) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -104,26 +141,7 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
       </SidebarHeader>
       <SidebarGroup>
         <SidebarGroupContent>
-          {/* Wired to the search dialog by #4; renders disabled until then. */}
-          <Button
-            aria-disabled="true"
-            className="w-full group-data-[collapsible=icon]:hidden"
-            disabled
-            size="lg"
-          >
-            {messages.shell.bookRoom}
-          </Button>
-          {/* Same height as the text button so collapsing does not shift
-              the nav. */}
-          <Button
-            aria-disabled="true"
-            aria-label={messages.shell.bookRoom}
-            className="mx-auto hidden size-9 group-data-[collapsible=icon]:flex"
-            disabled
-            size="icon"
-          >
-            <CalendarPlusIcon />
-          </Button>
+          <BookRoomButtons onOpen={onOpenSearch} />
         </SidebarGroupContent>
       </SidebarGroup>
       <SidebarContent>
@@ -200,31 +218,22 @@ function ShellFooter({ wifi }: { wifi: WifiSettings }) {
   );
 
   return (
-    <footer className="flex justify-end gap-2 text-muted-foreground text-xs max-md:flex-col md:items-center md:gap-2">
-      <div className="flex items-center gap-2">
-        <span className="inline-flex">
-          <WifiIcon aria-hidden="true" className="size-4" />
-        </span>
-        <span>{wifi.network}</span>
-      </div>
-      <Separator
-        className="my-auto h-3.5 self-center max-md:hidden"
-        orientation="vertical"
-      />
-      <div className="flex items-center gap-2">
-        <span>{messages.shell.footer.passwordLabel}</span>
-        <span className="inline-flex items-center gap-1">
-          <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-foreground">
-            {wifi.password}
-          </span>
-          <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>
-              {copyButton}
-            </TooltipTrigger>
-            <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
-          </Tooltip>
-        </span>
-      </div>
+    <footer className="flex flex-wrap items-center justify-center gap-2 text-muted-foreground text-xs md:justify-end">
+      <span className="inline-flex">
+        <WifiIcon aria-hidden="true" className="size-4" />
+      </span>
+      <span>{wifi.network}</span>
+      <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
+      <span>{messages.shell.footer.passwordLabel}</span>
+      <span className="inline-flex items-center gap-1">
+        <span className="font-mono text-foreground">{wifi.password}</span>
+        <Tooltip>
+          <TooltipTrigger render={<span className="inline-flex" />}>
+            {copyButton}
+          </TooltipTrigger>
+          <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
+        </Tooltip>
+      </span>
     </footer>
   );
 }
@@ -240,16 +249,21 @@ export function AppShell({
   defaultOpen: boolean;
   wifi: WifiSettings;
 }) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <CloseMobileSidebarOnNavigate />
-      <ShellSidebar isAdmin={isAdmin} />
+      <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
+      <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
       <SidebarInset>
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
-          <SidebarTrigger
-            aria-label={messages.shell.openMenu}
-            className="self-start md:hidden"
-          />
+        {/* From tablet up the column is exactly the viewport: title, panel
+            and footer line stay in view and the panel scrolls inside
+            (DESIGN.md "Shell"). Phone keeps the document scroll. No left
+            padding from tablet up: the sidebar's own padding is the gutter,
+            so the menu sits centred between the screen edge and the
+            content. */}
+        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
           {children}
           <ShellFooter wifi={wifi} />
         </div>

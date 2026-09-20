@@ -47,14 +47,16 @@ Poppins, loaded in `app/layout.tsx` with weights 400 to 900. Geist Mono for book
 
 | Role | Size | Weight | Colour | Example |
 |---|---|---|---|---|
-| Page title (h1) | 28px / `text-3xl` | 600 | foreground | "Administrer lokaler" |
-| Section title (h2) | 22px / `text-2xl` | 500 | foreground | "Lokaler" above the rooms carousel |
-| Card title (h3) | 18px / `text-lg` | 500 | foreground | "Room of Relations" on a room card |
-| Body | 14px / `text-sm` | 400 | foreground | descriptions, table cells |
-| Label, hint | 12px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
+| Page title (h1) | 18px / `text-xl` | 600 | foreground | "Administrer lokaler" |
+| Section title (h2) | 17px / `text-lg` | 500 | foreground | "Lokaler" above the rooms carousel |
+| Card title (h3) | 15px / `text-base` | 500 | foreground | "Room of Relations" on a room card |
+| Body | 13px / `text-sm` | 400 | foreground | descriptions, table cells |
+| Label, hint | 11px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
 | Group header | 11px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
-| Value, price | 16px to 20px | 500 | foreground | "800 kr/time" |
-| Big number | 28px / `text-3xl` | 600 | foreground | statistic tiles |
+| Value, price | 15px to 18px | 500 | foreground | "800 kr/time" |
+| Big number | 26px / `text-3xl` | 600 | foreground | statistic tiles |
+
+The scale is 0.9 of Tailwind's defaults, set once in the `@theme` block of globals.css (`text-xs` 11px, `text-sm` 13px, `text-base` 15px, `text-lg` 17px, `text-xl` 18px, `text-2xl` 21px, `text-3xl` 26px). Decided 2026-09-16 in #4: the default scale read too large at the 0.22rem density, and titles step down one size each (page title `text-xl`, not `text-3xl`).
 
 No eyebrows. The old front page put "THE DAILY" over "Booking overview"; the rule now is one bold title and nothing above it. The uppercase small style is reserved for sidebar group headers.
 
@@ -99,10 +101,11 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style.
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
-- The content panel is `bg-muted rounded-xl p-6` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
-- The footer line sits under the panel, right-aligned, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in a mono chip. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
-- Content column: `max-w-[1400px]`, padding `px-8 py-6` on desktop, `px-4 py-4` on phone.
-- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button at the top left of the content.
+- From tablet up the content column is exactly the viewport height (`md:h-svh`): the title, the panel and the footer line are always in view, and the panel scrolls inside (`md:overflow-y-auto`). The page itself never scrolls. Phone keeps the document scroll.
+- The content panel is `bg-muted rounded-xl p-3` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
+- The footer line sits under the panel, right-aligned on tablet and desktop and centred on phone, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in mono, foreground colour, no chip background. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
+- Content column: `max-w-[1400px]`, `gap-3` between title, panel and footer line. Every shell gutter equals the sidebar's own padding (`p-2`): from tablet up the column is `py-2 pr-2 pl-0`, so the menu sits centred between the screen edge and the content; on phone it is `px-2 py-2` (2026-09-20 in #4).
+- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button on the title row, left of the page title. "Book lokale" closes the sheet as the search dialog opens; the dialog is mounted by the shell outside the sidebar, never inside the sheet.
 
 Decisions the shell (#55) records on top of these rules:
 
@@ -123,6 +126,8 @@ Login is outside the shell: a centred white card on the background with the logo
 **Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card.
 
 **Empty state.** A white bordered card, `py-16`, centred: card-title line, one body sentence, optional secondary button. "Ingen kommende bookinger" / "Du har ingen kommende bookinger lige nu."
+
+**Long text.** A description that may run long is held to a few lines (4 for a room description, 3 for practical notes) with a soft fade at the cut, and gets a "Læs mere" / "Læs mindre" text button under it, foreground colour, underlined. It folds out by animating its height (300ms, off under reduced motion). The button shows only when the text is actually cut off. One component: `components/expandable-text.tsx`. In the booking dialog an add-on's description folds out from a shadcn `Accordion` trigger under its row: "Læs om House Host".
 
 **Chips.** `Badge` variant outline with `rounded-full bg-secondary/40 px-2 py-0.5 text-xs` and a 16px icon: "1 - 12 personer", "25 m²". Used on room cards and the room detail page. Not clickable.
 
@@ -174,9 +179,9 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Tables.** shadcn `Table` inside a `Card` with no padding, header row 12px muted, cells `p-2`, rows `h-12` with a border between. Numeric columns right-aligned with `tabular-nums`. Booking number in mono. Below `md` every wide table scrolls horizontally inside its card with the first column sticky; nothing stacks into cards. Selection checkboxes on the left when bulk actions exist (admin bookings). Totals row in the invoicing view is `font-medium` on a muted ground.
 
-**Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom.
+**Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom; there the dialog's close button is a larger tap target (about 45px, 21px icon), and the booking dialog's calendar fills the width so the days are large tap targets. Dialogs fade and zoom in and out over 200ms, ease-out; the large booking dialog takes 300ms with a slight rise. Under reduced motion dialogs appear and disappear without animation.
 
-**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
+**Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen, stacked above dialogs and sheets (`z-100`) so a result raised from inside a dialog is never hidden behind its backdrop. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
 **Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence.
 
@@ -206,11 +211,11 @@ Day view only. Week and month views are out of v1.0 (ADR-0022) even though the s
 
 ### Book lokale
 
-1. "Book lokale" opens a dialog with room (default "Alle lokaler"), date, start time, end time, participants, and a primary "Søg".
+1. "Book lokale" opens a dialog with participants, date, start time, end time, and a primary "Søg". No room field: the search returns every room that is free and holds the party (decided 2026-09-16 in #4).
 2. Results are a page at `/rooms?dato=…&fra=…&til=…&personer=…` titled "Ledige lokaler" with a 3-column card grid (1 column on phone, 2 on tablet). Empty state: "Ingen ledige lokaler i det valgte tidsrum."
 3. A room card: photo carousel with two round ghost arrows bottom right of the photo, then name (card title), capacity and size chips, then a two-column price row: "Normalpris" struck in muted-foreground left, "Din pris" in 18px foreground right. When the company has no discount the struck price is omitted and "Din pris" sits alone.
-4. The room detail page is two columns on desktop (info 40%, photos 60%), one column on phone with photos first. Left: bold title, chips row (size, capacity, price per hour), a border, description, a border, "Tilkøb" list where each add-on has its price as a chip ("+ 35 kr", "Gratis", "+ 200 kr / person"). Right: photos stacked, `rounded-lg`. A sticky bottom bar spans the content column: room name left, "Normalpris" struck and "Din pris" centre-right, primary "Book nu" right. On phone the bar is a fixed footer.
-5. "Book nu", and an empty-slot click on the grid, open the booking dialog.
+4. The room detail page has a shadcn `Breadcrumb` under the title, `text-xs` and `gap-1` from the title: "Lokaler" (or "Ledige lokaler" with the search kept in the link) then the room name. It is two columns on desktop (info 40%, photos 60%), one column on phone with photos first. On desktop the card fills the panel and only the photos column scrolls, inside the card; the info column, the bar and the footer line stay in view. Left: bold title, chips row (size, capacity, price per hour), a border, description, a border, "Tilkøb" list where each add-on has its price as a chip ("+ 35 kr", "Gratis", "+ 200 kr / person"). Right: photos stacked, `rounded-lg`; below `lg`, where the page is one column, they are one shadcn `Carousel` with the room card's round ghost arrows instead of a stack. A bottom bar carries the price and "Book nu". On desktop it lies on the card's bottom edge as part of the content, and the photos scroll behind it. Below `lg` it is the content panel's bottom edge (flush with the panel, `rounded-b-xl`, a top border): room name left (hidden on phone), "Normalpris" struck and "Din pris" centre-right, primary "Book nu" right. It sticks to the viewport bottom while the panel scrolls and rests above the footer line, never over it.
+5. "Book nu", and an empty-slot click on the grid, open the booking dialog. Arriving at a room from a search never opens it by itself: the visitor sees the room first, and "Book nu" opens the dialog with the searched date, times and participants pre-filled.
 
 ### Booking dialog
 
@@ -222,9 +227,9 @@ Large dialog (`max-w-5xl`), full-screen on phone. Header: room name, close icon.
 
 Under the panel a one-line sentence in body text: "Dit møde starter onsdag 02/09/2026 kl. 19:00 og slutter kl. 21:30."
 
-Then two columns: "Tilkøb" as checkboxes with price chips left; the price summary right as a muted panel with rows "Lokale", "Tilkøb", "Subtotal", the discount line in success ("Medlemsrabat (50 %)", negative amount), and "Total" bold at 20px with "ekskl. moms" in 12px muted after it. A terms checkbox ("Jeg accepterer bookingbetingelserne", linked) sits above a full-width primary "Book nu".
+Then two columns: "Tilkøb" as checkboxes with price chips left; the price summary right as a muted panel with rows "Lokale", "Tilkøb", "Subtotal", the discount line in success ("Medlemsrabat (50 %)", negative amount), and "Total" bold at 20px with "ekskl. moms" in 12px muted after it. Under them the catering rule with its required acceptance checkbox (#7), then the responsible booker's name, work email and mobile. A terms checkbox ("Jeg accepterer bookingbetingelserne", linked) sits above a full-width primary "Book nu".
 
-"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, a six-digit code input, a hold countdown in muted text, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog and toasts "Booking bekræftet".
+"Book nu" creates the hold and swaps the dialog body to the verification step: the same header, a sentence naming the booker's email, the six-digit code in a shadcn `InputOTP` (one continuous row of six slots, 60px tall with `border-secondary` so the cells read clearly, centred, no separator, digits only), the hold countdown in muted text centred directly under the code, secondary "Send ny kode", primary "Bekræft booking". Success closes the dialog, toasts "Booking bekræftet" and goes to the booking-complete page at `/bookings/[bookingId]/confirmed`: a centred card with a success check, "Tak for din booking", the booking number in mono, room, date, time, participants, booker and the expected total excl. VAT, then "Se bookinger" (primary, members) and "Book et lokale mere". An admin's booking for a company lands on the same page.
 
 ### Bookinger (member)
 

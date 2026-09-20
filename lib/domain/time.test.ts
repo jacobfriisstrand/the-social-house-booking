@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cphWallClock, hoursBetween, timeOptions, toUtc } from "./time";
+import {
+  addMonths,
+  cphToUtc,
+  cphWallClock,
+  hoursBetween,
+  timeOptions,
+  toUtc,
+} from "./time";
 
 describe("toUtc", () => {
   it("parses an ISO string with positive offset to a UTC Date", () => {
@@ -102,5 +109,49 @@ describe("cphWallClock", () => {
     const afterGap = new Date("2025-03-30T01:30:00Z");
     expect(cphWallClock(beforeGap)).toEqual({ hour: 1, minute: 30 });
     expect(cphWallClock(afterGap)).toEqual({ hour: 3, minute: 30 });
+  });
+});
+
+describe("cphToUtc", () => {
+  it("converts a summer wall clock (CEST, +02:00) to the instant", () => {
+    expect(cphToUtc("2026-09-16", "10:00").toISOString()).toBe(
+      "2026-09-16T08:00:00.000Z"
+    );
+  });
+
+  it("converts a winter wall clock (CET, +01:00) to the instant", () => {
+    expect(cphToUtc("2026-11-18", "10:00").toISOString()).toBe(
+      "2026-11-18T09:00:00.000Z"
+    );
+  });
+
+  it("handles the day the clocks fall back (2026-10-25)", () => {
+    // 01:00 CEST is still summer time; 04:00 is CET.
+    expect(cphToUtc("2026-10-25", "01:00").toISOString()).toBe(
+      "2026-10-24T23:00:00.000Z"
+    );
+    expect(cphToUtc("2026-10-25", "04:00").toISOString()).toBe(
+      "2026-10-25T03:00:00.000Z"
+    );
+  });
+
+  it("accepts 24:00 as midnight at the end of the date", () => {
+    expect(cphToUtc("2026-09-16", "24:00").toISOString()).toBe(
+      "2026-09-16T22:00:00.000Z"
+    );
+  });
+});
+
+describe("addMonths", () => {
+  it("adds calendar months keeping the time of day", () => {
+    expect(addMonths(new Date("2026-09-16T08:15:00Z"), 12).toISOString()).toBe(
+      "2027-09-16T08:15:00.000Z"
+    );
+  });
+
+  it("clamps to the last day of a shorter month", () => {
+    expect(addMonths(new Date("2027-01-31T00:00:00Z"), 1).toISOString()).toBe(
+      "2027-02-28T00:00:00.000Z"
+    );
   });
 });

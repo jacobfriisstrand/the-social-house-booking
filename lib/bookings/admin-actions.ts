@@ -34,7 +34,7 @@ const adminErrors = messages.booking.admin.errors;
 
 export type AdminBookingState =
   | Exclude<FormState<AdminBookingValues>, { status: "success" }>
-  | { bookingNumber: string; status: "created" };
+  | { bookingId: string; bookingNumber: string; status: "created" };
 
 interface BookingCompany {
   company_discount_percent: number;
@@ -111,7 +111,11 @@ async function insertConfirmedBooking(
       status: "error",
     };
   }
-  return { bookingNumber: inserted.bookingNumber, status: "created" };
+  return {
+    bookingId,
+    bookingNumber: inserted.bookingNumber,
+    status: "created",
+  };
 }
 
 // Frees the room: the exclusion constraint and calendar_entries ignore
