@@ -115,14 +115,16 @@ function RoomPhotos({ room }: { room: PublicRoom }) {
   }
   return (
     <>
-      {/* Stacked on tablet and desktop; a carousel on phone, so the photos
-          do not push the room's details off the first screen. */}
+      {/* Stacked only in the two-column desktop layout, where they scroll
+          in their own column. In the one-column layout (phone and tablet)
+          they are a carousel, so they do not push the room's details off
+          the first screen. */}
       <RoomPhotoCarousel
-        className="rounded-lg md:hidden"
+        className="rounded-lg lg:hidden"
         images={room.images}
         name={room.name}
       />
-      <div className="hidden flex-col gap-4 md:flex">
+      <div className="hidden flex-col gap-4 lg:flex">
         {room.images.map((src) => (
           <Image
             alt={alt}
