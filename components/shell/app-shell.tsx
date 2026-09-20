@@ -201,8 +201,11 @@ export function AppShell({
       <SidebarInset>
         {/* From tablet up the column is exactly the viewport: title, panel
             and footer line stay in view and the panel scrolls inside
-            (DESIGN.md "Shell"). Phone keeps the document scroll. */}
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:px-4 md:py-3">
+            (DESIGN.md "Shell"). Phone keeps the document scroll. No left
+            padding from tablet up: the sidebar's own padding is the gutter,
+            so the menu sits centred between the screen edge and the
+            content. */}
+        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
           {children}
           <ShellFooter wifi={wifi} />
         </div>
