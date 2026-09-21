@@ -143,7 +143,7 @@ function RoomNameCell({ room }: { room: RoomDetail }) {
 // Status badge: Aktiv when bookable, Deaktiveret when not (history kept).
 function RoomStatusCell({ isActive }: { isActive: boolean }) {
   return (
-    <TableCell>
+    <TableCell className="w-32">
       {isActive ? (
         <Badge variant="success">{messages.rooms.activeLabel}</Badge>
       ) : (
@@ -195,11 +195,17 @@ export default async function AdminRoomsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-20" />
                   <TableHead>{messages.rooms.nameColumn}</TableHead>
-                  <TableHead>{messages.rooms.capacityColumn}</TableHead>
-                  <TableHead>{messages.rooms.priceColumn}</TableHead>
-                  <TableHead>{messages.rooms.activeColumn}</TableHead>
+                  <TableHead className="w-24">
+                    {messages.rooms.capacityColumn}
+                  </TableHead>
+                  <TableHead className="w-32">
+                    {messages.rooms.priceColumn}
+                  </TableHead>
+                  <TableHead className="w-32">
+                    {messages.rooms.activeColumn}
+                  </TableHead>
                   <TableHead className="w-40" />
                 </TableRow>
               </TableHeader>
@@ -208,15 +214,15 @@ export default async function AdminRoomsPage() {
                   <TableRow key={room.roomId}>
                     <RoomImageCell room={room} />
                     <RoomNameCell room={room} />
-                    <TableCell className="tabular-nums">
+                    <TableCell className="w-24 tabular-nums">
                       {room.capacity} {messages.rooms.persons}
                     </TableCell>
-                    <TableCell className="tabular-nums">
+                    <TableCell className="w-32 tabular-nums">
                       {formatKroner(room.hourlyPriceOre)}
                       {messages.rooms.perHourSuffix}
                     </TableCell>
                     <RoomStatusCell isActive={room.isActive} />
-                    <TableCell>
+                    <TableCell className="w-40">
                       <div className="flex items-center justify-end gap-2 *:basis-1/2">
                         <RoomSheet
                           {...sheetPropsOf(room, addons)}

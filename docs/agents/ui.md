@@ -18,6 +18,49 @@ Read `docs/vendor/shadcn/installation-next.md` and `forms-react-hook-form.md`, a
 
 Booking form specifics: date, start, end in 30-minute steps (`lib/domain/time.ts` produces the options), participant count drives capacity and per-participant add-ons, terms checkbox is required and records the accepted terms version.
 
+### Inputs with trailing controls use `InputGroup`
+
+A control inside an input (copy button, icon, text prefix/suffix) is composed with the shadcn `InputGroup`, not a `trailing`/`addon` prop on `TextField`. Seeing a bare input with a button hovering beside it is a smell.
+
+- Wrap the control with `InputGroup`, and use `InputGroupInput`/`InputGroupTextarea` — never a raw `Input`/`Textarea` inside a group.
+- The button sits in an `InputGroupAddon align="inline-end"` (addon comes after the control in the DOM; `align` positions it) and uses `InputGroupButton` + `size="icon-xs"`.
+- The addon shares the input's border, height, and focus ring; no manual flex/absolute positioning.
+
+```tsx
+// components/forms/text-field.tsx stays a plain labelled input; the group
+// lives in the feature component, wired with useController.
+function WifiPasswordField({ control }: { control: Control<SettingsValues> }) {
+  const { field, fieldState } = useController({ control, name: "wifiPassword" });
+  const id = "field-wifiPassword";
+
+  return (
+    <Field data-invalid={fieldState.invalid}>
+      <FieldLabel htmlFor={id}>{labels.wifiPassword}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput
+          aria-invalid={fieldState.invalid}
+          id={id}
+          name={field.name}
+          onBlur={field.onBlur}
+          onChange={field.onChange}
+          ref={field.ref}
+          type="password"
+          value={field.value}
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton aria-label={labels.copyPassword} size="icon-xs">
+            <CopyIcon />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+      {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+    </Field>
+  );
+}
+```
+
+See `components/settings/wifi-form.tsx` for the full example.
+
 ## Copy and language
 
 - All user-visible text is Danish (ADR-0016) and lives in `messages/da.ts`, keyed by feature (`messages.booking.submit`). Components import from there; no Danish string literals in components. This is what makes an English `messages/en.ts` possible in v2.

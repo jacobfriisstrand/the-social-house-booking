@@ -6,11 +6,15 @@ describe("shellMainLinks", () => {
     expect(shellMainLinks(false).map((link) => link.href)).toEqual([
       "/",
       "/bookings",
+      "/rooms",
     ]);
   });
 
   it("hides the member bookings link from admins", () => {
-    expect(shellMainLinks(true).map((link) => link.href)).toEqual(["/"]);
+    expect(shellMainLinks(true).map((link) => link.href)).toEqual([
+      "/",
+      "/rooms",
+    ]);
   });
 });
 
@@ -19,6 +23,7 @@ describe("shellAdminLinks", () => {
     expect(shellAdminLinks().map((link) => link.href)).toEqual([
       "/admin/rooms",
       "/admin/companies",
+      "/admin/addons",
       "/admin/settings",
     ]);
   });

@@ -25,9 +25,9 @@ insert into public.addons (addon_id, addon_name, addon_price_ore, addon_pricing_
   ('55555555-5555-5555-5555-555555555001', 'Lunch', 22500, 'per_participant'),
   ('55555555-5555-5555-5555-555555555002', 'Host service', 5000, 'fixed');
 
-insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_price_ore) values
-  ('66666666-6666-6666-6666-666666666001', '55555555-5555-5555-5555-555555555001', 180000),
-  ('66666666-6666-6666-6666-666666666002', '55555555-5555-5555-5555-555555555001', 180000);
+insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values
+  ('66666666-6666-6666-6666-666666666001', '55555555-5555-5555-5555-555555555001', 22500, 8, 180000),
+  ('66666666-6666-6666-6666-666666666002', '55555555-5555-5555-5555-555555555001', 22500, 8, 180000);
 
 -- Booking 002 starts pending so its add-on rows can exist; it is confirmed
 -- here, which itself changes no snapshot column.
@@ -63,11 +63,11 @@ select throws_ok(
 
 -- Add-on rows freeze with the booking.
 select throws_ok(
-  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_price_ore) values (''66666666-6666-6666-6666-666666666002'', ''55555555-5555-5555-5555-555555555002'', 5000)',
+  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666002'', ''55555555-5555-5555-5555-555555555002'', 5000, 1, 5000)',
   'P0001', null,
   'no add-on can be added to a confirmed booking');
 select throws_ok(
-  'update public.booking_addons set booking_addon_price_ore = 190000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666002''',
+  'update public.booking_addons set booking_addon_unit_price_ore = 190000, booking_addon_total_ore = 1520000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666002''',
   'P0001', null,
   'a confirmed booking''s add-on price is frozen');
 select throws_ok(
@@ -82,7 +82,7 @@ select lives_ok(
 
 -- And a pending booking's add-ons are still editable.
 select lives_ok(
-  'update public.booking_addons set booking_addon_price_ore = 190000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001''',
+  'update public.booking_addons set booking_addon_unit_price_ore = 190000, booking_addon_total_ore = 1520000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001''',
   'a pending booking''s add-on price stays writable');
 
 select * from finish();

@@ -1,8 +1,14 @@
-// Booking schemas (#2), shared by the client forms and the server actions;
-// the action re-parses on the server, always (docs/agents/ui.md). Times are
-// ISO strings with an explicit offset (ADR-0021); #4's dialog adds the
-// 30-minute grid, opening hours and the 12-month horizon on top.
+// Booking schemas (#2, #4, #7), shared by the client forms and the server
+// actions; the action re-parses on the server, always (docs/agents/ui.md).
+// Times are ISO strings with an explicit offset (ADR-0021). The booking
+// window (30-minute grid, minimum length, future start, 12-month horizon)
+// is lib/domain/booking-window.ts; opening hours and collisions are checked
+// in the action against the room's rows and the database.
 import { z } from "zod";
+import {
+  type BookingWindowOutcome,
+  bookingWindowOutcome,
+} from "@/lib/domain/booking-window";
 import { VERIFICATION_CODE_LENGTH } from "@/lib/domain/verification";
 import { messages } from "@/messages/da";
 
@@ -37,21 +43,76 @@ const slotFields = {
   startAt: instant,
 };
 
-const endAfterStart = (values: { endAt: string; startAt: string }) =>
-  new Date(values.endAt) > new Date(values.startAt);
-const endAfterStartError = { message: errors.endBeforeStart, path: ["endAt"] };
+// A checkbox that must be ticked. A boolean with a refinement rather than
+// z.literal(true): the parse still cannot produce false, and a form can
+// start from an unticked box without fighting the type.
+const mustAccept = (message: string) =>
+  z.boolean().refine((accepted) => accepted, message);
+
+// Selected add-ons and the catering rule (#7, Bilag 1 "Forplejning og
+// hospitality"): catering is ordered only through The Social House and the
+// booker must actively accept it — an unchecked checkbox fails the parse,
+// so the acceptance timestamp is only ever written from a parsed true.
+export const addOnFields = {
+  addOnIds: z.array(z.guid()).max(50),
+  cateringAccepted: mustAccept(errors.cateringAcceptRequired),
+};
+
+// The booking terms (DESIGN.md "Booking dialog"); #15 records the version.
+const termsFields = {
+  termsAccepted: mustAccept(errors.termsRequired),
+};
+
+const bookingFields = {
+  ...bookerFields,
+  ...slotFields,
+  ...addOnFields,
+  ...termsFields,
+};
+
+const windowErrors: Record<
+  Exclude<BookingWindowOutcome["kind"], "ok">,
+  { message: string; path: "endAt" | "startAt" }
+> = {
+  beyond_horizon: { message: errors.beyondHorizon, path: "endAt" },
+  in_past: { message: errors.inPast, path: "startAt" },
+  off_grid: { message: errors.offGrid, path: "startAt" },
+  too_short: { message: errors.tooShort, path: "endAt" },
+};
+
+const bookingWindowRule = (
+  values: { endAt: string; startAt: string },
+  ctx: z.RefinementCtx
+): void => {
+  const outcome = bookingWindowOutcome({
+    endAt: new Date(values.endAt),
+    now: new Date(),
+    startAt: new Date(values.startAt),
+  });
+  if (outcome.kind === "ok") {
+    return;
+  }
+  const rule = windowErrors[outcome.kind];
+  ctx.addIssue({ code: "custom", message: rule.message, path: [rule.path] });
+};
 
 export const createHoldSchema = z
-  .object({ ...bookerFields, ...slotFields })
-  .refine(endAfterStart, endAfterStartError);
+  .object(bookingFields)
+  .superRefine(bookingWindowRule);
 
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
+
+// The dialog's form for a company: the same fields, with the company id
+// carried along empty so one form type serves both viewers.
+export const bookingFormSchema = z
+  .object({ ...bookingFields, companyId: z.string() })
+  .superRefine(bookingWindowRule);
 
 // Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
 // which company, and confirmed at once without a verification code.
 export const adminBookingSchema = z
-  .object({ ...bookerFields, ...slotFields, companyId: z.guid() })
-  .refine(endAfterStart, endAfterStartError);
+  .object({ ...bookingFields, companyId: z.guid(errors.required) })
+  .superRefine(bookingWindowRule);
 
 export type AdminBookingValues = z.infer<typeof adminBookingSchema>;
 

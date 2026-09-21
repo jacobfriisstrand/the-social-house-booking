@@ -53,25 +53,36 @@ export default async function AdminCompaniesPage({
       <PagePanel>
         {companies?.length ? (
           <Card className="overflow-x-auto py-0">
-            <Table>
+            {/* table-fixed: column widths come from the header row only, so
+                row content can never resize a column and the layout does not
+                jump as data changes. */}
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>{copy.columns.displayName}</TableHead>
-                  <TableHead>{copy.columns.email}</TableHead>
-                  <TableHead>{copy.columns.status}</TableHead>
-                  <TableHead className="text-right">
+                  <TableHead className="w-[26%]">
+                    {copy.columns.displayName}
+                  </TableHead>
+                  <TableHead className="w-[26%]">
+                    {copy.columns.email}
+                  </TableHead>
+                  <TableHead className="w-32">{copy.columns.status}</TableHead>
+                  <TableHead className="w-24 text-right">
                     {copy.columns.discount}
                   </TableHead>
-                  <TableHead>{copy.columns.masterData}</TableHead>
+                  <TableHead className="w-56 max-w-56 text-right">
+                    {copy.columns.masterData}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {companies.map((company) => (
                   <TableRow key={company.company_id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="truncate font-medium">
                       <CompanySheet company={company} />
                     </TableCell>
-                    <TableCell>{company.company_email}</TableCell>
+                    <TableCell className="truncate">
+                      {company.company_email}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {copy.membership[company.company_membership_status]}
@@ -80,7 +91,7 @@ export default async function AdminCompaniesPage({
                     <TableCell className="text-right tabular-nums">
                       {company.company_discount_percent} %
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       {company.company_master_data_completed_at ? (
                         <Badge
                           className="bg-success/10 text-success"

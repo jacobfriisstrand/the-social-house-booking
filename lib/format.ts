@@ -47,3 +47,23 @@ export function formatDateTime(instant: Date | string | number): string {
   const date = new Date(instant);
   return `${dateFormatter.format(date).replaceAll(".", "/")} ${timeFormatter.format(date).replace(".", ":")}`;
 }
+
+// formatTime("2026-09-02T17:00:00Z") → "19:00".
+export function formatTime(instant: Date | string | number): string {
+  return timeFormatter.format(new Date(instant)).replace(".", ":");
+}
+
+const weekdayFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: "Europe/Copenhagen",
+  weekday: "long",
+});
+
+// formatWeekday("2026-09-02T17:00:00Z") → "onsdag" (lower-case, sentences only).
+export function formatWeekday(instant: Date | string | number): string {
+  return weekdayFormatter.format(new Date(instant)).toLowerCase();
+}
+
+// formatDate("2026-09-02T17:00:00Z") → "02/09/2026".
+export function formatDate(instant: Date | string | number): string {
+  return dateFormatter.format(new Date(instant)).replaceAll(".", "/");
+}

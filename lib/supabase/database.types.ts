@@ -43,6 +43,7 @@ export type Database = {
           addon_name: string
           addon_price_ore: number
           addon_pricing_model: Database["public"]["Enums"]["addon_pricing_model"]
+          addon_sort_order: number | null
           addon_updated_at: string
         }
         Insert: {
@@ -53,6 +54,7 @@ export type Database = {
           addon_name: string
           addon_price_ore: number
           addon_pricing_model: Database["public"]["Enums"]["addon_pricing_model"]
+          addon_sort_order?: number | null
           addon_updated_at?: string
         }
         Update: {
@@ -63,6 +65,7 @@ export type Database = {
           addon_name?: string
           addon_price_ore?: number
           addon_pricing_model?: Database["public"]["Enums"]["addon_pricing_model"]
+          addon_sort_order?: number | null
           addon_updated_at?: string
         }
         Relationships: []
@@ -95,17 +98,23 @@ export type Database = {
         Row: {
           booking_addon_addon_id: string
           booking_addon_booking_id: string
-          booking_addon_price_ore: number
+          booking_addon_quantity: number
+          booking_addon_total_ore: number
+          booking_addon_unit_price_ore: number
         }
         Insert: {
           booking_addon_addon_id: string
           booking_addon_booking_id: string
-          booking_addon_price_ore: number
+          booking_addon_quantity: number
+          booking_addon_total_ore: number
+          booking_addon_unit_price_ore: number
         }
         Update: {
           booking_addon_addon_id?: string
           booking_addon_booking_id?: string
-          booking_addon_price_ore?: number
+          booking_addon_quantity?: number
+          booking_addon_total_ore?: number
+          booking_addon_unit_price_ore?: number
         }
         Relationships: [
           {
@@ -133,6 +142,7 @@ export type Database = {
           booking_cancellation_fee_ore: number | null
           booking_cancellation_terms: string | null
           booking_cancelled_at: string | null
+          booking_catering_accepted_at: string | null
           booking_company_id: string
           booking_created_at: string
           booking_discount_percent: number
@@ -164,6 +174,7 @@ export type Database = {
           booking_cancellation_fee_ore?: number | null
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_catering_accepted_at?: string | null
           booking_company_id: string
           booking_created_at?: string
           booking_discount_percent?: number
@@ -195,6 +206,7 @@ export type Database = {
           booking_cancellation_fee_ore?: number | null
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_catering_accepted_at?: string | null
           booking_company_id?: string
           booking_created_at?: string
           booking_discount_percent?: number

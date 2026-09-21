@@ -27,7 +27,9 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       className={cn(
-        "pointer-events-none fixed top-4 right-4 left-4 z-50 mx-auto w-auto max-w-sm outline-none sm:left-auto sm:w-full",
+        // z-100: above dialogs and sheets (z-50), whose blurred backdrop would
+        // otherwise cover an action result raised from inside them.
+        "pointer-events-none fixed top-4 right-4 left-4 z-100 mx-auto w-auto max-w-sm outline-none sm:left-auto sm:w-full",
         className
       )}
       data-slot="toast-viewport"

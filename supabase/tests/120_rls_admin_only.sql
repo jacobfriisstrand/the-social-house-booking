@@ -52,8 +52,8 @@ select throws_ok(
 select lives_ok(
   'update public.rooms set room_is_active = false where room_id = ''44444444-4444-4444-4444-444444444001''',
   'company room update is silently scoped to zero rows');
-select is((select count(*) from public.addons), 0::bigint, 'addons stay admin-only until #7');
-select is((select count(*) from public.room_addons), 0::bigint, 'room_addons stay admin-only until #7');
+select is((select count(*) from public.addons), 5::bigint, 'company reads active add-ons (#7: fixture + 4 seed)');
+select is((select count(*) from public.room_addons), 7::bigint, 'company reads room add-on links (#7: fixture + 6 seed)');
 select is((select count(*) from public.house_events), 0::bigint, 'house_events are admin-only on the base table');
 select is((select count(*) from public.house_event_rooms), 0::bigint, 'house_event_rooms are admin-only');
 select is((select count(*) from public.verification_codes), 0::bigint, 'verification_codes are admin-only');

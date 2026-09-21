@@ -23,7 +23,7 @@ export default function GlobalError({
     <html lang="da">
       <body className="antialiased">
         <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-          <h1 className="font-semibold text-3xl">{messages.error.title}</h1>
+          <h1 className="font-semibold text-xl">{messages.error.title}</h1>
           <p className="text-muted-foreground">{messages.error.description}</p>
           <Button onClick={retry}>{messages.error.retry}</Button>
         </main>

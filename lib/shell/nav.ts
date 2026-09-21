@@ -10,6 +10,7 @@ import {
   HouseIcon,
   type LucideIcon,
   SettingsIcon,
+  ShoppingBagIcon,
 } from "lucide-react";
 import { messages } from "@/messages/da";
 
@@ -30,6 +31,11 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
       label: messages.shell.bookings,
     });
   }
+  links.push({
+    href: "/rooms",
+    icon: DoorOpenIcon,
+    label: messages.shell.rooms,
+  });
   return links;
 }
 
@@ -44,6 +50,11 @@ export function shellAdminLinks(): ShellNavLink[] {
       href: "/admin/companies",
       icon: Building2Icon,
       label: messages.shell.companies,
+    },
+    {
+      href: "/admin/addons",
+      icon: ShoppingBagIcon,
+      label: messages.addons.title,
     },
     {
       href: "/admin/settings",
