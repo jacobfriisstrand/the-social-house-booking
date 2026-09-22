@@ -25,25 +25,17 @@ type BookingRow = Pick<
   | "booking_room_price_ore"
   | "booking_start_at"
   | "booking_status"
->;
-
-type BookingAddonRow = Pick<
-  Database["public"]["Tables"]["booking_addons"]["Row"],
-  | "booking_addon_addon_id"
-  | "booking_addon_booking_id"
-  | "booking_addon_quantity"
-  | "booking_addon_total_ore"
->;
-
-type RoomRow = Pick<
-  Database["public"]["Tables"]["rooms"]["Row"],
-  "room_id" | "room_name"
->;
-
-type AddonRow = Pick<
-  Database["public"]["Tables"]["addons"]["Row"],
-  "addon_id" | "addon_name"
->;
+> & {
+  booking_addons: Array<
+    Pick<
+      Database["public"]["Tables"]["booking_addons"]["Row"],
+      | "booking_addon_addon_id"
+      | "booking_addon_quantity"
+      | "booking_addon_total_ore"
+    > & { addons: { addon_name: string } | null }
+  >;
+  rooms: { room_name: string } | null;
+};
 
 const BOOKING_COLUMNS =
   "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
@@ -58,41 +50,17 @@ function rowsOrThrow<T>(
   return result.data ?? [];
 }
 
-function unique(values: string[]): string[] {
-  return [...new Set(values)];
-}
-
-function groupAddOnsByBooking(
-  bookingAddons: BookingAddonRow[]
-): Map<string, BookingAddonRow[]> {
-  const addOnsByBooking = new Map<string, BookingAddonRow[]>();
-  for (const bookingAddon of bookingAddons) {
-    const lines =
-      addOnsByBooking.get(bookingAddon.booking_addon_booking_id) ?? [];
-    lines.push(bookingAddon);
-    addOnsByBooking.set(bookingAddon.booking_addon_booking_id, lines);
-  }
-  return addOnsByBooking;
-}
-
-function toOverviewRow(
-  booking: BookingRow,
-  roomNames: Map<string, string>,
-  addonNames: Map<string, string>,
-  addOnsByBooking: Map<string, BookingAddonRow[]>
-): BookingOverviewRow {
-  const roomName = roomNames.get(booking.booking_room_id);
+function toOverviewRow(booking: BookingRow): BookingOverviewRow {
+  const roomName = booking.rooms?.room_name;
   if (!roomName) {
     throw new Error(`booking room ${booking.booking_room_id} was not found`);
   }
 
-  const addOns: BookingAddonOverview[] = (
-    addOnsByBooking.get(booking.booking_id) ?? []
-  ).map((bookingAddon) => ({
-    addonId: bookingAddon.booking_addon_addon_id,
-    name: addonNames.get(bookingAddon.booking_addon_addon_id) ?? null,
-    quantity: bookingAddon.booking_addon_quantity,
-    totalOre: bookingAddon.booking_addon_total_ore,
+  const addOns: BookingAddonOverview[] = booking.booking_addons.map((line) => ({
+    addonId: line.booking_addon_addon_id,
+    name: line.addons?.addon_name ?? null,
+    quantity: line.booking_addon_quantity,
+    totalOre: line.booking_addon_total_ore,
   }));
 
   return {
@@ -111,62 +79,21 @@ function toOverviewRow(
   };
 }
 
+// One query, not three stages: the room name and every add-on line with its
+// add-on name are embedded through the foreign keys, so the overview costs
+// a single round trip (deployed, each sequential stage is a network hop).
 export async function listOwnBookingOverview(
   supabase: SupabaseClient<Database>,
   companyId: string
 ): Promise<BookingOverviewRow[]> {
   const bookingResult = await supabase
     .from("bookings")
-    .select(BOOKING_COLUMNS)
+    .select(
+      `${BOOKING_COLUMNS}, rooms(room_name), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name))`
+    )
     .eq("booking_company_id", companyId)
     .order("booking_start_at", { ascending: true });
   const bookings = rowsOrThrow<BookingRow>(bookingResult, "company bookings");
 
-  if (bookings.length === 0) {
-    return [];
-  }
-
-  const bookingIds = bookings.map((booking) => booking.booking_id);
-  const roomIds = unique(bookings.map((booking) => booking.booking_room_id));
-  const [roomResult, bookingAddonResult] = await Promise.all([
-    supabase.from("rooms").select("room_id, room_name").in("room_id", roomIds),
-    supabase
-      .from("booking_addons")
-      .select(
-        "booking_addon_addon_id, booking_addon_booking_id, booking_addon_quantity, booking_addon_total_ore"
-      )
-      .in("booking_addon_booking_id", bookingIds)
-      .order("booking_addon_addon_id"),
-  ]);
-  const rooms = rowsOrThrow<RoomRow>(roomResult, "booking rooms");
-  const bookingAddons = rowsOrThrow<BookingAddonRow>(
-    bookingAddonResult,
-    "booking add-ons"
-  );
-
-  const addonIds = unique(
-    bookingAddons.map((bookingAddon) => bookingAddon.booking_addon_addon_id)
-  );
-  const addonResult =
-    addonIds.length === 0
-      ? null
-      : await supabase
-          .from("addons")
-          .select("addon_id, addon_name")
-          .in("addon_id", addonIds);
-  const addons = addonResult
-    ? rowsOrThrow<AddonRow>(addonResult, "booking add-on names")
-    : [];
-
-  const roomNames = new Map(
-    rooms.map((room) => [room.room_id, room.room_name])
-  );
-  const addonNames = new Map(
-    addons.map((addon) => [addon.addon_id, addon.addon_name])
-  );
-  const addOnsByBooking = groupAddOnsByBooking(bookingAddons);
-
-  return bookings.map((booking) =>
-    toOverviewRow(booking, roomNames, addonNames, addOnsByBooking)
-  );
+  return bookings.map(toOverviewRow);
 }

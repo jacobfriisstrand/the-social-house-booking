@@ -28,7 +28,9 @@ async function listBookingCompanies(
       "company_id, company_display_name, company_membership_status, company_discount_percent"
     )
     .not("company_master_data_completed_at", "is", null)
-    .order("company_display_name");
+    .order("company_display_name")
+    // Bounded: the admin booking dialog's company picker is catalogue-sized.
+    .limit(500);
   return (data ?? []).map((company) => ({
     companyId: company.company_id,
     discountPercent: company.company_discount_percent,

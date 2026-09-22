@@ -21,7 +21,10 @@ export async function listAddonDetails(
     .from("addons")
     .select("*")
     .order("addon_sort_order", { ascending: true, nullsFirst: false })
-    .order("addon_name");
+    .order("addon_name")
+    // Bounded: the add-on catalogue is small; paginate in a follow-up if it
+    // ever approaches the cap.
+    .limit(200);
   if (error) {
     throw new Error(`could not list add-ons: ${error.message}`);
   }
