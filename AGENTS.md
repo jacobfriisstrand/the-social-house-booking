@@ -33,7 +33,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 |---|---|
 | `docs/agents/stack.md` | versions, commands, env vars, Ultracite, Sentry |
 | `docs/agents/typescript.md` | discriminated unions for state, type modeling |
-| `docs/agents/supabase.md` | declarative schemas, migrations, generated types, RLS, pgTAP, service-role allowlist |
+| `docs/agents/supabase.md` | declarative schemas, migrations, generated types, RLS, pgTAP, service-role allowlist, local Edge Functions |
 | `docs/agents/auth.md` | email login, admin role in JWT, booker verification, holds |
 | `docs/agents/email.md` | `sendMail()`, Resend templates, webhook, the one hourly job |
 | `docs/agents/deploy.md` | environments, branches, CI, Netlify |
