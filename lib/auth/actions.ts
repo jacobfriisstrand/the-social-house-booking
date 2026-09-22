@@ -51,6 +51,27 @@ export async function signOut(): Promise<void> {
 
 export type SetPasswordState = FormState<SetPasswordValues>;
 
+// Runs on the verified session; Auth rejects reusing the current password
+// (422 same_password), which gets its own message instead of a generic one.
+const updatePassword = async (
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  password: string
+): Promise<SetPasswordState> => {
+  const updated = await supabase.auth.updateUser({ password });
+  if (updated.error) {
+    return {
+      error:
+        updated.error.code === "same_password"
+          ? messages.setPassword.errors.samePassword
+          : messages.setPassword.errors.saveFailed,
+      status: "error",
+    };
+  }
+
+  await supabase.auth.signOut({ scope: "global" });
+  redirect("/");
+};
+
 // Invite (and later recovery) link → password (#1). verifyOtp consumes the
 // single-use token_hash and starts the session; the password is then set on
 // that session. Both happen here, in the action, because a Server Component
@@ -69,20 +90,32 @@ export async function setPassword(
   }
 
   const supabase = await createClient();
-  const verified = await supabase.auth.verifyOtp({
-    token_hash: parsed.data.tokenHash,
-    type: parsed.data.type,
-  });
+  const verified = parsed.data.code
+    ? await supabase.auth.exchangeCodeForSession(parsed.data.code)
+    : await supabase.auth.verifyOtp({
+        token_hash: parsed.data.tokenHash ?? "",
+        type: parsed.data.type,
+      });
   if (verified.error) {
-    return { error: messages.setPassword.errors.linkInvalid, status: "error" };
+    // The code is single-use: a failed password save burns it. For recovery,
+    // the session the first verification started is still alive in the
+    // cookies (a failed exchange removes only the verifier), so a retry
+    // continues on that session instead of blaming the link.
+    if (parsed.data.type === "recovery") {
+      const { data: current } = await supabase.auth.getUser();
+      if (current.user) {
+        return updatePassword(supabase, parsed.data.password);
+      }
+    }
+    return {
+      error:
+        parsed.data.type === "recovery"
+          ? messages.setPassword.errors.recoveryLinkInvalid
+          : messages.setPassword.errors.linkInvalid,
+      linkInvalid: true,
+      status: "error",
+    };
   }
 
-  const updated = await supabase.auth.updateUser({
-    password: parsed.data.password,
-  });
-  if (updated.error) {
-    return { error: messages.setPassword.errors.saveFailed, status: "error" };
-  }
-
-  redirect("/");
+  return updatePassword(supabase, parsed.data.password);
 }

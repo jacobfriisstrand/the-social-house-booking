@@ -218,21 +218,55 @@ export const messages = {
     bookingsTitle: "Bookinger",
     masterDataLink: "Virksomhedens oplysninger",
   },
+  companyChangeReview: {
+    after: "Efter",
+    approve: "Godkend ændringer",
+    approving: "Godkender …",
+    before: "Før",
+    description: "Kontrollér ændringerne, før du godkender dem.",
+    emailChangeSent: (email: string) =>
+      `Vi har sendt et separat bekræftelseslink til ${email}.`,
+    errors: {
+      failed:
+        "Ændringerne kunne ikke godkendes. Bed virksomheden sende dem igen.",
+      invalid: "Linket er ugyldigt, udløbet eller allerede brugt.",
+    },
+    fields: {
+      attention: "Att.",
+      billingAddress: "Faktureringsadresse",
+      billingCity: "By",
+      billingCountry: "Land",
+      billingNotes: "Bemærkninger til fakturering",
+      billingPostalCode: "Postnummer",
+      contactName: "Primær kontaktperson",
+      contactPhone: "Kontaktpersonens mobilnummer",
+      cvrNumber: "CVR- eller VAT-nummer",
+      department: "Afdeling",
+      email: "Primær/login email",
+      invoiceEmail: "Faktura-email",
+      legalName: "Juridisk virksomhedsnavn",
+      reference: "Reference",
+    },
+    invalid: "Linket er ugyldigt eller udløbet.",
+    noChanges: "Der er ingen ændringer at vise.",
+    success: "Ændringerne er godkendt.",
+    title: "Godkend ændringer",
+  },
   companyFields: {
-    attention: "Att. (valgfrit)",
+    attention: "Att.",
     billingAddress: "Faktureringsadresse",
     billingCity: "By",
     billingCountry: "Land",
-    billingNotes: "Bemærkninger til fakturering, fx EAN (valgfrit)",
+    billingNotes: "Bemærkninger til fakturering, fx EAN",
     billingPostalCode: "Postnummer",
     contactName: "Primær kontaktperson",
     contactPhone: "Kontaktpersonens mobilnummer",
     cvrNumber: "CVR- eller VAT-nummer",
     defaultCountry: "Danmark",
-    department: "Afdeling (valgfrit)",
+    department: "Afdeling",
     discountPercent: "Rabat i procent",
     displayName: "Visningsnavn",
-    economicCustomerNumber: "Kundenummer i e-conomic (valgfrit)",
+    economicCustomerNumber: "Kundenummer i e-conomic",
     email: "Email (login og kontakt)",
     errors: {
       discountInvalid: "Rabatten skal være et helt tal mellem 0 og 100.",
@@ -243,7 +277,7 @@ export const messages = {
       required: "Feltet skal udfyldes.",
       tooLong: "Teksten er for lang.",
     },
-    internalNote: "Intern note (valgfrit)",
+    internalNote: "Intern note",
     invoiceEmail: "Faktura-email",
     legalName: "Juridisk virksomhedsnavn",
     membershipStatus: "Medlemsstatus",
@@ -252,7 +286,29 @@ export const messages = {
         "Betaler fuld lokalepris. Oprettes uden invitation; du udfylder oplysningerne selv.",
       member: "Får rabat på lokaleleje og en invitation på mail.",
     },
-    reference: "PO-nummer, reference eller omkostningssted (valgfrit)",
+    reference: "PO-nummer, reference eller omkostningssted",
+  },
+  companySettings: {
+    changePending: (email: string) =>
+      `Ændringerne afventer godkendelse på ${email} og er ikke aktive endnu.`,
+    description:
+      "I kan ændre virksomhedens oplysninger. Ændringerne skal godkendes fra den nuværende primære email.",
+    emailHint:
+      "Ændring af primær email kræver godkendelse fra både den nuværende og den nye email.",
+    errors: {
+      requestFailed:
+        "Ændringerne kunne ikke sendes til godkendelse. Prøv igen.",
+    },
+    passwordLink: "Send link til ny adgangskode",
+    passwordLinkSending: "Sender …",
+    passwordLinkSent:
+      "Linket til en ny adgangskode er sendt til den primære email.",
+    save: "Gem ændringer",
+    saving: "Sender …",
+    securityTitle: "Adgangskode og sikkerhed",
+    securityWarning:
+      "Hvis du ændrer adgangskoden eller e-mailadressen, bliver alle aktive sessioner på virksomhedens fælles konto afsluttet. Virksomheden er selv ansvarlig for at informere medarbejderne om de nye loginoplysninger.",
+    title: "Virksomhedsoplysninger",
   },
   dashboard: {
     title: "Dashboard",
@@ -267,7 +323,7 @@ export const messages = {
     },
     fields: {
       email: "Arbejdsmail",
-      message: "Besked (valgfrit)",
+      message: "Besked",
       messagePlaceholder: "Hvad drejer det sig om?",
       name: "Navn",
     },
@@ -284,12 +340,25 @@ export const messages = {
     retry: "Prøv igen",
     title: "Der skete en fejl",
   },
+  forgotPassword: {
+    backToLogin: "Tilbage til login",
+    description: "Indtast virksomhedens primære email, så sender vi et link.",
+    email: "Primær email",
+    genericSuccess:
+      "Hvis emailen hører til en virksomhed, sender vi et link til nulstilling af adgangskoden.",
+    submit: "Send link",
+    submitting: "Sender …",
+    title: "Glemt adgangskode",
+  },
   format: {
     exclVat: "ekskl. moms",
   },
   login: {
     email: "Email",
+    emailChangedAlert: (email: string) =>
+      `Din email er ændret til ${email}. Alle aktive sessioner er afsluttet – log ind med den nye email.`,
     failed: "Forkert email eller adgangskode",
+    forgotPassword: "Glemt adgangskode?",
     invalidEmail: "Indtast en gyldig email",
     missingPassword: "Indtast adgangskoden",
     password: "Adgangskode",
@@ -440,13 +509,17 @@ export const messages = {
     description: "Vælg den adgangskode, virksomheden logger ind med.",
     errors: {
       linkInvalid:
-        "Linket er ugyldigt eller udløbet. Bed The Social House om en ny invitation.",
+        "Linket er ugyldigt eller udløbet. Bed The Social House om et nyt link.",
       mismatch: "De to adgangskoder er ikke ens.",
       passwordMin: "Adgangskoden skal være mindst 8 tegn.",
+      recoveryLinkInvalid:
+        "Linket er udløbet. Prøv igen fra siden Glemt adgangskode.",
+      samePassword: "Den nye adgangskode skal være forskellig fra den gamle.",
       saveFailed: "Adgangskoden kunne ikke gemmes. Prøv igen.",
     },
     password: "Adgangskode",
     passwordConfirm: "Gentag adgangskode",
+    recoveryLink: "Gå til Glemt adgangskode",
     submit: "Gem adgangskode",
     submitting: "Gemmer …",
     title: "Vælg adgangskode",

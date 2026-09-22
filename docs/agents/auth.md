@@ -49,4 +49,4 @@ Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/d
 
 ## Auth emails
 
-Supabase's own SMTP is disabled. Every auth email goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. Only `invite` is mapped today; `recovery` comes with #11, and `email_change` is never triggered because admin sets a new email with `email_confirm: true`. Locally the hook is off and the mail catcher on port 54324 receives auth mail. See `email.md`.
+Supabase's own SMTP is disabled. Every auth email goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. `invite` maps to `company-invitation` and `recovery` maps to `password-reset`; member email changes use the two-step app flow instead of Auth's `email_change`. Locally the hook is off and the mail catcher on port 54324 receives auth mail. See `email.md`.
