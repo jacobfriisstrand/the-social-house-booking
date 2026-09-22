@@ -450,6 +450,17 @@ enabled = true
 uri = "https://rukxjslnbhsqdzmeenbn.supabase.co/functions/v1/send-email"
 secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
-# TODO(#26): add the same two blocks for the development project under
-# [remotes.development] once its project ref is known; until then the base
-# config (hook disabled) is what `supabase config push` ships to it.
+# The development project (branch deploys and deploy previews). Without this
+# block the base config ships the hook disabled, so Auth sends its own mail
+# straight to the recipient and the redirect to EMAIL_REDIRECT_TO never happens.
+[remotes.development]
+project_id = "wvqqaizffluzavhzepmo"
+
+[remotes.development.auth]
+site_url = "https://develop--the-social-house-booking.netlify.app"
+additional_redirect_urls = ["https://develop--the-social-house-booking.netlify.app"]
+
+[remotes.development.auth.hook.send_email]
+enabled = true
+uri = "https://wvqqaizffluzavhzepmo.supabase.co/functions/v1/send-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
