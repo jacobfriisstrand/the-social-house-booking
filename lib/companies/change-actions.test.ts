@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { approveCompanyChange } from "./change-actions";
+import { approveCompanyChange, verifyNewCompanyEmail } from "./change-actions";
 
 const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
@@ -11,8 +11,14 @@ const mocks = vi.hoisted(() => ({
   updateUserById: vi.fn(),
 }));
 
+const companyId = "22222222-2222-2222-2222-222222222070";
+const requestId = "33333333-3333-3333-3333-333333333070";
+
 vi.mock("@/lib/env", () => ({
-  env: { NEXT_PUBLIC_SITE_URL: "http://localhost:3000" },
+  env: {
+    ADMIN_NOTIFY_EMAIL: "admin@tsh.test",
+    NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
+  },
 }));
 
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -36,19 +42,26 @@ vi.mock("@/lib/supabase/admin", () => ({
   },
 }));
 
-import { verifyNewCompanyEmail } from "./change-actions";
-
 vi.mock("@/lib/email/send-mail", () => ({ sendMail: mocks.sendMail }));
 
-const requestId = "33333333-3333-3333-3333-333333333070";
-const currentToken = "current-raw-token";
+const currentEmailTokenLink = () => {
+  mocks.maybeSingle
+    .mockResolvedValueOnce({
+      data: { company_change_request_company_id: companyId },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: { company_master_data_completed_at: "2026-09-01T10:00:00Z" },
+      error: null,
+    });
+};
 
 describe("approveCompanyChange", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.rpc.mockResolvedValue({
       data: {
-        company_id: "22222222-2222-2222-2222-222222222070",
+        company_id: companyId,
         current_email: "current@tsh.test",
         next_step: "awaiting_new_email",
         proposed_email: "new@tsh.test",
@@ -56,19 +69,17 @@ describe("approveCompanyChange", () => {
       error: null,
     });
     mocks.single.mockResolvedValue({
-      data: {
-        company_change_request_company_id:
-          "22222222-2222-2222-2222-222222222070",
-      },
+      data: { company_display_name: "Change Test" },
       error: null,
     });
-    mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
     mocks.insert.mockResolvedValue({ error: null });
     mocks.sendMail.mockResolvedValue(undefined);
   });
 
   it("sends the new-email verification and succeeds when the current-email approval passes", async () => {
-    const result = await approveCompanyChange(requestId, currentToken);
+    currentEmailTokenLink();
+
+    const result = await approveCompanyChange(requestId, "current-raw-token");
 
     expect(result).toEqual({ email: "new@tsh.test", success: true });
     expect(mocks.insert).toHaveBeenCalledWith(
@@ -86,9 +97,10 @@ describe("approveCompanyChange", () => {
   });
 
   it("returns success without new-email steps for a non-email change", async () => {
+    currentEmailTokenLink();
     mocks.rpc.mockResolvedValue({
       data: {
-        company_id: "22222222-2222-2222-2222-222222222070",
+        company_id: companyId,
         current_email: "current@tsh.test",
         next_step: "committed",
         proposed_email: "current@tsh.test",
@@ -96,13 +108,57 @@ describe("approveCompanyChange", () => {
       error: null,
     });
 
-    const result = await approveCompanyChange(requestId, currentToken);
+    const result = await approveCompanyChange(requestId, "current-raw-token");
 
     expect(result).toEqual({ success: true });
     expect(mocks.sendMail).not.toHaveBeenCalled();
   });
 
+  it("notifies the admin when the approval completes the master data for the first time", async () => {
+    mocks.maybeSingle
+      .mockResolvedValueOnce({
+        data: { company_change_request_company_id: companyId },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { company_master_data_completed_at: null },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          company_display_name: "Change Test",
+          company_id: companyId,
+        },
+        error: null,
+      });
+    mocks.rpc.mockResolvedValue({
+      data: {
+        company_id: companyId,
+        current_email: "current@tsh.test",
+        next_step: "committed",
+        proposed_email: "current@tsh.test",
+      },
+      error: null,
+    });
+
+    const result = await approveCompanyChange(requestId, "current-raw-token");
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "admin-company-completed" })
+    );
+  });
+
   it("verifies the new email, revokes sessions and redirects to login with an alert", async () => {
+    mocks.maybeSingle
+      .mockResolvedValueOnce({
+        data: { company_change_request_company_id: companyId },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { company_master_data_completed_at: "2026-09-01T10:00:00Z" },
+        error: null,
+      });
     mocks.rpc.mockImplementation(async (name: string) =>
       name === "commit_company_email_change"
         ? { data: {}, error: null }
@@ -111,8 +167,6 @@ describe("approveCompanyChange", () => {
     mocks.single
       .mockResolvedValueOnce({
         data: {
-          company_change_request_company_id:
-            "22222222-2222-2222-2222-222222222070",
           company_change_request_current_email: "current@tsh.test",
           company_change_request_proposed_email: "new@tsh.test",
         },

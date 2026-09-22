@@ -75,6 +75,63 @@ function PasswordField({ field, fieldState }: FieldRender<"password">) {
   );
 }
 
+function LoginNotices({
+  emailChanged,
+  error,
+}: {
+  emailChanged?: string;
+  error?: string;
+}) {
+  return (
+    <>
+      {emailChanged ? (
+        <Alert variant="info">
+          <AlertDescription>
+            {messages.login.emailChangedAlert(emailChanged)}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </>
+  );
+}
+
+function SeedHintCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{messages.login.seedHint}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="flex flex-col gap-2 text-sm">
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedAdminLabel}
+            </dt>
+            <dd className="font-mono">{messages.login.seedAdminEmail}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedMemberLabel}
+            </dt>
+            <dd className="font-mono">{messages.login.seedMemberEmail}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedExternalLabel}
+            </dt>
+            <dd className="font-mono">{messages.login.seedExternalEmail}</dd>
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function LoginForm({
   emailChanged,
   isDevelopment,
@@ -100,13 +157,10 @@ export function LoginForm({
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="flex w-full max-w-sm flex-col gap-4">
-        {emailChanged ? (
-          <Alert variant="info">
-            <AlertDescription>
-              {messages.login.emailChangedAlert(emailChanged)}
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        <LoginNotices
+          emailChanged={emailChanged}
+          error={state.status === "error" ? state.error : undefined}
+        />
         <Card className="w-full">
           <CardContent>
             <form id="login-form" onSubmit={handleSubmit}>
@@ -121,11 +175,6 @@ export function LoginForm({
                   name="password"
                   render={PasswordField}
                 />
-                {state.status === "error" ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{state.error}</AlertDescription>
-                  </Alert>
-                ) : null}
               </FieldGroup>
             </form>
           </CardContent>
@@ -144,39 +193,7 @@ export function LoginForm({
           </CardFooter>
         </Card>
 
-        {isDevelopment ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>{messages.login.seedHint}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="flex flex-col gap-2 text-sm">
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedAdminLabel}
-                  </dt>
-                  <dd className="font-mono">{messages.login.seedAdminEmail}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedMemberLabel}
-                  </dt>
-                  <dd className="font-mono">
-                    {messages.login.seedMemberEmail}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedExternalLabel}
-                  </dt>
-                  <dd className="font-mono">
-                    {messages.login.seedExternalEmail}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-        ) : null}
+        {isDevelopment ? <SeedHintCard /> : null}
       </div>
     </main>
   );

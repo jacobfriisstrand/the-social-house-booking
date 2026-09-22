@@ -225,26 +225,51 @@ const recordResult = async (
   return settled.ok ? json(200, {}) : settled.response;
 };
 
-const deliver = async (plan: SendPlan): Promise<Response> => {
-  const recipients = recipientsFor(plan);
-  if (!recipients.ok) {
-    return recipients.response;
-  }
+const prepareDelivery = async (plan: SendPlan, recipients: string[]) => {
   const supabase = adminClient();
   const company = await loadCompany(supabase, plan.authUserId);
   if (!company.ok) {
-    return company.response;
+    return company;
   }
-  const safe = await safeRecipients(supabase, recipients.value);
+  const safe = await safeRecipients(supabase, recipients);
   if (!safe.ok) {
-    return safe.response;
+    return safe;
   }
   const log = await logQueued(supabase, plan, company.value.company_id);
   if (!log.ok) {
-    return log.response;
+    return log;
   }
-  const result = await sendWithResend(plan, company.value, safe.value);
-  return recordResult(supabase, log.value, plan, result);
+  return {
+    ok: true as const,
+    value: {
+      company: company.value,
+      log: log.value,
+      recipients: safe.value,
+      supabase,
+    },
+  };
+};
+
+const deliver = async (plan: SendPlan): Promise<Response> => {
+  const recipientList = recipientsFor(plan);
+  if (!recipientList.ok) {
+    return recipientList.response;
+  }
+  const prepared = await prepareDelivery(plan, recipientList.value);
+  if (!prepared.ok) {
+    return prepared.response;
+  }
+  const result = await sendWithResend(
+    plan,
+    prepared.value.company,
+    prepared.value.recipients
+  );
+  return recordResult(
+    prepared.value.supabase,
+    prepared.value.log,
+    plan,
+    result
+  );
 };
 
 Deno.serve(async (request) => {

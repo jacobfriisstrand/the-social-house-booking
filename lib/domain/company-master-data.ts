@@ -46,13 +46,6 @@ const masterDataUpdate = (
 export const masterDataToUpdate = (values: MasterDataValues): CompanyUpdate =>
   masterDataUpdate(values);
 
-export const memberValuesToUpdate = (
-  values: MemberCompanyValues
-): CompanyUpdate => ({
-  ...masterDataUpdate(values),
-  company_email: values.email,
-});
-
 export const adminValuesToUpdate = (
   values: AdminCompanyValues
 ): CompanyUpdate => ({

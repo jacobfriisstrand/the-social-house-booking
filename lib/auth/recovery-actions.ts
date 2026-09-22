@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -64,10 +63,4 @@ export async function requestCompanyPasswordReset(
   return reset.error
     ? { error: messages.companySettings.errors.requestFailed, status: "error" }
     : { status: "success" };
-}
-
-export async function finishPasswordReset(): Promise<void> {
-  const supabase = await createClient();
-  await supabase.auth.signOut({ scope: "global" });
-  redirect("/login");
 }

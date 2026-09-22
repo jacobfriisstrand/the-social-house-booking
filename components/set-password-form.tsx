@@ -26,6 +26,20 @@ import { messages } from "@/messages/da";
 
 const copy = messages.setPassword;
 
+function RecoveryLinkInvalidAlert({ show }: { show: boolean }) {
+  if (!show) {
+    return null;
+  }
+  return (
+    <Alert className="mb-4" variant="destructive">
+      <AlertDescription>
+        {messages.setPassword.errors.recoveryLinkInvalid}{" "}
+        <Link href="/forgot-password">{copy.recoveryLink}</Link>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 export function SetPasswordForm({ link }: { link: SetPasswordLinkValues }) {
   const form = useForm<SetPasswordValues>({
     defaultValues: {
@@ -47,16 +61,13 @@ export function SetPasswordForm({ link }: { link: SetPasswordLinkValues }) {
         <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        {link.type === "recovery" &&
-        state.status === "error" &&
-        state.linkInvalid ? (
-          <Alert className="mb-4" variant="destructive">
-            <AlertDescription>
-              {messages.setPassword.errors.recoveryLinkInvalid}{" "}
-              <Link href="/forgot-password">{copy.recoveryLink}</Link>
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        <RecoveryLinkInvalidAlert
+          show={
+            link.type === "recovery" &&
+            state.status === "error" &&
+            state.linkInvalid === true
+          }
+        />
         <form id="set-password-form" onSubmit={submit}>
           <FieldGroup>
             <TextField

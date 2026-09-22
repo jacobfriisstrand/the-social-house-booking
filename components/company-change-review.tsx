@@ -20,6 +20,61 @@ const fields = Object.keys(messages.companyChangeReview.fields) as Array<
   keyof typeof messages.companyChangeReview.fields
 >;
 
+function ResultMessages({
+  error,
+  message,
+}: {
+  error?: string;
+  message?: string;
+}) {
+  return (
+    <>
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {message ? <p className="text-sm">{message}</p> : null}
+    </>
+  );
+}
+
+function ChangeTable({
+  after,
+  before,
+}: {
+  after: CompanyChangeReviewData["after"];
+  before: CompanyChangeReviewData["before"];
+}) {
+  const changedFields = fields.filter(
+    (field) => before[field] !== after[field]
+  );
+  if (changedFields.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        {messages.companyChangeReview.noChanges}
+      </p>
+    );
+  }
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-3 text-muted-foreground text-xs uppercase tracking-wider">
+        <span />
+        <span>{messages.companyChangeReview.before}</span>
+        <span>{messages.companyChangeReview.after}</span>
+      </div>
+      {changedFields.map((field) => (
+        <div
+          className="grid grid-cols-3 gap-3 border-b pb-3 text-sm"
+          key={field}
+        >
+          <span className="font-medium">
+            {messages.companyChangeReview.fields[field]}
+          </span>
+          <span className="text-muted-foreground">{before[field] || "-"}</span>
+          <span>{after[field] || "-"}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function CompanyChangeReview({
   review,
   token,
@@ -30,9 +85,6 @@ export function CompanyChangeReview({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const [message, setMessage] = useState<string>();
-  const changedFields = fields.filter(
-    (field) => review.before[field] !== review.after[field]
-  );
 
   const approve = useCallback(() => {
     startTransition(async () => {
@@ -58,33 +110,8 @@ export function CompanyChangeReview({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <div className="grid grid-cols-3 gap-3 text-muted-foreground text-xs uppercase tracking-wider">
-          <span />
-          <span>{messages.companyChangeReview.before}</span>
-          <span>{messages.companyChangeReview.after}</span>
-        </div>
-        {changedFields.length > 0 ? (
-          changedFields.map((field) => (
-            <div
-              className="grid grid-cols-3 gap-3 border-b pb-3 text-sm"
-              key={field}
-            >
-              <span className="font-medium">
-                {messages.companyChangeReview.fields[field]}
-              </span>
-              <span className="text-muted-foreground">
-                {review.before[field] || "-"}
-              </span>
-              <span>{review.after[field] || "-"}</span>
-            </div>
-          ))
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            {messages.companyChangeReview.noChanges}
-          </p>
-        )}
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        {message ? <p className="text-sm">{message}</p> : null}
+        <ChangeTable after={review.after} before={review.before} />
+        <ResultMessages error={error} message={message} />
       </CardContent>
       <CardFooter>
         <Button

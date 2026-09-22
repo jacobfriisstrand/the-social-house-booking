@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { notifyAdminCompanyCompleted } from "@/lib/companies/notify-admin";
 import { createChangeToken, hashChangeToken } from "@/lib/domain/change-token";
 import {
   type CompanyChangeValues,
@@ -22,6 +23,75 @@ import { messages } from "@/messages/da";
 const TOKEN_MINUTES = 30;
 const TOKEN_MS = TOKEN_MINUTES * 60 * 1000;
 const requestIdSchema = z.guid();
+
+const invalidChangeLink = {
+  error: messages.companyChangeReview.errors.invalid,
+  success: false,
+};
+
+// Validates the link pair and resolves the request's company. Shared by the
+// approval and the new-email verification; null means the link is malformed
+// or the request is gone.
+const loadChangeRequestCompany = async (
+  requestId: string,
+  rawToken: string
+): Promise<{
+  admin: ReturnType<typeof createAdminClient>;
+  companyId: string;
+  parsedId: string;
+} | null> => {
+  const parsedId = requestIdSchema.safeParse(requestId);
+  if (!(parsedId.success && rawToken)) {
+    return null;
+  }
+  const admin = createAdminClient();
+  const request = await admin
+    .from("company_change_requests")
+    .select("company_change_request_company_id")
+    .eq("company_change_request_id", parsedId.data)
+    .maybeSingle();
+  if (request.error || !request.data) {
+    return null;
+  }
+  return {
+    admin,
+    companyId: request.data.company_change_request_company_id,
+    parsedId: parsedId.data,
+  };
+};
+
+// Mail 10 fires only on the null-to-set transition of
+// company_master_data_completed_at, so the pre-commit state decides.
+const isMasterDataIncomplete = async (
+  admin: ReturnType<typeof createAdminClient>,
+  companyId: string
+): Promise<boolean> => {
+  const row = await admin
+    .from("companies")
+    .select("company_master_data_completed_at")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  return (
+    !row.error &&
+    row.data !== null &&
+    row.data.company_master_data_completed_at === null
+  );
+};
+
+const notifyAdminOnFirstCompletion = async (
+  admin: ReturnType<typeof createAdminClient>,
+  companyId: string
+): Promise<void> => {
+  const company = await admin
+    .from("companies")
+    .select("*")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (company.error || !company.data) {
+    return;
+  }
+  await notifyAdminCompanyCompleted(company.data);
+};
 
 export type CompanyChangeState = FormState<MemberCompanyValues>;
 
@@ -130,12 +200,10 @@ export interface CompanyChangeReview {
   status: "pending" | "awaiting_new_email";
 }
 
-export async function getCompanyChangeReview(
-  requestId: string,
-  rawToken: string
-): Promise<CompanyChangeReview | null> {
+// A request the current-email approver may still act on.
+const fetchReviewableRequest = async (requestId: string) => {
   const parsedId = requestIdSchema.safeParse(requestId);
-  if (!(parsedId.success && rawToken)) {
+  if (!parsedId.success) {
     return null;
   }
   const request = await createAdminClient()
@@ -145,43 +213,77 @@ export async function getCompanyChangeReview(
     )
     .eq("company_change_request_id", parsedId.data)
     .maybeSingle();
-  if (
-    request.error ||
-    !request.data ||
-    !["pending", "awaiting_new_email"].includes(
-      request.data.company_change_request_status
-    )
-  ) {
+  if (request.error || !request.data) {
     return null;
   }
+  return ["pending", "awaiting_new_email"].includes(
+    request.data.company_change_request_status
+  )
+    ? request.data
+    : null;
+};
+
+const tokenIsLive = (
+  token: { company_change_token_expires_at: string } | null | undefined
+): boolean =>
+  Boolean(
+    token && new Date(token.company_change_token_expires_at) > new Date()
+  );
+
+// An unexpired, unconsumed current-email token for this exact link.
+const hasValidCurrentEmailToken = async (
+  requestId: string,
+  rawToken: string
+): Promise<boolean> => {
   const token = await createAdminClient()
     .from("company_change_tokens")
     .select("company_change_token_expires_at")
-    .eq("company_change_token_request_id", parsedId.data)
+    .eq("company_change_token_request_id", requestId)
     .eq("company_change_token_kind", "current_email")
     .eq("company_change_token_hash", hashChangeToken(rawToken))
     .is("company_change_token_consumed_at", null)
     .maybeSingle();
+  return tokenIsLive(token.data);
+};
+
+const parseChangeReviewValues = (request: {
+  company_change_request_before_values: unknown;
+  company_change_request_after_values: unknown;
+}): { after: MemberCompanyValues; before: MemberCompanyValues } | null => {
+  const before = companyChangeBeforeSchema.safeParse(
+    request.company_change_request_before_values
+  );
+  const after = memberCompanySchema.safeParse(
+    request.company_change_request_after_values
+  );
+  return before.success && after.success
+    ? { after: after.data, before: before.data }
+    : null;
+};
+
+export async function getCompanyChangeReview(
+  requestId: string,
+  rawToken: string
+): Promise<CompanyChangeReview | null> {
+  const request = await fetchReviewableRequest(requestId);
+  if (!request) {
+    return null;
+  }
   if (
-    token.error ||
-    !token.data ||
-    new Date(token.data.company_change_token_expires_at) <= new Date()
+    !(await hasValidCurrentEmailToken(
+      request.company_change_request_id,
+      rawToken
+    ))
   ) {
     return null;
   }
-
-  const before = companyChangeBeforeSchema.safeParse(
-    request.data.company_change_request_before_values
-  );
-  const after = memberCompanySchema.safeParse(
-    request.data.company_change_request_after_values
-  );
-  return before.success && after.success
+  const values = parseChangeReviewValues(request);
+  return values
     ? {
-        after: after.data,
-        before: before.data,
-        requestId: parsedId.data,
-        status: request.data.company_change_request_status as
+        after: values.after,
+        before: values.before,
+        requestId: request.company_change_request_id,
+        status: request.company_change_request_status as
           | "pending"
           | "awaiting_new_email",
       }
@@ -204,26 +306,21 @@ export async function isNewEmailChangeToken(
     .eq("company_change_token_hash", hashChangeToken(rawToken))
     .is("company_change_token_consumed_at", null)
     .maybeSingle();
-  return Boolean(
-    token.data &&
-      new Date(token.data.company_change_token_expires_at) > new Date()
-  );
+  return tokenIsLive(token.data);
 }
 
 export async function approveCompanyChange(
   requestId: string,
   rawToken: string
 ): Promise<{ email?: string; error?: string; success: boolean }> {
-  const parsedId = requestIdSchema.safeParse(requestId);
-  if (!(parsedId.success && rawToken)) {
-    return {
-      error: messages.companyChangeReview.errors.invalid,
-      success: false,
-    };
+  const loaded = await loadChangeRequestCompany(requestId, rawToken);
+  if (!loaded) {
+    return invalidChangeLink;
   }
-  const admin = createAdminClient();
+  const { admin, companyId, parsedId } = loaded;
+  const masterDataIncomplete = await isMasterDataIncomplete(admin, companyId);
   const result = await admin.rpc("apply_company_change_request", {
-    p_request_id: parsedId.data,
+    p_request_id: parsedId,
     p_token_hash: hashChangeToken(rawToken),
   });
   if (result.error) {
@@ -246,20 +343,12 @@ export async function approveCompanyChange(
     };
   }
   if (response.next_step === "committed") {
+    if (masterDataIncomplete) {
+      await notifyAdminOnFirstCompletion(admin, companyId);
+    }
     return { success: true };
   }
 
-  const request = await admin
-    .from("company_change_requests")
-    .select("company_change_request_id, company_change_request_company_id")
-    .eq("company_change_request_id", parsedId.data)
-    .single();
-  if (request.error) {
-    return {
-      error: messages.companyChangeReview.errors.failed,
-      success: false,
-    };
-  }
   const token = createChangeToken();
   const created = await admin.from("company_change_tokens").insert({
     company_change_token_expires_at: new Date(
@@ -267,7 +356,7 @@ export async function approveCompanyChange(
     ).toISOString(),
     company_change_token_hash: token.hash,
     company_change_token_kind: "new_email",
-    company_change_token_request_id: parsedId.data,
+    company_change_token_request_id: parsedId,
   });
   if (created.error) {
     return {
@@ -278,7 +367,7 @@ export async function approveCompanyChange(
   const company = await admin
     .from("companies")
     .select("company_display_name")
-    .eq("company_id", request.data.company_change_request_company_id)
+    .eq("company_id", companyId)
     .single();
   if (company.error) {
     return {
@@ -288,11 +377,11 @@ export async function approveCompanyChange(
   }
   try {
     await sendMail({
-      companyId: request.data.company_change_request_company_id,
+      companyId,
       kind: "company-change-new-email",
       to: response.proposed_email,
       variables: {
-        ACTION_URL: actionUrl(parsedId.data, token.raw),
+        ACTION_URL: actionUrl(parsedId, token.raw),
         COMPANY_DISPLAY_NAME: company.data.company_display_name,
         VALID_MINUTES: TOKEN_MINUTES,
       },
@@ -301,7 +390,7 @@ export async function approveCompanyChange(
     await admin
       .from("company_change_requests")
       .update({ company_change_request_status: "rejected" })
-      .eq("company_change_request_id", parsedId.data);
+      .eq("company_change_request_id", parsedId);
     return {
       error: messages.companyChangeReview.errors.failed,
       success: false,
@@ -317,20 +406,17 @@ export async function verifyNewCompanyEmail(
   requestId: string,
   rawToken: string
 ): Promise<{ error?: string; success: boolean }> {
-  const parsedId = requestIdSchema.safeParse(requestId);
-  if (!(parsedId.success && rawToken)) {
-    return {
-      error: messages.companyChangeReview.errors.invalid,
-      success: false,
-    };
+  const loaded = await loadChangeRequestCompany(requestId, rawToken);
+  if (!loaded) {
+    return invalidChangeLink;
   }
-  const admin = createAdminClient();
+  const { admin, companyId, parsedId } = loaded;
   const request = await admin
     .from("company_change_requests")
     .select(
       "company_change_request_company_id, company_change_request_current_email, company_change_request_proposed_email, company_change_request_before_values"
     )
-    .eq("company_change_request_id", parsedId.data)
+    .eq("company_change_request_id", parsedId)
     .eq("company_change_request_status", "awaiting_new_email")
     .single();
   if (request.error) {
@@ -342,7 +428,7 @@ export async function verifyNewCompanyEmail(
   const company = await admin
     .from("companies")
     .select("company_auth_user_id")
-    .eq("company_id", request.data.company_change_request_company_id)
+    .eq("company_id", companyId)
     .single();
   if (company.error) {
     return {
@@ -350,6 +436,7 @@ export async function verifyNewCompanyEmail(
       success: false,
     };
   }
+  const masterDataIncomplete = await isMasterDataIncomplete(admin, companyId);
   const authUpdate = await admin.auth.admin.updateUserById(
     company.data.company_auth_user_id,
     {
@@ -364,7 +451,7 @@ export async function verifyNewCompanyEmail(
     };
   }
   const committed = await admin.rpc("commit_company_email_change", {
-    p_request_id: parsedId.data,
+    p_request_id: parsedId,
     p_token_hash: hashChangeToken(rawToken),
   });
   if (committed.error) {
@@ -380,8 +467,11 @@ export async function verifyNewCompanyEmail(
   await admin.rpc("revoke_company_sessions", {
     p_auth_user_id: company.data.company_auth_user_id,
   });
+  if (masterDataIncomplete) {
+    await notifyAdminOnFirstCompletion(admin, companyId);
+  }
   await sendCompletionNotices(
-    request.data.company_change_request_company_id,
+    companyId,
     request.data.company_change_request_current_email,
     request.data.company_change_request_proposed_email
   );
