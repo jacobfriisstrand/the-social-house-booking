@@ -65,7 +65,11 @@ function OpeningHourRow({ form, index, weekday }: OpeningHourRowProps) {
           id={`room-open-${index}`}
           onCheckedChange={handleOpenChange}
         />
-        <FieldLabel className="w-16 font-normal" htmlFor={`room-open-${index}`}>
+        <FieldLabel
+          className="w-16 font-normal"
+          htmlFor={`room-open-${index}`}
+          required
+        >
           {weekday}
         </FieldLabel>
       </div>

@@ -136,7 +136,9 @@ export function NativeSelectField<Values extends FieldValues>({
   const id = `field-${name}`;
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} required>
+        {label}
+      </FieldLabel>
       <select
         aria-invalid={fieldState.invalid}
         className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
@@ -170,7 +172,9 @@ export function DateTimeField<Values extends FieldValues>({
   const id = `field-${name}`;
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} required>
+        {label}
+      </FieldLabel>
       <Input
         aria-invalid={fieldState.invalid}
         id={id}

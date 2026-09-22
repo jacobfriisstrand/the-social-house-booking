@@ -278,7 +278,7 @@ export function SpecialClosingDays({
           className="flex flex-wrap items-end gap-3 border-t pt-4"
         >
           <Field>
-            <FieldLabel htmlFor="special-day-date">
+            <FieldLabel htmlFor="special-day-date" required>
               {messages.rooms.specialDayDate}
             </FieldLabel>
             <SpecialDayDatePicker onChange={setDate} value={date} />
@@ -291,13 +291,19 @@ export function SpecialClosingDays({
               id="special-day-closed"
               onCheckedChange={handleClosedChange}
             />
-            <FieldLabel className="font-normal" htmlFor="special-day-closed">
+            <FieldLabel
+              className="font-normal"
+              htmlFor="special-day-closed"
+              required
+            >
               {messages.rooms.specialDayClosed}
             </FieldLabel>
           </Field>
           {isClosed ? null : (
             <Field orientation="horizontal">
-              <FieldLabel>{messages.rooms.specialDayHoursLabel}</FieldLabel>
+              <FieldLabel required>
+                {messages.rooms.specialDayHoursLabel}
+              </FieldLabel>
               <div className="flex items-center gap-2">
                 <TimeSelect
                   ariaLabel={messages.rooms.specialDayOpens}

@@ -158,7 +158,9 @@ export function CateringAcceptance<Values extends FieldValues>({
 
   return (
     <FieldSet data-invalid={Boolean(error)}>
-      <FieldLegend variant="label">{copy.catering.title}</FieldLegend>
+      <FieldLegend required variant="label">
+        {copy.catering.title}
+      </FieldLegend>
       <p className="text-muted-foreground text-sm">{copy.catering.rule}</p>
       <Field>
         <div className="flex items-start gap-3">
@@ -168,7 +170,7 @@ export function CateringAcceptance<Values extends FieldValues>({
             id={id}
             onCheckedChange={handleCheckedChange}
           />
-          <FieldLabel className="font-normal" htmlFor={id}>
+          <FieldLabel className="font-normal" htmlFor={id} required>
             {copy.catering.accept}
           </FieldLabel>
         </div>

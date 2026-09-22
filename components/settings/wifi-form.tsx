@@ -75,7 +75,9 @@ function WifiPasswordField({ control }: { control: Control<SettingsValues> }) {
 
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor={id}>{labels.wifiPassword}</FieldLabel>
+      <FieldLabel htmlFor={id} required>
+        {labels.wifiPassword}
+      </FieldLabel>
       <InputGroup>
         <InputGroupInput
           aria-invalid={fieldState.invalid}

@@ -221,7 +221,7 @@ function AddonRow({ addon, control }: AddonRowProps) {
       ) : (
         switchButton
       )}
-      <FieldLabel className="font-normal" htmlFor={switchId}>
+      <FieldLabel className="font-normal" htmlFor={switchId} required>
         {addon.name}
         <span className="text-muted-foreground text-xs">
           {addonPriceLabel(addon)}
@@ -441,7 +441,7 @@ function ActiveField({ control, initial }: ActiveFieldProps) {
         id="room-is-active"
         onCheckedChange={field.onChange}
       />
-      <FieldLabel className="font-normal" htmlFor="room-is-active">
+      <FieldLabel className="font-normal" htmlFor="room-is-active" required>
         {messages.rooms.activeLabel}
       </FieldLabel>
     </Field>
@@ -1006,14 +1006,14 @@ export function RoomForm({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field data-invalid={Boolean(form.formState.errors.name)}>
-            <FieldLabel htmlFor="room-name">
+            <FieldLabel htmlFor="room-name" required>
               {messages.rooms.fields.name}
             </FieldLabel>
             <Input id="room-name" {...form.register("name")} />
             <FieldMessage error={form.formState.errors.name} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="room-description">
+            <FieldLabel htmlFor="room-description" required={false}>
               {messages.rooms.fields.description}
             </FieldLabel>
             <Textarea
@@ -1023,7 +1023,7 @@ export function RoomForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="room-location">
+            <FieldLabel htmlFor="room-location" required={false}>
               {messages.rooms.fields.location}
             </FieldLabel>
             <Input id="room-location" {...form.register("location")} />
@@ -1040,7 +1040,7 @@ export function RoomForm({
           <Field
             data-invalid={Boolean(form.formState.errors.hourlyPriceKroner)}
           >
-            <FieldLabel htmlFor="room-price">
+            <FieldLabel htmlFor="room-price" required>
               {messages.rooms.fields.price}
             </FieldLabel>
             <Input
@@ -1052,7 +1052,7 @@ export function RoomForm({
             <FieldMessage error={form.formState.errors.hourlyPriceKroner} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.capacity)}>
-            <FieldLabel htmlFor="room-capacity">
+            <FieldLabel htmlFor="room-capacity" required>
               {messages.rooms.fields.capacity}
             </FieldLabel>
             <FieldDescription>
@@ -1066,7 +1066,7 @@ export function RoomForm({
             <FieldMessage error={form.formState.errors.capacity} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="room-practical-notes">
+            <FieldLabel htmlFor="room-practical-notes" required={false}>
               {messages.rooms.fields.practicalNotes}
             </FieldLabel>
             <Textarea
