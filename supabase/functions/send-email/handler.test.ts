@@ -65,6 +65,20 @@ describe("buildActionUrl", () => {
     expect(url.startsWith("http://localhost:3000/")).toBe(true);
     expect(url).not.toContain("54321");
   });
+
+  it("does not append set-password twice when Auth includes the path", () => {
+    const payload = hookPayload.parse({
+      ...invitePayload,
+      email_data: {
+        ...invitePayload.email_data,
+        redirect_to: "http://localhost:3000/set-password",
+      },
+    });
+
+    expect(buildActionUrl(payload.email_data)).toBe(
+      "http://localhost:3000/set-password?token_hash=abc%2Bdef%2F123%3D&type=invite"
+    );
+  });
 });
 
 describe("planEmail", () => {
@@ -79,8 +93,26 @@ describe("planEmail", () => {
     });
   });
 
-  it.each(["recovery", "email_change", "signup", "magiclink"])(
-    "rejects %s until a template maps it",
+  it("maps recovery to the password-reset template", () => {
+    const payload = hookPayload.parse({
+      ...invitePayload,
+      email_data: {
+        ...invitePayload.email_data,
+        email_action_type: "recovery",
+      },
+    });
+    expect(planEmail(payload)).toEqual({
+      actionUrl:
+        "http://localhost:3000/set-password?token_hash=abc%2Bdef%2F123%3D&type=recovery",
+      authUserId: "00000000-0000-0000-0000-000000000002",
+      kind: "password-reset",
+      status: "send",
+      to: "kontakt@rituals.dk",
+    });
+  });
+
+  it.each(["email_change", "signup", "magiclink"])(
+    "rejects unsupported %s action types",
     (type) => {
       const payload = hookPayload.parse({
         ...invitePayload,

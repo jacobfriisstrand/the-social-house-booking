@@ -23,7 +23,7 @@ export type EmailPlan =
   | {
       actionUrl: string;
       authUserId: string;
-      kind: "company-invitation";
+      kind: "company-invitation" | "password-reset";
       status: "send";
       to: string;
     }
@@ -38,16 +38,22 @@ export const buildActionUrl = ({
   token_hash,
 }: HookPayload["email_data"]): string => {
   const base = redirect_to.replace(TRAILING_SLASHES, "");
+  const actionBase = base.endsWith(SET_PASSWORD_PATH)
+    ? base
+    : `${base}${SET_PASSWORD_PATH}`;
   const query = new URLSearchParams({ token_hash, type: email_action_type });
-  return `${base}${SET_PASSWORD_PATH}?${query.toString()}`;
+  return `${actionBase}?${query.toString()}`;
 };
 
-// Only `invite` is mapped (#26). `recovery` arrives with #11; every other
-// action type (email_change, signup, magiclink, …) is rejected so a
-// misconfiguration fails the auth call instead of sending a blank mail.
+// Auth recovery is the shared password-reset flow. Every other action type is
+// rejected so a misconfiguration fails the auth call instead of sending a
+// blank mail.
 export const planEmail = (payload: HookPayload): EmailPlan => {
   const { email_data, user } = payload;
-  if (email_data.email_action_type !== "invite") {
+  if (
+    email_data.email_action_type !== "invite" &&
+    email_data.email_action_type !== "recovery"
+  ) {
     return {
       reason: `unsupported email_action_type "${email_data.email_action_type}"`,
       status: "reject",
@@ -56,7 +62,10 @@ export const planEmail = (payload: HookPayload): EmailPlan => {
   return {
     actionUrl: buildActionUrl(email_data),
     authUserId: user.id,
-    kind: "company-invitation",
+    kind:
+      email_data.email_action_type === "recovery"
+        ? "password-reset"
+        : "company-invitation",
     status: "send",
     to: user.email,
   };

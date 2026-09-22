@@ -32,6 +32,7 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 | `npm run db:test` | Run pgTAP tests in `supabase/tests/` (`supabase test db`). |
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |
+| `npx supabase functions serve <name>` | Serve an Edge Function locally at `http://127.0.0.1:54321/functions/v1/<name>` (local stack must be up; env from `supabase/functions/.env`). See `supabase.md`. |
 | `supabase db schema declarative sync --name <name>` | Turn `supabase/schemas/` changes into a migration (CLI ≥ 2.116; add `--no-apply` to review first). |
 
 Scripts not yet present in `package.json` are added when the tool they call is installed (Ultracite, Vitest, the sync script). Do not add a substitute in the meantime.

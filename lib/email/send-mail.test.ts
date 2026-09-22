@@ -6,13 +6,19 @@ import { sendMail } from "./send-mail";
 const mocks = vi.hoisted(() => {
   const insertSingle = vi.fn();
   const updateEq = vi.fn();
+  const selectIn = vi.fn();
   const insert = vi.fn(() => ({ select: () => ({ single: insertSingle }) }));
   const update = vi.fn(() => ({ eq: updateEq }));
   return {
     admin: {
-      from: vi.fn(() => ({ insert, update })),
+      from: vi.fn(() => ({
+        insert,
+        select: () => ({ in: selectIn }),
+        update,
+      })),
       insert,
       insertSingle,
+      selectIn,
       update,
       updateEq,
     },
@@ -76,6 +82,7 @@ describe("sendMail", () => {
       data: { outbound_email_id: "log-1" },
       error: null,
     });
+    mocks.admin.selectIn.mockResolvedValue({ data: [], error: null });
     mocks.admin.updateEq.mockResolvedValue({ data: null, error: null });
     mocks.send.mockResolvedValue({
       data: { id: "resend-1" },
@@ -198,6 +205,45 @@ describe("sendMail", () => {
     mocks.env.EMAIL_REDIRECT_TO = undefined;
 
     await expect(sendMail(sendInput)).rejects.toThrow("EMAIL_REDIRECT_TO");
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("refuses to redirect development mail to a real company email", async () => {
+    mocks.env.EMAIL_REDIRECT_TO = "kontakt@rituals.dk";
+    mocks.admin.selectIn.mockResolvedValue({
+      data: [{ company_email: "kontakt@rituals.dk", company_id: "company-1" }],
+      error: null,
+    });
+
+    await expect(sendMail(sendInput)).rejects.toThrow(
+      "matches a real company email"
+    );
+    expect(mocks.admin.insert).not.toHaveBeenCalled();
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("allows the redirect when the target matches only the mail's own company email", async () => {
+    mocks.env.EMAIL_REDIRECT_TO = "qa@example.com";
+    mocks.admin.selectIn.mockResolvedValue({
+      data: [{ company_email: "qa@example.com", company_id: "company-1" }],
+      error: null,
+    });
+
+    await sendMail({ ...sendInput, companyId: "company-1" });
+
+    expect(mocks.send).toHaveBeenCalled();
+  });
+
+  it("still refuses when the target matches another company's email", async () => {
+    mocks.env.EMAIL_REDIRECT_TO = "qa@example.com";
+    mocks.admin.selectIn.mockResolvedValue({
+      data: [{ company_email: "qa@example.com", company_id: "company-2" }],
+      error: null,
+    });
+
+    await expect(
+      sendMail({ ...sendInput, companyId: "company-1" })
+    ).rejects.toThrow("matches a real company email");
     expect(mocks.send).not.toHaveBeenCalled();
   });
 

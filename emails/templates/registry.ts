@@ -7,7 +7,11 @@
 import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
 import { adminCompanyCompleted } from "./admin-company-completed.ts";
+import { companyChangeCompleted } from "./company-change-completed.ts";
+import { companyChangeNewEmail } from "./company-change-new-email.ts";
+import { companyChangeReview } from "./company-change-review.ts";
 import { companyInvitation } from "./company-invitation.ts";
+import { passwordReset } from "./password-reset.ts";
 import { verificationCode } from "./verification-code.ts";
 
 export type OutboundEmailKind =
@@ -26,6 +30,10 @@ export interface EmailTemplate {
 export const emailTemplates: Partial<Record<OutboundEmailKind, EmailTemplate>> =
   {
     "admin-company-completed": adminCompanyCompleted,
+    "company-change-completed": companyChangeCompleted,
+    "company-change-new-email": companyChangeNewEmail,
+    "company-change-review": companyChangeReview,
     "company-invitation": companyInvitation,
+    "password-reset": passwordReset,
     "verification-code": verificationCode,
   };

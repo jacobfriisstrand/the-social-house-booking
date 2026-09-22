@@ -126,10 +126,19 @@ const sendWithResend = async (
       reply_to: senderAddress(from),
       template: {
         id: plan.kind,
-        variables: invitationVariables(
-          plan.actionUrl,
-          company.company_display_name
-        ),
+        // The published template declares VALID_MINUTES as a number and
+        // inserts {{{KEY}}} unescaped, so values go through the same
+        // HTML escaping as the invitation (invitationVariables).
+        variables:
+          plan.kind === "password-reset"
+            ? {
+                ...invitationVariables(
+                  plan.actionUrl,
+                  company.company_display_name
+                ),
+                VALID_MINUTES: 60,
+              }
+            : invitationVariables(plan.actionUrl, company.company_display_name),
       },
       to: recipients,
     }),
@@ -172,6 +181,28 @@ const recipientsFor = (plan: SendPlan): Step<string[]> => {
   }
 };
 
+const safeRecipients = async (
+  supabase: SupabaseClient,
+  recipients: string[]
+): Promise<Step<string[]>> => {
+  if (Deno.env.get("APP_ENV") === "production") {
+    return { ok: true, value: recipients };
+  }
+  const { data, error } = await supabase
+    .from("companies")
+    .select("company_email")
+    .in("company_email", recipients);
+  if (error) {
+    return fail(500, `development recipient check failed: ${error.message}`);
+  }
+  return data.length === 0
+    ? { ok: true, value: recipients }
+    : fail(
+        500,
+        "a development redirect recipient matches a real company email"
+      );
+};
+
 const recordResult = async (
   supabase: SupabaseClient,
   outboundEmailId: string,
@@ -204,11 +235,15 @@ const deliver = async (plan: SendPlan): Promise<Response> => {
   if (!company.ok) {
     return company.response;
   }
+  const safe = await safeRecipients(supabase, recipients.value);
+  if (!safe.ok) {
+    return safe.response;
+  }
   const log = await logQueued(supabase, plan, company.value.company_id);
   if (!log.ok) {
     return log.response;
   }
-  const result = await sendWithResend(plan, company.value, recipients.value);
+  const result = await sendWithResend(plan, company.value, safe.value);
   return recordResult(supabase, log.value, plan, result);
 };
 
