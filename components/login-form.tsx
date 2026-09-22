@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { startTransition, useActionState, useEffect } from "react";
 import {
   Controller,
@@ -39,7 +40,9 @@ interface FieldRender<K extends keyof LoginValues> {
 function EmailField({ field, fieldState }: FieldRender<"email">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="login-email">{messages.login.email}</FieldLabel>
+      <FieldLabel htmlFor="login-email" required>
+        {messages.login.email}
+      </FieldLabel>
       <Input
         {...field}
         aria-invalid={fieldState.invalid}
@@ -56,7 +59,7 @@ function EmailField({ field, fieldState }: FieldRender<"email">) {
 function PasswordField({ field, fieldState }: FieldRender<"password">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="login-password">
+      <FieldLabel htmlFor="login-password" required>
         {messages.login.password}
       </FieldLabel>
       <Input
@@ -72,7 +75,13 @@ function PasswordField({ field, fieldState }: FieldRender<"password">) {
   );
 }
 
-export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
+export function LoginForm({
+  emailChanged,
+  isDevelopment,
+}: {
+  emailChanged?: string;
+  isDevelopment: boolean;
+}) {
   const [state, formAction, pending] = useActionState(logIn, initialState);
   const form = useForm<LoginValues>({
     defaultValues: { email: "", password: "" },
@@ -91,6 +100,13 @@ export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="flex w-full max-w-sm flex-col gap-4">
+        {emailChanged ? (
+          <Alert variant="info">
+            <AlertDescription>
+              {messages.login.emailChangedAlert(emailChanged)}
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <Card className="w-full">
           <CardContent>
             <form id="login-form" onSubmit={handleSubmit}>
@@ -114,9 +130,17 @@ export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
             </form>
           </CardContent>
           <CardFooter>
-            <Button form="login-form" pending={pending} type="submit">
-              {pending ? messages.login.submitting : messages.login.submit}
-            </Button>
+            <div className="flex w-full flex-col gap-3">
+              <Button form="login-form" pending={pending} type="submit">
+                {pending ? messages.login.submitting : messages.login.submit}
+              </Button>
+              <Link
+                className="text-center text-muted-foreground text-sm underline"
+                href="/forgot-password"
+              >
+                {messages.login.forgotPassword}
+              </Link>
+            </div>
           </CardFooter>
         </Card>
 
