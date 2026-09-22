@@ -7,7 +7,11 @@
 import { startTransition, useActionState, useEffect } from "react";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 import { toast } from "@/components/ui/toast";
-import { type FormState, idleFormState } from "@/lib/validation/form-state";
+import {
+  type FormError,
+  type FormState,
+  idleFormState,
+} from "@/lib/validation/form-state";
 import { applyFieldErrors } from "./field-errors";
 
 interface UseFormActionOptions<Values extends FieldValues> {
@@ -17,6 +21,28 @@ interface UseFormActionOptions<Values extends FieldValues> {
   ) => Promise<FormState<Values>>;
   form: UseFormReturn<Values>;
   successMessage?: string;
+}
+
+// The error half of an action result, shared by forms that manage their
+// own success handling: one toast, and the field errors through the field
+// API.
+// Any action state: the shared error branch, or one of the callers' own
+// non-error statuses.
+type ActionState<Values> =
+  | FormError<Values>
+  | { status: "created" | "held" | "idle" | "success" };
+
+export function useActionError<Values extends FieldValues>(
+  state: ActionState<Values>,
+  form: UseFormReturn<Values>
+): void {
+  useEffect(() => {
+    if (state.status !== "error") {
+      return;
+    }
+    toast.add({ title: state.error, type: "error" });
+    applyFieldErrors(form, state.fieldErrors ?? {});
+  }, [state, form]);
 }
 
 export function useFormAction<Values extends FieldValues>({
@@ -38,13 +64,7 @@ export function useFormAction<Values extends FieldValues>({
     }
   }, [state, successMessage]);
 
-  useEffect(() => {
-    if (state.status !== "error") {
-      return;
-    }
-    toast.add({ title: state.error, type: "error" });
-    applyFieldErrors(form, state.fieldErrors ?? {});
-  }, [state, form]);
+  useActionError(state, form);
 
   return { pending, state, submit };
 }

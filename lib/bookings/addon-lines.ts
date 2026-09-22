@@ -8,7 +8,11 @@ import { type AddOn, type AddOnLine, addonLines } from "@/lib/domain/addons";
 import type { Database } from "@/lib/supabase/database.types";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
-import { findBookableRoom, type SessionClient } from "./new-booking";
+import {
+  type BookableRoomInput,
+  findBookableRoom,
+  type SessionClient,
+} from "./new-booking";
 
 const { errors } = messages.booking;
 
@@ -44,22 +48,6 @@ export async function listRoomAddOns(
     throw new Error(`could not list the room's add-ons: ${error.message}`);
   }
   return data.map((link) => addOnFromRow(link.addons));
-}
-
-// The booking forms' room select needs each room's offered add-ons keyed by
-// room id: one lookup per room, in one place.
-export async function addOnsByRoomId(
-  supabase: SupabaseClient<Database>,
-  roomIds: string[]
-): Promise<Record<string, AddOn[]>> {
-  const lists = await Promise.all(
-    roomIds.map(async (roomId) => listRoomAddOns(supabase, roomId))
-  );
-  const byRoomId: Record<string, AddOn[]> = {};
-  for (const [index, roomId] of roomIds.entries()) {
-    byRoomId[roomId] = lists[index] ?? [];
-  }
-  return byRoomId;
 }
 
 export type AddOnSelection =
@@ -139,7 +127,7 @@ export type RoomAndAddOns =
 
 export async function findRoomAndAddOns(
   supabase: SessionClient,
-  input: { addOnIds: string[]; participantCount: number; roomId: string }
+  input: BookableRoomInput & { addOnIds: string[] }
 ): Promise<RoomAndAddOns> {
   const room = await findBookableRoom(supabase, input);
   if (!room.ok) {

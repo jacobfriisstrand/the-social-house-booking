@@ -31,6 +31,11 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
       label: messages.shell.bookings,
     });
   }
+  links.push({
+    href: "/rooms",
+    icon: DoorOpenIcon,
+    label: messages.shell.rooms,
+  });
   return links;
 }
 
