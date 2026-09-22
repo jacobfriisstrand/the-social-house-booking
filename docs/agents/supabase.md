@@ -65,6 +65,8 @@ The service-role client (`lib/supabase/admin.ts`) may be imported in exactly the
 3. `lib/email/send-mail.ts` and the Resend webhook — `outbound_emails` writes.
 4. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
 5. `lib/companies/admin-actions.ts` — admin company creation, re-invite and email change through the Auth admin API (`inviteUserByEmail`, `updateUserById`), which has no RLS-scoped equivalent (#1). The `companies` row itself is written under the admin's session.
+6. `lib/companies/change-actions.ts` — member company-change request tokens, atomic approval RPCs, Auth email change, and global session invalidation for #70.
+7. `lib/auth/recovery-actions.ts` — the generic forgot-password company lookup before asking Auth to send the recovery email.
 
 One further consumer of the service-role key exists outside this list: `scripts/create-admin.ts` builds its own client in a standalone process (`lib/supabase/admin.ts` is `server-only`, unusable there).
 
@@ -81,3 +83,20 @@ Everything else uses the user's session and RLS.
 ## Auth config as code
 
 `supabase/config.toml` is the source of truth for Auth: `enable_signup = false` (ADR-0008), Send Email Hook and Custom Access Token Hook enabled, built-in email templates unused, OTP and session lifetimes. Pushed by CI with `supabase config push`. Settings that only Pro projects accept (the session inactivity timeout) live under `[remotes.production]`, which the CLI applies only when the linked project is production. Dashboard changes are forbidden.
+
+## Edge Functions
+
+Edge Functions live in `supabase/functions/<name>/` and run on Deno; the deployed function is `send-email`, documented with the email flow in `email.md`. They are excluded from `tsc` and resolve imports through `supabase/functions/deno.json` — TypeScript in there is not covered by `npm run check`, only by their own Vitest-covered pure modules.
+
+Run one locally while the local stack is up:
+
+```bash
+npx supabase functions serve send-email   # → http://127.0.0.1:54321/functions/v1/send-email
+```
+
+- Function env comes from `supabase/functions/.env` (gitignored); `--env-file` overrides. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected for the local project, so the function's own Supabase writes work without extra config.
+- Saves hot-reload; the terminal running `serve` shows the request log.
+- Requests are verified, not open: an unsigned call gets a 403 from the function's Standard Webhooks signature check.
+- To exercise an Auth hook function without cloud Auth, simulate the call: request a real recovery/invite locally (the mail catcher holds it), take the real token from the caught email, sign the JSON payload with `standardwebhooks` (secret = `SEND_EMAIL_HOOK_SECRET` without the `v1,whsec_` prefix) and send `webhook-id`, `webhook-timestamp`, `webhook-signature` headers. The pinned `standardwebhooks` rejects the legacy `svix-*` header names.
+- A rejected send surfaces as 502 from the function with the provider's reason in `outbound_emails.outbound_email_error` — read that row before guessing.
+- The Auth Send Email Hook stays disabled locally (`config.toml`), so real local recovery/invite mail keeps going to the mail catcher; `serve` plus a signed simulated call is the way to run the function itself.

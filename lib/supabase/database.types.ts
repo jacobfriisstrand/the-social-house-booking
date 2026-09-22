@@ -331,6 +331,88 @@ export type Database = {
         }
         Relationships: []
       }
+      company_change_requests: {
+        Row: {
+          company_change_request_after_values: Json
+          company_change_request_before_values: Json
+          company_change_request_company_id: string
+          company_change_request_created_at: string
+          company_change_request_current_email: string
+          company_change_request_id: string
+          company_change_request_proposed_email: string
+          company_change_request_status: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at: string
+        }
+        Insert: {
+          company_change_request_after_values: Json
+          company_change_request_before_values: Json
+          company_change_request_company_id: string
+          company_change_request_created_at?: string
+          company_change_request_current_email: string
+          company_change_request_id?: string
+          company_change_request_proposed_email: string
+          company_change_request_status?: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at?: string
+        }
+        Update: {
+          company_change_request_after_values?: Json
+          company_change_request_before_values?: Json
+          company_change_request_company_id?: string
+          company_change_request_created_at?: string
+          company_change_request_current_email?: string
+          company_change_request_id?: string
+          company_change_request_proposed_email?: string
+          company_change_request_status?: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_change_requests_company_change_request_company_id_fkey"
+            columns: ["company_change_request_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      company_change_tokens: {
+        Row: {
+          company_change_token_consumed_at: string | null
+          company_change_token_created_at: string
+          company_change_token_expires_at: string
+          company_change_token_hash: string
+          company_change_token_id: string
+          company_change_token_kind: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id: string
+        }
+        Insert: {
+          company_change_token_consumed_at?: string | null
+          company_change_token_created_at?: string
+          company_change_token_expires_at: string
+          company_change_token_hash: string
+          company_change_token_id?: string
+          company_change_token_kind: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id: string
+        }
+        Update: {
+          company_change_token_consumed_at?: string | null
+          company_change_token_created_at?: string
+          company_change_token_expires_at?: string
+          company_change_token_hash?: string
+          company_change_token_id?: string
+          company_change_token_kind?: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_change_tokens_company_change_token_request_id_fkey"
+            columns: ["company_change_token_request_id"]
+            isOneToOne: false
+            referencedRelation: "company_change_requests"
+            referencedColumns: ["company_change_request_id"]
+          },
+        ]
+      }
       house_event_rooms: {
         Row: {
           house_event_room_event_id: string
@@ -810,6 +892,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_company_change_request: {
+        Args: { p_request_id: string; p_token_hash: string }
+        Returns: Json
+      }
       assert_booking_room_free: {
         Args: { p_end_at: string; p_room_id: string; p_start_at: string }
         Returns: undefined
@@ -824,9 +910,27 @@ export type Database = {
         Returns: undefined
       }
       booking_blocked_until: { Args: { p_end_at: string }; Returns: string }
+      commit_company_email_change: {
+        Args: { p_request_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      create_company_change_request: {
+        Args: {
+          p_after_values: Json
+          p_before_values: Json
+          p_company_id: string
+          p_current_email: string
+          p_proposed_email: string
+        }
+        Returns: string
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       expire_stale_holds: { Args: never; Returns: number }
       next_booking_number: { Args: never; Returns: string }
+      revoke_company_sessions: {
+        Args: { p_auth_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"
@@ -836,6 +940,13 @@ export type Database = {
         | "confirmed"
         | "cancelled"
         | "expired"
+      company_change_request_status:
+        | "pending"
+        | "awaiting_new_email"
+        | "committed"
+        | "rejected"
+        | "expired"
+      company_change_token_kind: "current_email" | "new_email"
       company_membership_status: "member" | "external"
       outbound_email_kind:
         | "company-invitation"
@@ -848,6 +959,9 @@ export type Database = {
         | "admin-new-booking"
         | "admin-booking-cancelled"
         | "admin-company-completed"
+        | "company-change-review"
+        | "company-change-new-email"
+        | "company-change-completed"
       outbound_email_status:
         | "queued"
         | "sent"
@@ -994,6 +1108,14 @@ export const Constants = {
         "cancelled",
         "expired",
       ],
+      company_change_request_status: [
+        "pending",
+        "awaiting_new_email",
+        "committed",
+        "rejected",
+        "expired",
+      ],
+      company_change_token_kind: ["current_email", "new_email"],
       company_membership_status: ["member", "external"],
       outbound_email_kind: [
         "company-invitation",
@@ -1006,6 +1128,9 @@ export const Constants = {
         "admin-new-booking",
         "admin-booking-cancelled",
         "admin-company-completed",
+        "company-change-review",
+        "company-change-new-email",
+        "company-change-completed",
       ],
       outbound_email_status: [
         "queued",
