@@ -4,7 +4,13 @@
 // admin group only when the session carries the admin role, the content
 // column (mobile menu button, page content, footer line), and the
 // off-canvas sheet on phone. Visual rules: docs/design/DESIGN.md, "Shell".
-import { CalendarPlusIcon, CopyIcon, LogOutIcon, WifiIcon } from "lucide-react";
+import {
+  CalendarPlusIcon,
+  CopyIcon,
+  LogOutIcon,
+  SettingsIcon,
+  WifiIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -84,9 +90,11 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
 }
 
 function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
+  const pathname = usePathname();
+
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="pt-4.5">
         {/* Fixed height: collapsing hides the logo, and the row must not
             shrink or the whole nav shifts up. */}
         <div className="flex h-9 items-center justify-between group-data-[collapsible=icon]:justify-center">
@@ -151,8 +159,23 @@ function ShellSidebar({ isAdmin }: { isAdmin: boolean }) {
           </SidebarGroup>
         ) : null}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="pb-19">
         <SidebarMenu className="gap-1">
+          {isAdmin ? null : (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="text-muted-foreground [&_svg]:size-5"
+                isActive={isShellLinkActive("/settings", pathname)}
+                render={<Link href="/settings" />}
+                tooltip={messages.shell.settings}
+              >
+                <SettingsIcon />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {messages.shell.settings}
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <form action={signOut}>
               <SidebarMenuButton
@@ -241,16 +264,21 @@ export function AppShell({
   wifi: WifiSettings;
 }) {
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider
+      className="h-svh overflow-hidden"
+      defaultOpen={defaultOpen}
+    >
       <CloseMobileSidebarOnNavigate />
       <ShellSidebar isAdmin={isAdmin} />
-      <SidebarInset>
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
+      <SidebarInset className="min-h-0">
+        <div className="flex min-h-0 w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-4 md:p-4">
           <SidebarTrigger
             aria-label={messages.shell.openMenu}
             className="self-start md:hidden"
           />
-          {children}
+          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
+            {children}
+          </div>
           <ShellFooter wifi={wifi} />
         </div>
       </SidebarInset>
