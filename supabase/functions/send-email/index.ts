@@ -126,10 +126,19 @@ const sendWithResend = async (
       reply_to: senderAddress(from),
       template: {
         id: plan.kind,
-        variables: invitationVariables(
-          plan.actionUrl,
-          company.company_display_name
-        ),
+        // The published template declares VALID_MINUTES as a number and
+        // inserts {{{KEY}}} unescaped, so values go through the same
+        // HTML escaping as the invitation (invitationVariables).
+        variables:
+          plan.kind === "password-reset"
+            ? {
+                ...invitationVariables(
+                  plan.actionUrl,
+                  company.company_display_name
+                ),
+                VALID_MINUTES: 60,
+              }
+            : invitationVariables(plan.actionUrl, company.company_display_name),
       },
       to: recipients,
     }),
@@ -172,6 +181,28 @@ const recipientsFor = (plan: SendPlan): Step<string[]> => {
   }
 };
 
+const safeRecipients = async (
+  supabase: SupabaseClient,
+  recipients: string[]
+): Promise<Step<string[]>> => {
+  if (Deno.env.get("APP_ENV") === "production") {
+    return { ok: true, value: recipients };
+  }
+  const { data, error } = await supabase
+    .from("companies")
+    .select("company_email")
+    .in("company_email", recipients);
+  if (error) {
+    return fail(500, `development recipient check failed: ${error.message}`);
+  }
+  return data.length === 0
+    ? { ok: true, value: recipients }
+    : fail(
+        500,
+        "a development redirect recipient matches a real company email"
+      );
+};
+
 const recordResult = async (
   supabase: SupabaseClient,
   outboundEmailId: string,
@@ -194,22 +225,51 @@ const recordResult = async (
   return settled.ok ? json(200, {}) : settled.response;
 };
 
-const deliver = async (plan: SendPlan): Promise<Response> => {
-  const recipients = recipientsFor(plan);
-  if (!recipients.ok) {
-    return recipients.response;
-  }
+const prepareDelivery = async (plan: SendPlan, recipients: string[]) => {
   const supabase = adminClient();
   const company = await loadCompany(supabase, plan.authUserId);
   if (!company.ok) {
-    return company.response;
+    return company;
+  }
+  const safe = await safeRecipients(supabase, recipients);
+  if (!safe.ok) {
+    return safe;
   }
   const log = await logQueued(supabase, plan, company.value.company_id);
   if (!log.ok) {
-    return log.response;
+    return log;
   }
-  const result = await sendWithResend(plan, company.value, recipients.value);
-  return recordResult(supabase, log.value, plan, result);
+  return {
+    ok: true as const,
+    value: {
+      company: company.value,
+      log: log.value,
+      recipients: safe.value,
+      supabase,
+    },
+  };
+};
+
+const deliver = async (plan: SendPlan): Promise<Response> => {
+  const recipientList = recipientsFor(plan);
+  if (!recipientList.ok) {
+    return recipientList.response;
+  }
+  const prepared = await prepareDelivery(plan, recipientList.value);
+  if (!prepared.ok) {
+    return prepared.response;
+  }
+  const result = await sendWithResend(
+    plan,
+    prepared.value.company,
+    prepared.value.recipients
+  );
+  return recordResult(
+    prepared.value.supabase,
+    prepared.value.log,
+    plan,
+    result
+  );
 };
 
 Deno.serve(async (request) => {

@@ -14,41 +14,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FieldGroup } from "@/components/ui/field";
+import { requestCompanyChange } from "@/lib/companies/change-actions";
 import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { saveMasterData } from "@/lib/companies/master-data-actions";
-import {
-  type MasterDataValues,
-  masterDataSchema,
+  type MemberCompanyValues,
+  memberCompanySchema,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
 import { masterDataTextFields } from "./company-field-list";
 
 const labels = messages.companyFields;
-const copy = messages.masterData;
+const copy = messages.companySettings;
 
-// The company's own master data. The login email is shown, not edited
-// (admin changes it in v1.0). On first completion the action redirects home.
+// Canonical member-facing company form. Both /company and /settings use this
+// component and the same approval action.
 export function MasterDataForm({
   defaultValues,
-  email,
 }: {
-  defaultValues: MasterDataValues;
-  email: string;
+  defaultValues: MemberCompanyValues;
 }) {
-  const form = useForm<MasterDataValues>({
+  const form = useForm<MemberCompanyValues>({
     defaultValues,
-    resolver: zodResolver(masterDataSchema),
+    resolver: zodResolver(memberCompanySchema),
   });
   const { pending, submit } = useFormAction({
-    action: saveMasterData,
+    action: requestCompanyChange,
     form,
-    successMessage: copy.saved,
+    successMessage: messages.companySettings.changePending(defaultValues.email),
   });
 
   return (
@@ -60,18 +52,13 @@ export function MasterDataForm({
       <CardContent>
         <form id="master-data-form" onSubmit={submit}>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="field-email">{labels.email}</FieldLabel>
-              <Input
-                disabled
-                id="field-email"
-                name="email"
-                readOnly
-                type="email"
-                value={email}
-              />
-              <FieldDescription>{copy.emailHint}</FieldDescription>
-            </Field>
+            <TextField
+              autoComplete="email"
+              control={form.control}
+              label={labels.email}
+              name="email"
+              type="email"
+            />
             {masterDataTextFields.map((spec) => (
               <TextField control={form.control} key={spec.name} {...spec} />
             ))}
@@ -79,13 +66,14 @@ export function MasterDataForm({
               control={form.control}
               label={labels.billingNotes}
               name="billingNotes"
+              required={false}
             />
           </FieldGroup>
         </form>
       </CardContent>
       <CardFooter>
         <Button form="master-data-form" pending={pending} type="submit">
-          {pending ? copy.submitting : copy.submit}
+          {pending ? copy.saving : copy.save}
         </Button>
       </CardFooter>
     </Card>

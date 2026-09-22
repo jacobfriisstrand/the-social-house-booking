@@ -55,7 +55,9 @@ interface FieldRender<K extends keyof DemoFormValues> {
 function NameField({ field, fieldState }: FieldRender<"name">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="demo-name">{messages.demo.fields.name}</FieldLabel>
+      <FieldLabel htmlFor="demo-name" required>
+        {messages.demo.fields.name}
+      </FieldLabel>
       <Input
         {...field}
         aria-invalid={fieldState.invalid}
@@ -71,7 +73,9 @@ function NameField({ field, fieldState }: FieldRender<"name">) {
 function EmailField({ field, fieldState }: FieldRender<"email">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="demo-email">{messages.demo.fields.email}</FieldLabel>
+      <FieldLabel htmlFor="demo-email" required>
+        {messages.demo.fields.email}
+      </FieldLabel>
       <Input
         {...field}
         aria-invalid={fieldState.invalid}
@@ -88,7 +92,7 @@ function EmailField({ field, fieldState }: FieldRender<"email">) {
 function MessageField({ field, fieldState }: FieldRender<"message">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="demo-message">
+      <FieldLabel htmlFor="demo-message" required={false}>
         {messages.demo.fields.message}
       </FieldLabel>
       <Textarea

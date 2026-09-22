@@ -55,6 +55,30 @@ const developmentRecipients = (): string[] => {
     .filter(Boolean);
 };
 
+const assertDevelopmentRecipientsAreSafe = async (
+  admin: ReturnType<typeof createAdminClient>,
+  companyId: string | undefined,
+  recipients: string[]
+): Promise<void> => {
+  const companies = await admin
+    .from("companies")
+    .select("company_id, company_email")
+    .in("company_email", recipients);
+  if (companies.error) {
+    throw new Error(
+      `sendMail: could not verify development recipients: ${companies.error.message}`
+    );
+  }
+  const foreignCompanyMatch = companies.data.some(
+    (company) => company.company_id !== companyId
+  );
+  if (foreignCompanyMatch) {
+    throw new Error(
+      "sendMail: a development redirect recipient matches a real company email"
+    );
+  }
+};
+
 const redactRecipient = (text: string, recipient: string): string =>
   recipient ? text.replaceAll(recipient, "[recipient]") : text;
 
@@ -84,6 +108,10 @@ export const sendMail = async ({
   const resend = resendClient();
   const recipients =
     env.APP_ENV === "development" ? developmentRecipients() : [to];
+  const admin = createAdminClient();
+  if (env.APP_ENV === "development") {
+    await assertDevelopmentRecipientsAreSafe(admin, companyId, recipients);
+  }
   const renderedSubject = renderSubject(template.subject, parsedVariables);
   const subject =
     env.APP_ENV === "development"
@@ -93,7 +121,6 @@ export const sendMail = async ({
   // The log row goes in before the send: the once-only index
   // (reminder, booking-confirmation) aborts a double send before Resend is
   // called, so retries are safe.
-  const admin = createAdminClient();
   const insert = await admin
     .from("outbound_emails")
     .insert({
