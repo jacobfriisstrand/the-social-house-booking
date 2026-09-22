@@ -68,6 +68,10 @@ function CloseMobileSidebarOnNavigate() {
   return null;
 }
 
+// Every shell link is a gated dynamic route: prefetching them all on render
+// makes each page load SSR the whole sidebar server-side (six extra renders
+// right after login, on routes the user has not clicked). They fetch on
+// click instead.
 function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
   const pathname = usePathname();
   const Icon = link.icon;
@@ -77,7 +81,7 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
       <SidebarMenuButton
         className="text-muted-foreground [&_svg]:size-5"
         isActive={isShellLinkActive(link.href, pathname)}
-        render={<Link href={link.href} />}
+        render={<Link href={link.href} prefetch={false} />}
         tooltip={link.label}
       >
         <Icon />
@@ -184,7 +188,7 @@ function ShellSidebar({
               <SidebarMenuButton
                 className="text-muted-foreground [&_svg]:size-5"
                 isActive={isShellLinkActive("/settings", pathname)}
-                render={<Link href="/settings" />}
+                render={<Link href="/settings" prefetch={false} />}
                 tooltip={messages.shell.settings}
               >
                 <SettingsIcon />
