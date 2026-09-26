@@ -1,9 +1,11 @@
 "use client";
 
-// The booking dialog (DESIGN.md "Booking dialog", #4): large, full-screen
-// on phone; header with the room name, a stats band, then the form. "Book
-// nu" swaps the body to the verification step (#2); success closes the
-// dialog, toasts, and goes to the booking-complete page.
+// The booking dialog (DESIGN.md "Booking dialog", #4, #81): one height from
+// md up, full-screen on phone. The room name, the step row, then the
+// current step with its navigation pinned under it. "Book nu" on the
+// overview step creates the hold and swaps the body to the verification
+// step (#2); success closes the dialog, toasts, and goes to the
+// booking-complete page.
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
@@ -16,40 +18,13 @@ import {
 import type { Hold } from "@/lib/bookings/actions";
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import type { BookingViewer } from "@/lib/bookings/viewer";
-import { formatKroner } from "@/lib/format";
 import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
-import { BookingForm, type DialogRoom } from "./booking-form";
+import { BookingForm, type DialogRoom, FORM_STEP_COUNT } from "./booking-form";
+import { BookingSteps } from "./booking-steps";
 import { VerificationStep } from "./verification-step";
 
-const copy = messages.booking.dialog;
-
 type Phase = { kind: "form" } | { hold: Hold; kind: "verify" };
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function StatsRow({ room }: { room: DialogRoom }) {
-  return (
-    <div className="grid grid-cols-3 gap-4 rounded-lg bg-muted p-4">
-      <Stat
-        label={messages.rooms.fields.capacity}
-        value={messages.rooms.capacityChip(room.capacity)}
-      />
-      <Stat
-        label={copy.pricePerHour}
-        value={`${formatKroner(room.hourlyPriceOre)}${messages.rooms.perHourSuffix}`}
-      />
-      <Stat label={copy.location} value={room.location ?? "–"} />
-    </div>
-  );
-}
 
 export interface BookingDialogProps {
   initialDate: string;
@@ -72,13 +47,16 @@ export function BookingDialog({
 }: BookingDialogProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
-  // Every close returns the dialog to the form, so the next "Book nu"
-  // never reopens on a finished verification step. The trigger opens the
-  // dialog directly, which is why the reset sits on close, not on open.
+  const [step, setStep] = useState(0);
+  // Every close returns the dialog to the first step of the form, so the
+  // next "Book nu" never reopens mid-flow or on a finished verification
+  // step. The trigger opens the dialog directly, which is why the reset
+  // sits on close, not on open.
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!next) {
         setPhase({ kind: "form" });
+        setStep(0);
       }
       onOpenChange(next);
     },
@@ -101,19 +79,22 @@ export function BookingDialog({
       complete(heldBookingId);
     }
   }, [complete, heldBookingId]);
+  const current = phase.kind === "verify" ? FORM_STEP_COUNT : step;
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
       {/* A large dialog: a slower fade with a slight rise reads smoother
-          than the default quick zoom, opening and closing. */}
-      <DialogContent className="data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4 max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 duration-300 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:content-start max-md:rounded-none sm:max-w-5xl">
+          than the default quick zoom, opening and closing. The height is
+          fixed from md up so the dialog keeps its size between steps, and
+          every step fits inside it: only the start-time list scrolls. */}
+      <DialogContent className="data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4 flex flex-col p-6 duration-300 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-3xl md:h-[min(40rem,calc(100dvh-2rem))]">
         <DialogHeader>
           <DialogTitle className="text-xl">{room.name}</DialogTitle>
           <DialogDescription className="sr-only">
             {messages.booking.search.description}
           </DialogDescription>
         </DialogHeader>
-        <StatsRow room={room} />
+        <BookingSteps current={current} verifies={viewer.kind === "company"} />
         {phase.kind === "verify" ? (
           <VerificationStep
             hold={phase.hold}
@@ -126,8 +107,10 @@ export function BookingDialog({
             initialPeriods={initialPeriods}
             onCreated={complete}
             onHeld={handleHeld}
+            onStepChange={setStep}
             prefill={prefill}
             room={room}
+            step={step}
             viewer={viewer}
           />
         )}

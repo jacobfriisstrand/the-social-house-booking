@@ -184,19 +184,27 @@ export function VerificationStep({
   const disabled = pending || resending || expired;
 
   return (
-    <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
-      <div className="flex flex-col gap-2">
-        <h2 className="font-medium text-lg">{copy.title}</h2>
-        <p>{copy.sentTo(hold.bookerEmail)}</p>
+    <form
+      className="flex min-h-0 flex-1 flex-col gap-6"
+      noValidate
+      onSubmit={submit}
+    >
+      {/* The step's body scrolls inside the dialog's fixed height; the
+          buttons stay in view under it. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
+        {/* The code is the step: centred in the space above the price. The
+            countdown belongs to the code, directly under it. */}
+        <div className="flex flex-1 flex-col justify-center gap-6">
+          <p className="text-center">{copy.sentTo(hold.bookerEmail)}</p>
+          <FieldGroup className="gap-2">
+            <CodeField control={form.control} disabled={expired} />
+            <HoldCountdown secondsLeft={secondsLeft} />
+          </FieldGroup>
+        </div>
+        {/* The frozen price overview (#6): exactly what confirmation bills,
+            read from the hold's snapshot columns, not recomputed. */}
+        <PriceOverview model={hold.price} />
       </div>
-      {/* The countdown belongs to the code: centred directly under it. */}
-      <FieldGroup className="gap-2">
-        <CodeField control={form.control} disabled={expired} />
-        <HoldCountdown secondsLeft={secondsLeft} />
-      </FieldGroup>
-      {/* The frozen price overview (#6): exactly what confirmation bills,
-          read from the hold's snapshot columns, not recomputed. */}
-      <PriceOverview model={hold.price} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <PendingButton
           disabled={disabled}

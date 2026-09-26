@@ -103,14 +103,26 @@ export const messages = {
     confirmed: "Booking bekræftet",
     dialog: {
       addonFree: "Gratis",
-      bookerSection: "Ansvarlig booker",
+      back: "Tilbage",
+      bookerIntro:
+        "Bookingen skal have en ansvarlig person, som vi kan kontakte om mødet.",
+      bookerVerify:
+        "Vi sender en sekscifret kode til arbejdsemailen, som bekræfter bookingen.",
       calendarLabel: "Vælg dato",
       endLabel: "Sluttidspunkt",
       endPlaceholder: "Vælg sluttidspunkt",
-      location: "Placering",
+      next: "Næste",
       noStartSlots: "Ingen ledige starttidspunkter den dag.",
+      overview: {
+        addOns: "Tilkøb",
+        booker: "Ansvarlig booker",
+        company: "Virksomhed",
+        date: "Dato",
+        noAddOns: "Ingen",
+        participants: "Deltagere",
+        time: "Tidspunkt",
+      },
       participantsHint: (max: number) => `Maks. ${max}`,
-      pricePerHour: "Pris pr. time",
       readAbout: (name: string) => `Læs om ${name}`,
       slotStatus: {
         blocked: "Optaget",
@@ -119,11 +131,24 @@ export const messages = {
       },
       startLabel: "Starttidspunkt",
       startListLabel: "Starttidspunkter",
+      stepOf: (step: number, total: number) => `Trin ${step} af ${total}`,
+      steps: {
+        booker: "Booker",
+        confirm: "Bekræft",
+        extras: "Tilkøb",
+        overview: "Oversigt",
+        time: "Tidspunkt",
+      },
+      stepsLabel: "Trin i bookingen",
+      stepTitles: {
+        booker: "Ansvarlig booker",
+        confirm: "Bekræft din booking",
+        extras: "Vælg tilkøb",
+        overview: "Oversigt over din booking",
+        time: "Vælg dato og tidspunkt",
+      },
       submit: "Book nu",
       submitting: "Opretter …",
-      summary: (weekday: string, date: string, start: string, end: string) =>
-        `Dit møde starter ${weekday} ${date} kl. ${start} og slutter kl. ${end}.`,
-      summaryEmpty: "Vælg dato, starttidspunkt og sluttidspunkt.",
       terms: "Jeg accepterer bookingbetingelserne",
     },
     errors: {
@@ -196,7 +221,6 @@ export const messages = {
       resending: "Sender …",
       sentTo: (email: string) =>
         `Vi har sendt en sekscifret kode til ${email}. Indtast den her for at gennemføre bookingen.`,
-      title: "Bekræft din booking",
     },
   },
   bookings: {
@@ -233,7 +257,6 @@ export const messages = {
     noCancellationFee: "-",
     noDiscount: "Ingen",
     quantity: (quantity: number) => `${quantity} stk.`,
-    roomRental: "Lokaleleje",
     status: {
       cancelled: "Aflyst",
       confirmed: "Bekræftet",

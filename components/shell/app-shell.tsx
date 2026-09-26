@@ -279,7 +279,10 @@ export function AppShell({
       <CloseMobileSidebarOnNavigate />
       <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
       <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
-      <SidebarInset>
+      {/* min-w-0: the inset is a flex item next to the sidebar, and a page
+          whose content has a minimum width (a wide table) must not widen
+          it past the viewport; the content scrolls inside instead. */}
+      <SidebarInset className="min-w-0">
         {/* From tablet up the column is exactly the viewport: title, panel
             and footer line stay in view and the panel scrolls inside
             (DESIGN.md "Shell"). Phone keeps the document scroll. No left

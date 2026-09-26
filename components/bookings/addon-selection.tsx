@@ -9,7 +9,7 @@
 // is ordered only through The Social House, and the acceptance timestamp
 // is what Mail 4 (#11) repeats. The booking dialog (#4) reuses these
 // fields.
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   type Control,
   type FieldValues,
@@ -48,15 +48,29 @@ export interface AddOnView {
 
 // "Læs om House Host": the description folds out under the row. The
 // trigger's chevron sits right after the text instead of at the far edge.
+// The list keeps one description open at a time, so the step fits the
+// booking dialog without scrolling (2026-09-26 in #81).
 function AddOnAbout({
   description,
   name,
+  onOpenChange,
+  open,
 }: {
   description: string;
   name: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
 }) {
+  const handleValueChange = useCallback(
+    (value: unknown[]) => onOpenChange(value.length > 0),
+    [onOpenChange]
+  );
   return (
-    <Accordion className="pl-7">
+    <Accordion
+      className="pl-7"
+      onValueChange={handleValueChange}
+      value={open ? ["about"] : []}
+    >
       <AccordionItem value="about">
         <AccordionTrigger className="justify-start! flex-none! gap-1 py-1 font-normal text-muted-foreground text-xs **:data-[slot=accordion-trigger-icon]:ml-0!">
           {messages.booking.dialog.readAbout(name)}
@@ -79,18 +93,30 @@ interface AddOnCheckboxListProps<Values extends FieldValues> {
 interface AddOnRowProps {
   addOn: AddOnView;
   checked: boolean;
+  onAboutChange: (addonId: string | null) => void;
   onChange: (addonId: string, checked: boolean) => void;
+  open: boolean;
 }
 
 // One add-on row: the checkbox, the price chip ("+ 500 kr", "Gratis",
 // "+ 225 kr / person", DESIGN.md), and the fold-out description.
-function AddOnRow({ addOn, checked, onChange }: AddOnRowProps) {
+function AddOnRow({
+  addOn,
+  checked,
+  onAboutChange,
+  onChange,
+  open,
+}: AddOnRowProps) {
   const id = `add-on-${addOn.addonId}`;
   const handleCheckedChange = useCallback(
     (isChecked: boolean): void => {
       onChange(addOn.addonId, isChecked);
     },
     [onChange, addOn.addonId]
+  );
+  const handleAboutChange = useCallback(
+    (isOpen: boolean): void => onAboutChange(isOpen ? addOn.addonId : null),
+    [onAboutChange, addOn.addonId]
   );
 
   return (
@@ -109,7 +135,12 @@ function AddOnRow({ addOn, checked, onChange }: AddOnRowProps) {
         </FieldLabel>
       </div>
       {addOn.description ? (
-        <AddOnAbout description={addOn.description} name={addOn.name} />
+        <AddOnAbout
+          description={addOn.description}
+          name={addOn.name}
+          onOpenChange={handleAboutChange}
+          open={open}
+        />
       ) : null}
     </Field>
   );
@@ -123,6 +154,8 @@ export function AddOnCheckboxList<Values extends FieldValues>({
 }: AddOnCheckboxListProps<Values>) {
   const { field } = useController({ control, name });
   const selected = Array.isArray(field.value) ? (field.value as string[]) : [];
+  // The add-on whose description is folded out; opening another closes it.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const toggle = useCallback(
     (addonId: string, checked: boolean): void => {
@@ -148,7 +181,9 @@ export function AddOnCheckboxList<Values extends FieldValues>({
             addOn={addOn}
             checked={selected.includes(addOn.addonId)}
             key={addOn.addonId}
+            onAboutChange={setOpenId}
             onChange={toggle}
+            open={openId === addOn.addonId}
           />
         ))}
       </div>
