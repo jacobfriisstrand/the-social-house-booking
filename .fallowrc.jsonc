@@ -31,6 +31,7 @@
       ]
     },
     { "file": "components/ui/alert.tsx", "exports": ["AlertAction"] },
+    { "file": "components/ui/table.tsx", "exports": ["TableFooter"] },
     {
       "file": "components/ui/breadcrumb.tsx",
       "exports": ["BreadcrumbEllipsis"]

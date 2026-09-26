@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { DetailRow } from "@/components/bookings/detail-row";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,23 +50,6 @@ async function loadConfirmedBooking(supabase: Supabase, bookingId: string) {
     .eq("room_id", booking.booking_room_id)
     .maybeSingle();
   return { ...booking, roomName: room?.room_name ?? "" };
-}
-
-function Detail({
-  label,
-  mono = false,
-  value,
-}: {
-  label: string;
-  mono?: boolean;
-  value: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b py-2 last:border-b-0">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={mono ? "font-mono" : "tabular-nums"}>{value}</dd>
-    </div>
-  );
 }
 
 // Members go on to their bookings; an admin has no company and no member
@@ -126,26 +110,29 @@ export default async function BookingConfirmedPage({
           </CardHeader>
           <CardContent>
             <dl className="flex flex-col">
-              <Detail
+              <DetailRow
                 label={copy.bookingNumber}
                 mono
                 value={booking.booking_number}
               />
-              <Detail label={copy.room} value={booking.roomName} />
-              <Detail
+              <DetailRow label={copy.room} value={booking.roomName} />
+              <DetailRow
                 label={copy.date}
                 value={formatDate(booking.booking_start_at)}
               />
-              <Detail
+              <DetailRow
                 label={copy.time}
                 value={`${formatTime(booking.booking_start_at)} - ${formatTime(booking.booking_end_at)}`}
               />
-              <Detail
+              <DetailRow
                 label={copy.participants}
                 value={`${booking.booking_participant_count} ${messages.rooms.persons}`}
               />
-              <Detail label={copy.booker} value={booking.booking_booker_name} />
-              <Detail
+              <DetailRow
+                label={copy.booker}
+                value={booking.booking_booker_name}
+              />
+              <DetailRow
                 label={copy.total}
                 value={`${formatOre(booking.booking_expected_total_ore)} ${messages.format.exclVat}`}
               />

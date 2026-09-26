@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Card, CardFooter } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -13,7 +13,6 @@ import {
   TableBody,
   TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -42,11 +41,7 @@ function BookingStatusBadge({ status }: { status: BookingOverviewStatus }) {
   if (status === "pending_verification") {
     return <Badge variant="warning">{copy.status.pendingVerification}</Badge>;
   }
-  return (
-    <span className="text-muted-foreground text-xs">
-      {copy.status.confirmed}
-    </span>
-  );
+  return <span className="text-muted-foreground">{copy.status.confirmed}</span>;
 }
 
 function InvoicingStatusBadge({ status }: { status: BookingInvoicingStatus }) {
@@ -79,32 +74,22 @@ function BookingDateCells({ booking }: { booking: BookingOverviewRow }) {
   );
 }
 
+// One value per cell, in the table's one text size: the total, and the
+// discount as its percentage (decided 2026-09-23 while reviewing #81).
 function BookingPriceCell({ booking }: { booking: BookingOverviewRow }) {
   return (
-    <TableCell className="text-right">
-      <span className="block font-medium text-base tabular-nums">
-        {formatOre(booking.price.totalOre)}
-      </span>
-      <span className="block text-muted-foreground text-xs">
-        {copy.roomRental}: {formatOre(booking.price.roomMemberTotalOre)}
-      </span>
+    <TableCell className="text-right tabular-nums">
+      {formatOre(booking.price.totalOre)}
     </TableCell>
   );
 }
 
 function BookingDiscountCell({ booking }: { booking: BookingOverviewRow }) {
-  if (!booking.price.showSavings) {
-    return <TableCell className="text-right">{copy.noDiscount}</TableCell>;
-  }
-
   return (
-    <TableCell className="text-right">
-      <span className="block tabular-nums">
-        {booking.price.discountPercent} %
-      </span>
-      <span className="block text-success text-xs tabular-nums">
-        {formatOre(-booking.price.savingsOre)}
-      </span>
+    <TableCell className="text-right tabular-nums">
+      {booking.price.showSavings
+        ? `${booking.price.discountPercent} %`
+        : copy.noDiscount}
     </TableCell>
   );
 }
@@ -144,28 +129,36 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   );
 }
 
+// The card fills the panel whatever the row count and never outgrows it:
+// the rows scroll inside the card, the header row staying at the top and
+// the booking number at the left. The "ekskl. moms" line is a card footer
+// outside the scrolling table, so it stays on the card's bottom edge and
+// never slides off to the right with the columns. The shell and the tabs
+// never move (decided 2026-09-23 and 2026-09-26 while reviewing #81).
+// Rows and columns are both separated by 1px lines in the border token,
+// the near-white hairline every other line uses. The header row sits on
+// the table-header ground (the panel is already muted, so muted would
+// not read as a header), opaque so nothing shows through it while the
+// rows scroll under it, and every title is left-aligned, numeric columns
+// included (2026-09-26 in #81).
 function BookingTable({ bookings }: { bookings: BookingOverviewRow[] }) {
   return (
-    <Card className="py-0">
-      <Table className="min-w-[78rem]">
+    <Card className="min-h-0 min-w-0 flex-1 gap-0 py-0 *:data-[slot=table-container]:grow">
+      <Table className="min-w-[78rem] [&_tr]:divide-x">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-20 bg-table-header">
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-36 bg-card">
+            <TableHead className="sticky left-0 z-10 w-36 bg-table-header">
               {copy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.room}</TableHead>
             <TableHead>{copy.columns.date}</TableHead>
             <TableHead>{copy.columns.time}</TableHead>
             <TableHead>{copy.columns.booker}</TableHead>
-            <TableHead className="text-right">{copy.columns.price}</TableHead>
-            <TableHead className="text-right">
-              {copy.columns.discount}
-            </TableHead>
+            <TableHead>{copy.columns.price}</TableHead>
+            <TableHead>{copy.columns.discount}</TableHead>
             <TableHead>{copy.columns.addOns}</TableHead>
-            <TableHead className="text-right">
-              {copy.columns.cancellationFee}
-            </TableHead>
+            <TableHead>{copy.columns.cancellationFee}</TableHead>
             <TableHead>{copy.columns.status}</TableHead>
           </TableRow>
         </TableHeader>
@@ -190,17 +183,10 @@ function BookingTable({ bookings }: { bookings: BookingOverviewRow[] }) {
             </TableRow>
           ))}
         </TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell
-              className="text-right text-muted-foreground text-xs"
-              colSpan={10}
-            >
-              {copy.allPricesExclVat}
-            </TableCell>
-          </TableRow>
-        </TableFooter>
       </Table>
+      <CardFooter className="justify-end py-2 text-muted-foreground text-xs">
+        {copy.allPricesExclVat}
+      </CardFooter>
     </Card>
   );
 }
@@ -213,8 +199,8 @@ function BookingEmptyState({
   title: string;
 }) {
   return (
-    <Card className="py-0">
-      <Empty className="min-h-64 border-0 py-16">
+    <Card className="flex flex-1 flex-col py-0">
+      <Empty className="flex-1 border-0 py-16">
         <EmptyHeader>
           <EmptyTitle>{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
@@ -246,35 +232,35 @@ export function BookingOverview({
   bookings: BookingOverviewLists<BookingOverviewRow>;
 }) {
   return (
-    <Tabs className="w-full" defaultValue="all">
+    <Tabs className="min-h-0 w-full flex-1" defaultValue="all">
       <TabsList className="w-full">
         <TabsTrigger value="all">{copy.tabs.all}</TabsTrigger>
         <TabsTrigger value="upcoming">{copy.tabs.upcoming}</TabsTrigger>
         <TabsTrigger value="past">{copy.tabs.past}</TabsTrigger>
         <TabsTrigger value="cancelled">{copy.tabs.cancelled}</TabsTrigger>
       </TabsList>
-      <TabsContent className="pt-4" value="all">
+      <TabsContent className="flex min-h-0 flex-col pt-4" value="all">
         <BookingPanel
           bookings={bookings.all}
           emptyDescription={copy.empty.allDescription}
           emptyTitle={copy.empty.allTitle}
         />
       </TabsContent>
-      <TabsContent className="pt-4" value="upcoming">
+      <TabsContent className="flex min-h-0 flex-col pt-4" value="upcoming">
         <BookingPanel
           bookings={bookings.upcoming}
           emptyDescription={copy.empty.upcomingDescription}
           emptyTitle={copy.empty.upcomingTitle}
         />
       </TabsContent>
-      <TabsContent className="pt-4" value="past">
+      <TabsContent className="flex min-h-0 flex-col pt-4" value="past">
         <BookingPanel
           bookings={bookings.past}
           emptyDescription={copy.empty.pastDescription}
           emptyTitle={copy.empty.pastTitle}
         />
       </TabsContent>
-      <TabsContent className="pt-4" value="cancelled">
+      <TabsContent className="flex min-h-0 flex-col pt-4" value="cancelled">
         <BookingPanel
           bookings={bookings.cancelled}
           emptyDescription={copy.empty.cancelledDescription}
