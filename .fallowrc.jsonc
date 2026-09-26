@@ -95,6 +95,9 @@
   // Kept intentionally before first use, not dead code:
   // - lib/format.ts: formatDateTime lands with the booking overview (#8)
   "ignoreFindings": ["lib/format.ts"],
+  // netlify-cli is a manual CLI tool (docs/agents/deploy.md), never imported
+  // from source, so the unused-devDependency finding is a false positive.
+  "ignoreDependencies": ["netlify-cli"],
   "duplicates": {
     // :root and .dark repeat the generated shadcn token values on purpose;
     // .dark exists only so components compile (DESIGN.md: no dark mode in v1).

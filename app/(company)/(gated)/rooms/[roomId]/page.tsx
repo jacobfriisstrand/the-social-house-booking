@@ -183,23 +183,25 @@ export default async function RoomPage({
   params: Promise<{ roomId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ roomId }, query] = await Promise.all([params, searchParams]);
-  const prefill = parseRoomPrefill(query);
-  const session = await requireSession();
+  const [{ roomId }, query, session] = await Promise.all([
+    params,
+    searchParams,
+    requireSession(),
+  ]);
   const supabase = await createClient();
-  const [room, viewer] = await Promise.all([
+  const prefill = parseRoomPrefill(query);
+  const initialDate = prefill.dato ?? cphDate(new Date());
+  // The day periods depend only on the roomId from the URL, not on the room
+  // row, so they load in parallel with the room and the viewer — the route
+  // was paying a third sequential round trip for them.
+  const [room, viewer, initialPeriods] = await Promise.all([
     findPublicRoom(supabase, roomId),
     getBookingViewer(supabase, session),
+    listRoomDayPeriods(supabase, roomId, initialDate),
   ]);
   if (!room) {
     notFound();
   }
-  const initialDate = prefill.dato ?? cphDate(new Date());
-  const initialPeriods = await listRoomDayPeriods(
-    supabase,
-    room.roomId,
-    initialDate
-  );
   const discountPercent = viewerDiscount(viewer);
 
   return (

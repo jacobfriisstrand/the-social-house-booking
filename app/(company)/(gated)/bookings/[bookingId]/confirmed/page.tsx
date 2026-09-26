@@ -30,13 +30,14 @@ const bookingIdSchema = z.guid();
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 // The confirmed booking as the viewer may see it (RLS: the company's own,
-// or any for an admin), with its room's name. A hold, a cancelled booking
+// or any for an admin), with its room's name embedded in the same query —
+// one round trip instead of booking-then-room. A hold, a cancelled booking
 // and another company's booking all read as not found.
 async function loadConfirmedBooking(supabase: Supabase, bookingId: string) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "booking_number, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_expected_total_ore"
+      "booking_number, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_expected_total_ore, rooms(room_name)"
     )
     .eq("booking_id", bookingId)
     .eq("booking_status", "confirmed")
@@ -44,12 +45,7 @@ async function loadConfirmedBooking(supabase: Supabase, bookingId: string) {
   if (!booking) {
     return null;
   }
-  const { data: room } = await supabase
-    .from("rooms")
-    .select("room_name")
-    .eq("room_id", booking.booking_room_id)
-    .maybeSingle();
-  return { ...booking, roomName: room?.room_name ?? "" };
+  return { ...booking, roomName: booking.rooms?.room_name ?? "" };
 }
 
 // Members go on to their bookings; an admin has no company and no member

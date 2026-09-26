@@ -21,7 +21,15 @@
   APP_ENV = "development"
   NEXT_PUBLIC_SITE_URL = "https://develop--the-social-house-booking.netlify.app"
 
-# pull requests: one URL per PR, so NEXT_PUBLIC_SITE_URL is not fixed here and
-# lib/env.ts falls back to Netlify's DEPLOY_PRIME_URL
+# pull requests: one URL per PR, so NEXT_PUBLIC_SITE_URL cannot be fixed
+# here. NEXT_PUBLIC_* keys are inlined into the server and edge bundles at
+# build time, and Netlify's DEPLOY_PRIME_URL exists only in the build —
+# neither the OpenNext function runtime nor the edge runtime exposes it, so
+# the runtime fallback in lib/env.ts never resolves and every deploy preview
+# crashed with "Invalid environment: NEXT_PUBLIC_SITE_URL". Derive the URL
+# in the build command so it is inlined per PR, the same mechanism the
+# production and branch contexts get from their static environment blocks.
+[context.deploy-preview]
+  command = 'NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-$DEPLOY_PRIME_URL}" npm run build'
 [context.deploy-preview.environment]
   APP_ENV = "development"

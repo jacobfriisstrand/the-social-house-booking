@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Netlify CLI link state
 .netlify
+
+# Local artifact from `netlify serve` edge runtime
+deno.lock
