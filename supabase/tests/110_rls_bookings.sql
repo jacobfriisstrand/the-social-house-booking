@@ -70,9 +70,17 @@ select lives_ok(
 
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
-select is((select count(*) from public.bookings), 2::bigint, 'admin sees all bookings');
+select is(
+  (select count(*) from public.bookings where booking_company_id in (
+    '22222222-2222-2222-2222-222222222001', '22222222-2222-2222-2222-222222222002')),
+  2::bigint,
+  'admin sees all bookings (fixture companies — seed.sql carries its own rows)');
 select is((select booking_booker_name from public.bookings where booking_id = '66666666-6666-6666-6666-666666666001'), 'Peter', 'foreign booking was not modified');
-select is((select count(*) from public.booking_addons), 1::bigint, 'admin sees all booking add-ons');
+select is(
+  (select count(*) from public.booking_addons where booking_addon_booking_id in (
+    '66666666-6666-6666-6666-666666666001', '66666666-6666-6666-6666-666666666002')),
+  1::bigint,
+  'admin sees all booking add-ons (fixture bookings)');
 select is((select count(*) from public.outbound_emails), 3::bigint, 'admin sees the whole send log incl. system mail');
 select lives_ok(
   'insert into public.bookings (booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values (''B-TEST-0004'', ''22222222-2222-2222-2222-222222222002'', ''44444444-4444-4444-4444-444444444001'', now(), now() + interval ''1 hour'', 2::bigint, ''X'', ''x@x.dk'', ''+45'', 1)',

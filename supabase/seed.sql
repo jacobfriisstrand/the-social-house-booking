@@ -5,6 +5,11 @@
 --   admin@thesocialhouse.dk      app_role = admin
 --   kontakt@rituals.dk           member company, 50% discount
 --   booking@nordicevents.dk      external company, 0% discount
+--
+-- Bookings: each company gets past and upcoming rows (incl. cancelled ones
+-- with fees) so the overview, sheet, and cancellation flows have realistic
+-- data after every reset. Pending holds are not seeded — a real hold lives
+-- only minutes — so QA creates its own through the booking flow.
 
 begin;
 insert into auth.users (
@@ -191,6 +196,108 @@ insert into public.room_addons (room_addon_room_id, room_addon_addon_id) values
   ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d4'),
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d1'),
   ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000d3');
+
+-- ---------------------------------------------------------------------------
+-- Demo bookings (#5): past and upcoming rows for each company so the booking
+-- overview, the sheet, and the cancellation flows carry realistic data after
+-- every reset. Numbers come from the bookings_assign_number trigger; add-on
+-- lines are written while the booking is still pending and freeze with the
+-- confirmation (ADR-0005), mirroring the app's write order. Dates are
+-- relative to the reset, so "upcoming" stays upcoming; an offset lands on
+-- whatever weekday follows the reset, and only the slot picker enforces
+-- opening hours — a seeded row outside them is cosmetic.
+--
+-- Bookers: Peter Pedersen and Mette Lund (Rituals, 50 %), Ali Hassan
+-- (Nordic Events, 0 %). Fees follow ADR-0006 on the member price:
+--   e3  cancelled the same morning              → 100 % = 80 000 øre
+--   e4  cancelled two days ahead                → 50 %  = 10 000 øre
+--   e9  cancelled five days ahead               → free tier, 0 øre
+--   f3  cancelled by admin inside 24 h, waived  → computed 100 %
+
+create function pg_temp.local_at(p_days integer, p_time time)
+returns timestamptz
+language sql
+immutable
+as $$
+  select (current_date + p_days + p_time) at time zone 'Europe/Copenhagen';
+$$;
+
+insert into public.bookings (
+  booking_id, booking_company_id, booking_room_id, booking_status,
+  booking_start_at, booking_end_at, booking_participant_count,
+  booking_booker_name, booking_booker_email, booking_booker_phone,
+  booking_reference, booking_practical_notes, booking_internal_note,
+  booking_room_price_ore, booking_discount_percent,
+  booking_addon_total_ore, booking_expected_total_ore,
+  booking_catering_accepted_at, booking_hold_expires_at,
+  booking_cancelled_at, booking_cancellation_fee_ore,
+  booking_cancelled_by, booking_cancellation_fee_waived
+) values
+  -- Rituals, past: invoiced workshop with House Service and Lunch for 8.
+  ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c1', 'pending_verification', pg_temp.local_at(-21, time '10:00'), pg_temp.local_at(-21, time '12:00'), 8, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', 'PO-4411', 'Kaffe og vand til mødet.', null, 160000, 50, 230000, 310000, now(), now() + interval '7 days', null, null, null, false),
+  -- Rituals, past: ordinary member meeting.
+  ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c2', 'confirmed', pg_temp.local_at(-14, time '09:00'), pg_temp.local_at(-14, time '11:00'), 5, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', null, null, null, 80000, 50, 0, 40000, now(), null, null, null, null, false),
+  -- Rituals, past: cancelled the same morning, full fee.
+  ('00000000-0000-0000-0000-0000000000e3', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c1', 'cancelled', pg_temp.local_at(-7, time '13:00'), pg_temp.local_at(-7, time '15:00'), 6, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', null, null, null, 160000, 50, 0, 80000, now(), null, pg_temp.local_at(-7, time '09:00'), 80000, 'member', false),
+  -- Rituals, past: cancelled two days ahead, half fee.
+  ('00000000-0000-0000-0000-0000000000e4', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c2', 'cancelled', pg_temp.local_at(-7, time '13:00'), pg_temp.local_at(-7, time '14:00'), 4, 'Mette Lund', 'mette@rituals.dk', '+45 2010 2031', null, null, null, 40000, 50, 0, 20000, now(), null, pg_temp.local_at(-9, time '13:00'), 10000, 'member', false),
+  -- Rituals, past: cancelled five days ahead — beyond 72 hours, so no fee.
+  ('00000000-0000-0000-0000-0000000000e9', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c2', 'cancelled', pg_temp.local_at(-14, time '13:00'), pg_temp.local_at(-14, time '15:00'), 5, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', null, null, null, 80000, 50, 0, 40000, now(), null, pg_temp.local_at(-19, time '10:00'), 0, 'member', false),
+  -- Nordic Events, past: training day with Lunch for 12.
+  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c1', 'pending_verification', pg_temp.local_at(-14, time '09:00'), pg_temp.local_at(-14, time '10:30'), 12, 'Ali Hassan', 'ali@nordicevents.dk', '+45 3020 3040', null, 'Sandwichmenuen skal være klar fra start.', null, 120000, 0, 270000, 390000, now(), now() + interval '7 days', null, null, null, false),
+  -- Nordic Events, past: ordinary meeting.
+  ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c2', 'confirmed', pg_temp.local_at(-21, time '10:00'), pg_temp.local_at(-21, time '12:00'), 4, 'Ali Hassan', 'ali@nordicevents.dk', '+45 3020 3040', null, null, null, 80000, 0, 0, 80000, now(), null, null, null, null, false),
+  -- Nordic Events, past: booked in error — admin cancelled inside 24 h, fee waived.
+  ('00000000-0000-0000-0000-0000000000f3', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c2', 'cancelled', pg_temp.local_at(-4, time '14:00'), pg_temp.local_at(-4, time '16:00'), 10, 'Ali Hassan', 'ali@nordicevents.dk', '+45 3020 3040', null, null, 'Fejlbooking — aflyst af admin umiddelbart efter oprettelse.', 80000, 0, 0, 80000, now(), null, pg_temp.local_at(-4, time '09:00'), 80000, 'admin', true),
+  -- Rituals, upcoming: board meeting with House Host and Lunch for 10.
+  ('00000000-0000-0000-0000-0000000000e5', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c1', 'pending_verification', pg_temp.local_at(7, time '10:00'), pg_temp.local_at(7, time '12:00'), 10, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', 'PO-4488', 'Frokost bestilles til klokken 12.', null, 160000, 50, 325000, 405000, now(), now() + interval '7 days', null, null, null, false),
+  -- Rituals, upcoming: workshop inside the 24–72 hour fee window.
+  ('00000000-0000-0000-0000-0000000000e7', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c1', 'pending_verification', pg_temp.local_at(3, time '09:00'), pg_temp.local_at(3, time '11:00'), 6, 'Peter Pedersen', 'peter@rituals.dk', '+45 2010 2030', null, null, null, 160000, 50, 50000, 130000, now(), now() + interval '7 days', null, null, null, false),
+  -- Rituals, upcoming: ordinary member meeting.
+  ('00000000-0000-0000-0000-0000000000e6', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c2', 'confirmed', pg_temp.local_at(9, time '13:00'), pg_temp.local_at(9, time '15:00'), 4, 'Mette Lund', 'mette@rituals.dk', '+45 2010 2031', null, null, null, 40000, 50, 0, 40000, now(), null, null, null, null, false),
+  -- Rituals, upcoming: tomorrow, inside the under-24-hour fee window.
+  ('00000000-0000-0000-0000-0000000000e8', '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c2', 'confirmed', pg_temp.local_at(1, time '13:00'), pg_temp.local_at(1, time '14:00'), 3, 'Mette Lund', 'mette@rituals.dk', '+45 2010 2031', null, null, null, 40000, 50, 0, 20000, now(), null, null, null, null, false),
+  -- Nordic Events, upcoming: planning day with House Host.
+  ('00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c1', 'pending_verification', pg_temp.local_at(7, time '13:00'), pg_temp.local_at(7, time '16:00'), 6, 'Ali Hassan', 'ali@nordicevents.dk', '+45 3020 3040', null, null, null, 240000, 0, 100000, 340000, now(), now() + interval '7 days', null, null, null, false),
+  -- Nordic Events, upcoming: customer event with Lunch for 5.
+  ('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c2', 'pending_verification', pg_temp.local_at(14, time '09:00'), pg_temp.local_at(14, time '12:00'), 5, 'Ali Hassan', 'ali@nordicevents.dk', '+45 3020 3040', null, null, null, 120000, 0, 112500, 232500, now(), now() + interval '7 days', null, null, null, false);
+
+-- Add-on lines belong to pending bookings (ADR-0005 freezes them at
+-- confirmation); the sync trigger finds the stored totals already correct,
+-- so no extra write happens.
+insert into public.booking_addons (
+  booking_addon_booking_id, booking_addon_addon_id,
+  booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore
+) values
+  ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 50000, 1, 50000),
+  ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d3', 22500, 8, 180000),
+  ('00000000-0000-0000-0000-0000000000e5', '00000000-0000-0000-0000-0000000000d2', 100000, 1, 100000),
+  ('00000000-0000-0000-0000-0000000000e5', '00000000-0000-0000-0000-0000000000d3', 22500, 10, 225000),
+  ('00000000-0000-0000-0000-0000000000e7', '00000000-0000-0000-0000-0000000000d1', 50000, 1, 50000),
+  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d3', 22500, 12, 270000),
+  ('00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000d2', 100000, 1, 100000),
+  ('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000d3', 22500, 5, 112500);
+
+-- Confirm the pending rows (the price snapshot they carry is then frozen).
+update public.bookings
+set booking_status = 'confirmed', booking_hold_expires_at = null
+where booking_id in (
+  '00000000-0000-0000-0000-0000000000e1',
+  '00000000-0000-0000-0000-0000000000e5',
+  '00000000-0000-0000-0000-0000000000e7',
+  '00000000-0000-0000-0000-0000000000f1',
+  '00000000-0000-0000-0000-0000000000f4',
+  '00000000-0000-0000-0000-0000000000f5'
+);
+
+-- The past Rituals workshop was invoiced manually in e-conomic (#9).
+update public.bookings
+set booking_invoicing_status = 'invoiced',
+    booking_invoice_date = (pg_temp.local_at(-7, time '00:00'))::date,
+    booking_invoice_number = '1042',
+    booking_invoiced_at = pg_temp.local_at(-7, time '11:00'),
+    booking_invoiced_by = '00000000-0000-0000-0000-000000000001'
+where booking_id = '00000000-0000-0000-0000-0000000000e1';
 
 -- Site-wide settings (#55 footer, single row per settings.sql): the Wi-Fi
 -- credentials the shell footer shows until an admin edits them.

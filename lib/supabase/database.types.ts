@@ -133,6 +133,38 @@ export type Database = {
           },
         ]
       }
+      booking_history: {
+        Row: {
+          booking_history_booking_id: string
+          booking_history_change: Json
+          booking_history_changed_at: string
+          booking_history_changed_by: string | null
+          booking_history_id: string
+        }
+        Insert: {
+          booking_history_booking_id: string
+          booking_history_change: Json
+          booking_history_changed_at?: string
+          booking_history_changed_by?: string | null
+          booking_history_id?: string
+        }
+        Update: {
+          booking_history_booking_id?: string
+          booking_history_change?: Json
+          booking_history_changed_at?: string
+          booking_history_changed_by?: string | null
+          booking_history_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_history_booking_history_booking_id_fkey"
+            columns: ["booking_history_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_addon_total_ore: number
@@ -140,8 +172,12 @@ export type Database = {
           booking_booker_name: string
           booking_booker_phone: string
           booking_cancellation_fee_ore: number | null
+          booking_cancellation_fee_waived: boolean
           booking_cancellation_terms: string | null
           booking_cancelled_at: string | null
+          booking_cancelled_by:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at: string | null
           booking_company_id: string
           booking_created_at: string
@@ -172,8 +208,12 @@ export type Database = {
           booking_booker_name: string
           booking_booker_phone: string
           booking_cancellation_fee_ore?: number | null
+          booking_cancellation_fee_waived?: boolean
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_cancelled_by?:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at?: string | null
           booking_company_id: string
           booking_created_at?: string
@@ -204,8 +244,12 @@ export type Database = {
           booking_booker_name?: string
           booking_booker_phone?: string
           booking_cancellation_fee_ore?: number | null
+          booking_cancellation_fee_waived?: boolean
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_cancelled_by?:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at?: string | null
           booking_company_id?: string
           booking_created_at?: string
@@ -934,6 +978,7 @@ export type Database = {
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"
+      booking_cancelled_by: "member" | "admin"
       booking_invoicing_status: "not_invoiced" | "invoiced" | "not_invoicable"
       booking_status:
         | "pending_verification"
@@ -1101,6 +1146,7 @@ export const Constants = {
   public: {
     Enums: {
       addon_pricing_model: ["fixed", "per_participant"],
+      booking_cancelled_by: ["member", "admin"],
       booking_invoicing_status: ["not_invoiced", "invoiced", "not_invoicable"],
       booking_status: [
         "pending_verification",

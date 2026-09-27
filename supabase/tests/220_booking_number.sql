@@ -31,9 +31,10 @@ select is(
   true,
   'the app-supplied booking number was overwritten');
 select is(
-  (select count(distinct booking_number) from public.bookings),
+  (select count(distinct booking_number) from public.bookings where booking_id in (
+    '66666666-6666-6666-6666-666666666001', '66666666-6666-6666-6666-666666666002')),
   2::bigint,
-  'every booking gets a distinct booking number');
+  'every booking gets a distinct booking number (fixture bookings)');
 
 select throws_ok(
   'update public.bookings set booking_number = ''B-HACK-0001'' where booking_id = ''66666666-6666-6666-6666-666666666001''',
