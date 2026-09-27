@@ -413,7 +413,7 @@ Samlet beløb til faktureringsgrundlaget: \[SAMLET BELØB\] kr. ekskl. moms
 
 Lokalet og den efterfølgende buffer er frigivet.
 
-\[ÅBN AFBOOKINGEN\]
+> Mail 9 har ingen handlingsknap.
 
 **MAIL 10 – ADVISERING TIL ADMIN OM FÆRDIG VIRKSOMHEDSOPRETTELSE**
 

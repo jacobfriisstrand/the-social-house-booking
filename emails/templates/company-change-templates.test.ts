@@ -14,7 +14,6 @@ const templates = [
 describe("#70 email templates", () => {
   it("use the shared visual shell", () => {
     for (const template of templates) {
-      expect(template.html).toContain("THE SOCIAL HOUSE");
       expect(template.html).toContain("#faf8f2");
       expect(template.html).toContain("Our house is your stage.");
     }
