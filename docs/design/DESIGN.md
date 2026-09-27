@@ -29,7 +29,7 @@ Tailwind classes come from `@theme inline` in globals.css, so `bg-primary`, `tex
 | primary | 0.718 0.103 67.3 | #cf975a | `bg-primary` | The tan. One primary action per view, selected calendar day, selected time slot, booking blocks. |
 | primary-foreground | 0.27 0 0 | #262626 | `text-primary-foreground` | Text on tan. Dark, not white: white on tan is 2.6:1 and fails AA, dark is 5.9:1. |
 | destructive | 0.488 0.2 28.2 | #b60008 | `bg-destructive` | Final confirm of cancellation, cancelled badge tint, field errors, cancellation bars in charts. |
-| success | 0.6 0.1 150 | #519160 | `bg-success` | Discount lines, "faktureret" badge. |
+| success | 0.6 0.1 150 | #519160 | `bg-success` | Discount lines, "bekræftet" and "faktureret" badges. |
 | warning | 0.75 0.15 90 | #d3a813 | `bg-warning` | Awaiting verification, fee applied, "ikke faktureret". Foreground is dark. |
 | info | 0.55 0.06 240 | #517791 | `bg-info` | House Event blocks and badges. |
 
@@ -169,7 +169,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 | State | Token | Label |
 |---|---|---|
-| confirmed | none | no badge |
+| confirmed | success | "Bekræftet" |
 | awaiting verification | warning | "Afventer bekræftelse" |
 | cancelled | destructive | "Aflyst" |
 | fee applied | warning | "Gebyr" |

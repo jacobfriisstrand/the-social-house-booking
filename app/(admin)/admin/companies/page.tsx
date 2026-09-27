@@ -93,17 +93,11 @@ export default async function AdminCompaniesPage({
                     </TableCell>
                     <TableCell className="text-right">
                       {company.company_master_data_completed_at ? (
-                        <Badge
-                          className="bg-success/10 text-success"
-                          variant="outline"
-                        >
+                        <Badge variant="success">
                           {copy.masterDataComplete}
                         </Badge>
                       ) : (
-                        <Badge
-                          className="bg-warning/20 text-warning-foreground"
-                          variant="outline"
-                        >
+                        <Badge variant="destructive">
                           {copy.masterDataMissing}
                         </Badge>
                       )}

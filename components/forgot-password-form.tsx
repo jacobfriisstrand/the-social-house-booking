@@ -68,6 +68,7 @@ export function ForgotPasswordForm() {
             </Button>
             <Button
               className="flex-1"
+              nativeButton={false}
               render={<Link href="/login" />}
               variant="secondary"
             >
