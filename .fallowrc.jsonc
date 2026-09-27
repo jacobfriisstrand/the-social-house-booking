@@ -96,6 +96,9 @@
   // - lib/bookings/admin-cancel-actions.ts: #9 and #12 wire these actions to admin screens
   // - lib/format.ts: formatDateTime lands with the booking overview (#8)
   "ignoreFindings": ["lib/bookings/admin-cancel-actions.ts", "lib/format.ts"],
+  // netlify-cli is a manual CLI tool (docs/agents/deploy.md), never imported
+  // from source, so the unused-devDependency finding is a false positive.
+  "ignoreDependencies": ["netlify-cli"],
   "duplicates": {
     // :root and .dark repeat the generated shadcn token values on purpose;
     // .dark exists only so components compile (DESIGN.md: no dark mode in v1).

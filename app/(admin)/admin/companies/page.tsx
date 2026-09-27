@@ -38,7 +38,10 @@ export default async function AdminCompaniesPage({
   const { data: companies } = await supabase
     .from("companies")
     .select("*")
-    .order("company_display_name");
+    .order("company_display_name")
+    // Bounded: the list is catalogue-sized; paginate in a follow-up if a
+    // tenant ever approaches the cap.
+    .limit(500);
 
   return (
     <>
