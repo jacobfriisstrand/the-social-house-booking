@@ -81,7 +81,13 @@ select is(
     '66666666-6666-6666-6666-666666666001', '66666666-6666-6666-6666-666666666002')),
   1::bigint,
   'admin sees all booking add-ons (fixture bookings)');
-select is((select count(*) from public.outbound_emails), 3::bigint, 'admin sees the whole send log incl. system mail');
+select is(
+  (select count(*) from public.outbound_emails where outbound_email_id in (
+    '77777777-7777-7777-7777-777777777001',
+    '77777777-7777-7777-7777-777777777002',
+    '77777777-7777-7777-7777-777777777003')),
+  3::bigint,
+  'admin sees all fixture send-log rows incl. system mail');
 select lives_ok(
   'insert into public.bookings (booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values (''B-TEST-0004'', ''22222222-2222-2222-2222-222222222002'', ''44444444-4444-4444-4444-444444444001'', now(), now() + interval ''1 hour'', 2::bigint, ''X'', ''x@x.dk'', ''+45'', 1)',
   'admin creates a booking');
