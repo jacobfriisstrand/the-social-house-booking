@@ -5,6 +5,7 @@ import { envSchema } from "./env-schema.ts";
 
 const required = {
   APP_ENV: "development",
+  BOOKING_CANCEL_SECRET: "tsh-dev-cancellation-link-secret-32",
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
   RESEND_FROM: "The Social House <booking@thesocialhouse.dk>",
@@ -22,7 +23,7 @@ assert.equal(full.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, undefined);
 assert.equal(full.RESEND_API_KEY, undefined);
 assert.equal("PATH" in full, false);
 // The schema covers every variable in .env.example — exactly 15 today.
-assert.equal(Object.keys(envSchema.shape).length, 15);
+assert.equal(Object.keys(envSchema.shape).length, 16);
 
 // APP_ENV accepts exactly the two documented values.
 assert.throws(

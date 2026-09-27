@@ -32,6 +32,11 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   cancellationFeeOre: number | null;
   endAt: string;
   invoicingStatus: BookingInvoicingStatus;
+  // The fee as it stands at load, for the cancel flow (#5): set only for a
+  // confirmed booking whose start has not passed. The confirm recomputes
+  // the fee server-side at the exact moment; this is the number the
+  // destructive confirm states.
+  liveCancellationFeeOre: number | null;
   price: PriceOverviewModel;
   roomName: string;
 }

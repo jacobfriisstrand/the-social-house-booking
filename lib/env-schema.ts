@@ -33,6 +33,7 @@ const emptyToUndefined = <S extends z.ZodType>(schema: S) =>
 export const envSchema = z.object({
   ADMIN_NOTIFY_EMAIL: emptyToUndefined(z.email()),
   APP_ENV: z.enum(["development", "production"]),
+  BOOKING_CANCEL_SECRET: z.string().min(32),
   EMAIL_REDIRECT_TO: emptyToUndefined(z.string().min(1)),
   GITHUB_ISSUES_TOKEN: emptyToUndefined(z.string().min(1)),
   JOB_SECRET: emptyToUndefined(z.string().min(1)),

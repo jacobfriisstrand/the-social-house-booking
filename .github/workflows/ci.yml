@@ -57,6 +57,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
       RESEND_FROM: The Social House <booking@thesocialhouse.dk>
+      BOOKING_CANCEL_SECRET: placeholder
     steps:
       - uses: actions/checkout@v4
 
