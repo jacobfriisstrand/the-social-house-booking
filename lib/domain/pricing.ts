@@ -2,7 +2,7 @@
 // og rabatter"). All amounts are integer øre, excl. VAT (ADR-0019,
 // ADR-0020); every function rounds half up to the nearest øre. The
 // discount applies to room rental only (ADR-0007).
-import { roundHalfUp } from "./money";
+import { roundHalfUp } from "./money.ts";
 
 export function roomTotalOre(hourlyPriceOre: number, hours: number): number {
   return roundHalfUp(hourlyPriceOre * hours);

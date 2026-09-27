@@ -16,6 +16,10 @@ create type public.booking_invoicing_status as enum (
   'not_invoicable'
 );
 
+-- Who called off the booking (#5): the member through the secure link or the
+-- booking sheet, or an admin on the company's behalf. Null while live.
+create type public.booking_cancelled_by as enum ('member', 'admin');
+
 create table public.bookings (
   booking_id uuid primary key default gen_random_uuid(),
   -- Assigned by the bookings_assign_number trigger; app-supplied values are
@@ -35,6 +39,9 @@ create table public.bookings (
   booking_practical_notes text,
   booking_internal_note text,
   -- Price snapshot (ADR-0005): frozen at confirmation.
+  -- booking_room_price_ore is the room's total for the booked hours, before
+  -- discount — the frozen room rental. Readers use it directly; nothing
+  -- multiplies it by the hours again.
   booking_room_price_ore integer not null check (booking_room_price_ore >= 0),
   booking_discount_percent integer not null default 0
     check (booking_discount_percent between 0 and 100),
@@ -42,8 +49,16 @@ create table public.bookings (
   booking_expected_total_ore integer not null default 0 check (booking_expected_total_ore >= 0),
   booking_cancellation_terms text,
   -- Cancellation (ADR-0006): fee on the member price, set at cancellation time.
+  -- The fee is recomputed server-side at the confirm moment, so the column
+  -- is the system's registered decision, not the pre-cancel preview.
   booking_cancelled_at timestamptz,
   booking_cancellation_fee_ore integer,
+  booking_cancelled_by public.booking_cancelled_by,
+  -- Waived fee (#5, Bilag 1 "Ombooking og fejl"): admin waives a computed fee
+  -- for an obvious error corrected immediately after booking. The computed
+  -- amount stays in booking_cancellation_fee_ore; the flag decides whether
+  -- it counts towards the invoicing basis (#9).
+  booking_cancellation_fee_waived boolean not null default false,
   -- Hold while the verification code is being entered. A hold past expiry is
   -- 'expired' (bookings_live_hold trigger + expire_stale_holds() sweep), so
   -- 'pending_verification' always means a live hold.

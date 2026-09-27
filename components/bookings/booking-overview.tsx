@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useState } from "react";
+import { BookingSheet } from "@/components/bookings/booking-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardFooter } from "@/components/ui/card";
 import {
@@ -41,7 +43,7 @@ function BookingStatusBadge({ status }: { status: BookingOverviewStatus }) {
   if (status === "pending_verification") {
     return <Badge variant="warning">{copy.status.pendingVerification}</Badge>;
   }
-  return <span className="text-muted-foreground">{copy.status.confirmed}</span>;
+  return <Badge variant="success">{copy.status.confirmed}</Badge>;
 }
 
 function InvoicingStatusBadge({ status }: { status: BookingInvoicingStatus }) {
@@ -141,7 +143,33 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
 // not read as a header), opaque so nothing shows through it while the
 // rows scroll under it, and every title is left-aligned, numeric columns
 // included (2026-09-26 in #81).
-function BookingTable({ bookings }: { bookings: BookingOverviewRow[] }) {
+// A row opens the booking sheet (DESIGN.md "Bookinger (member)"): click and
+// keyboard both work, the booking number doubles as the accessible label.
+function openBookingWith(
+  booking: BookingOverviewRow,
+  open: (booking: BookingOverviewRow) => void
+): {
+  onClick: () => void;
+  onKeyDown: (event: React.KeyboardEvent) => void;
+} {
+  return {
+    onClick: () => open(booking),
+    onKeyDown: (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open(booking);
+      }
+    },
+  };
+}
+
+function BookingTable({
+  bookings,
+  onOpen,
+}: {
+  bookings: BookingOverviewRow[];
+  onOpen: (booking: BookingOverviewRow) => void;
+}) {
   return (
     <Card className="min-h-0 min-w-0 flex-1 gap-0 py-0 *:data-[slot=table-container]:grow">
       <Table className="min-w-[78rem] [&_tr]:divide-x">
@@ -164,7 +192,12 @@ function BookingTable({ bookings }: { bookings: BookingOverviewRow[] }) {
         </TableHeader>
         <TableBody>
           {bookings.map((booking) => (
-            <TableRow key={booking.bookingId}>
+            <TableRow
+              className="cursor-pointer"
+              key={booking.bookingId}
+              tabIndex={0}
+              {...openBookingWith(booking, onOpen)}
+            >
               <TableCell className="sticky left-0 z-10 bg-card font-mono">
                 {booking.bookingNumber}
               </TableCell>
@@ -214,59 +247,79 @@ function BookingPanel({
   bookings,
   emptyDescription,
   emptyTitle,
+  onOpen,
 }: {
   bookings: BookingOverviewRow[];
   emptyDescription: string;
   emptyTitle: string;
+  onOpen: (booking: BookingOverviewRow) => void;
 }) {
   return bookings.length > 0 ? (
-    <BookingTable bookings={bookings} />
+    <BookingTable bookings={bookings} onOpen={onOpen} />
   ) : (
     <BookingEmptyState description={emptyDescription} title={emptyTitle} />
   );
 }
 
+// One sheet for the whole overview: the row a click or keyboard landed on.
+// After a cancel the row re-reads on refresh, so the sheet closes to a
+// fresh table.
 export function BookingOverview({
   bookings,
 }: {
   bookings: BookingOverviewLists<BookingOverviewRow>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<BookingOverviewRow | null>(null);
+  const openBooking = useCallback((booking: BookingOverviewRow) => {
+    setSelected(booking);
+    setOpen(true);
+  }, []);
+  const closeSheet = useCallback(() => setOpen(false), []);
+
   return (
-    <Tabs className="min-h-0 w-full flex-1" defaultValue="all">
-      <TabsList className="w-full">
-        <TabsTrigger value="all">{copy.tabs.all}</TabsTrigger>
-        <TabsTrigger value="upcoming">{copy.tabs.upcoming}</TabsTrigger>
-        <TabsTrigger value="past">{copy.tabs.past}</TabsTrigger>
-        <TabsTrigger value="cancelled">{copy.tabs.cancelled}</TabsTrigger>
-      </TabsList>
-      <TabsContent className="flex min-h-0 flex-col pt-4" value="all">
-        <BookingPanel
-          bookings={bookings.all}
-          emptyDescription={copy.empty.allDescription}
-          emptyTitle={copy.empty.allTitle}
-        />
-      </TabsContent>
-      <TabsContent className="flex min-h-0 flex-col pt-4" value="upcoming">
-        <BookingPanel
-          bookings={bookings.upcoming}
-          emptyDescription={copy.empty.upcomingDescription}
-          emptyTitle={copy.empty.upcomingTitle}
-        />
-      </TabsContent>
-      <TabsContent className="flex min-h-0 flex-col pt-4" value="past">
-        <BookingPanel
-          bookings={bookings.past}
-          emptyDescription={copy.empty.pastDescription}
-          emptyTitle={copy.empty.pastTitle}
-        />
-      </TabsContent>
-      <TabsContent className="flex min-h-0 flex-col pt-4" value="cancelled">
-        <BookingPanel
-          bookings={bookings.cancelled}
-          emptyDescription={copy.empty.cancelledDescription}
-          emptyTitle={copy.empty.cancelledTitle}
-        />
-      </TabsContent>
-    </Tabs>
+    <>
+      <Tabs className="min-h-0 w-full flex-1" defaultValue="all">
+        <TabsList className="w-full">
+          <TabsTrigger value="all">{copy.tabs.all}</TabsTrigger>
+          <TabsTrigger value="upcoming">{copy.tabs.upcoming}</TabsTrigger>
+          <TabsTrigger value="past">{copy.tabs.past}</TabsTrigger>
+          <TabsTrigger value="cancelled">{copy.tabs.cancelled}</TabsTrigger>
+        </TabsList>
+        <TabsContent className="flex min-h-0 flex-col pt-4" value="all">
+          <BookingPanel
+            bookings={bookings.all}
+            emptyDescription={copy.empty.allDescription}
+            emptyTitle={copy.empty.allTitle}
+            onOpen={openBooking}
+          />
+        </TabsContent>
+        <TabsContent className="flex min-h-0 flex-col pt-4" value="upcoming">
+          <BookingPanel
+            bookings={bookings.upcoming}
+            emptyDescription={copy.empty.upcomingDescription}
+            emptyTitle={copy.empty.upcomingTitle}
+            onOpen={openBooking}
+          />
+        </TabsContent>
+        <TabsContent className="flex min-h-0 flex-col pt-4" value="past">
+          <BookingPanel
+            bookings={bookings.past}
+            emptyDescription={copy.empty.pastDescription}
+            emptyTitle={copy.empty.pastTitle}
+            onOpen={openBooking}
+          />
+        </TabsContent>
+        <TabsContent className="flex min-h-0 flex-col pt-4" value="cancelled">
+          <BookingPanel
+            bookings={bookings.cancelled}
+            emptyDescription={copy.empty.cancelledDescription}
+            emptyTitle={copy.empty.cancelledTitle}
+            onOpen={openBooking}
+          />
+        </TabsContent>
+      </Tabs>
+      <BookingSheet booking={selected} onClose={closeSheet} open={open} />
+    </>
   );
 }

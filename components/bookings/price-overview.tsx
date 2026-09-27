@@ -1,10 +1,11 @@
 // The booking price summary (#6, DESIGN.md "Booking dialog"): a muted
-// panel with the room price, the add-ons, the member discount and the
-// total excl. VAT. Renders a frozen PriceOverviewModel — pre-confirmation
-// from the hold's snapshot columns, post-confirmation from the confirmed
-// row; never from live room or company prices (ADR-0005). The discount
-// line ("savings banner") appears only when the company has a discount,
-// and covers the room rental only (ADR-0007).
+// panel with the room's normal price, the add-ons, the member discount as
+// a subtractive line and the total excl. VAT — Lokale − rabat + tilkøb =
+// samlet. Renders a frozen PriceOverviewModel — pre-confirmation from the
+// hold's snapshot columns, post-confirmation from the confirmed row; never
+// from live room or company prices (ADR-0005). The discount line appears
+// only when the company has a discount, and covers the room rental only
+// (ADR-0007). Struck prices belong on room cards, not in this panel.
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { formatOre } from "@/lib/format";
 import { messages } from "@/messages/da";
@@ -23,21 +24,7 @@ function PriceRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function PriceOverview({ model }: { model: PriceOverviewModel }) {
   return (
     <dl className="flex flex-col gap-2 rounded-lg bg-muted p-4">
-      <PriceRow
-        label={copy.room}
-        value={
-          model.showSavings ? (
-            <span className="flex flex-col items-end">
-              <s className="text-muted-foreground">
-                {formatOre(model.roomNormalTotalOre)}
-              </s>
-              <span>{formatOre(model.roomMemberTotalOre)}</span>
-            </span>
-          ) : (
-            formatOre(model.roomMemberTotalOre)
-          )
-        }
-      />
+      <PriceRow label={copy.room} value={formatOre(model.roomNormalTotalOre)} />
       {model.addOnsOre > 0 ? (
         <PriceRow label={copy.addOns} value={formatOre(model.addOnsOre)} />
       ) : null}

@@ -112,8 +112,10 @@ type BookingInsert = Omit<
 >;
 
 // The row for a new booking: booker, slot, and the price snapshot
-// (ADR-0005) from the company's discount. The add-on lines arrive right
-// after the insert and Postgres moves booking_addon_total_ore and
+// (ADR-0005) from the company's discount. booking_room_price_ore carries
+// the room's total for the booked hours, before discount — the frozen room
+// rental, so a later time edit cannot move it. The add-on lines arrive
+// right after the insert and Postgres moves booking_addon_total_ore and
 // booking_expected_total_ore by their sum (booking_addons_sync_totals), so
 // the snapshot starts at member price + 0 and ends at member price + the
 // lines. Status, hold expiry, catering acceptance and company are the
@@ -140,7 +142,7 @@ export const newBookingRow = (
     booking_number: "",
     booking_participant_count: input.participantCount,
     booking_room_id: input.roomId,
-    booking_room_price_ore: snapshot.roomHourlyPriceOre,
+    booking_room_price_ore: snapshot.roomTotalOre,
     booking_start_at: input.startAt,
   };
 };
@@ -220,19 +222,15 @@ const SNAPSHOT_COLUMNS =
   "booking_addon_total_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_room_price_ore, booking_start_at";
 
 // The frozen overview of a booking, from its snapshot columns. The total
-// is the stored booking_expected_total_ore; room price, discount and
-// hours are the frozen inputs the snapshot was built from.
+// is the stored booking_expected_total_ore; the room total and discount
+// are the frozen inputs the snapshot was built from.
 export const bookingPriceOverview = (
   row: BookingPriceRow
 ): PriceOverviewModel =>
   priceOverview({
     addOnsOre: row.booking_addon_total_ore,
     discountPercent: row.booking_discount_percent,
-    hours: hoursBetween(
-      new Date(row.booking_start_at),
-      new Date(row.booking_end_at)
-    ),
-    roomHourlyPriceOre: row.booking_room_price_ore,
+    roomTotalOre: row.booking_room_price_ore,
     totalOre: row.booking_expected_total_ore,
   });
 

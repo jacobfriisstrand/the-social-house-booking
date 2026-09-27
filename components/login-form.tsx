@@ -1,8 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CopyIcon } from "lucide-react";
 import Link from "next/link";
-import { startTransition, useActionState, useEffect } from "react";
+import { startTransition, useActionState, useCallback, useEffect } from "react";
 import {
   Controller,
   type ControllerFieldState,
@@ -25,12 +26,46 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 import { type LoginState, logIn } from "@/lib/auth/actions";
 import type { LoginValues } from "@/lib/validation/auth";
 import { loginSchema } from "@/lib/validation/auth";
 import { messages } from "@/messages/da";
 
 const initialState: LoginState = { status: "idle" };
+
+function CopyDemoEmailButton({ email }: { email: string }) {
+  const handleCopy = useCallback(async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(email);
+      toast.add({ title: messages.login.emailCopied, type: "success" });
+    } catch {
+      toast.add({ title: messages.login.emailCopyFailed, type: "error" });
+    }
+  }, [email]);
+
+  return (
+    <Button
+      aria-label={`${messages.login.copyEmail}: ${email}`}
+      onClick={handleCopy}
+      size="icon-sm"
+      title={messages.login.copyEmail}
+      type="button"
+      variant="ghost"
+    >
+      <CopyIcon aria-hidden="true" />
+    </Button>
+  );
+}
+
+function SeedEmail({ email }: { email: string }) {
+  return (
+    <dd className="flex items-center justify-between gap-2 font-mono">
+      <span>{email}</span>
+      <CopyDemoEmailButton email={email} />
+    </dd>
+  );
+}
 
 interface FieldRender<K extends keyof LoginValues> {
   field: ControllerRenderProps<LoginValues, K>;
@@ -112,19 +147,19 @@ function SeedHintCard() {
             <dt className="text-muted-foreground">
               {messages.login.seedAdminLabel}
             </dt>
-            <dd className="font-mono">{messages.login.seedAdminEmail}</dd>
+            <SeedEmail email={messages.login.seedAdminEmail} />
           </div>
           <div>
             <dt className="text-muted-foreground">
               {messages.login.seedMemberLabel}
             </dt>
-            <dd className="font-mono">{messages.login.seedMemberEmail}</dd>
+            <SeedEmail email={messages.login.seedMemberEmail} />
           </div>
           <div>
             <dt className="text-muted-foreground">
               {messages.login.seedExternalLabel}
             </dt>
-            <dd className="font-mono">{messages.login.seedExternalEmail}</dd>
+            <SeedEmail email={messages.login.seedExternalEmail} />
           </div>
         </dl>
       </CardContent>

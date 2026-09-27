@@ -4,7 +4,7 @@
 // the component only renders; the savings banner exists only when the
 // company has a discount. Post-confirmation every input comes from the
 // booking's frozen snapshot columns (ADR-0005) — never live prices.
-import { memberPriceOre, roomTotalOre, savingsOre } from "./pricing";
+import { memberPriceOre, savingsOre } from "./pricing";
 
 export interface PriceOverviewModel {
   addOnsOre: number;
@@ -19,28 +19,25 @@ export interface PriceOverviewModel {
 export interface PriceOverviewInput {
   addOnsOre: number;
   discountPercent: number;
-  hours: number;
-  roomHourlyPriceOre: number;
-  // The frozen booking_expected_total_ore. Passed in rather than
-  // recomputed so a confirmed booking shows exactly what was frozen.
+  // The room's total for the booked hours, before discount — the frozen
+  // booking_room_price_ore for confirmed bookings (ADR-0005). A live
+  // preview derives it from the hourly price first, so the rounding lives
+  // there, not here.
+  roomTotalOre: number;
   totalOre: number;
 }
 
 export function priceOverview(input: PriceOverviewInput): PriceOverviewModel {
-  const roomNormalTotalOre = roomTotalOre(
-    input.roomHourlyPriceOre,
-    input.hours
-  );
   const roomMemberTotalOre = memberPriceOre(
-    roomNormalTotalOre,
+    input.roomTotalOre,
     input.discountPercent
   );
   return {
     addOnsOre: input.addOnsOre,
     discountPercent: input.discountPercent,
     roomMemberTotalOre,
-    roomNormalTotalOre,
-    savingsOre: savingsOre(roomNormalTotalOre, input.discountPercent),
+    roomNormalTotalOre: input.roomTotalOre,
+    savingsOre: savingsOre(input.roomTotalOre, input.discountPercent),
     showSavings: input.discountPercent > 0,
     totalOre: input.totalOre,
   };

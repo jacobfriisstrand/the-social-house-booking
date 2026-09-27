@@ -49,6 +49,7 @@ import {
   type Step,
   slotFailureMessage,
 } from "./new-booking";
+import { notifyAdminNewBooking } from "./notify-admin-booking";
 import {
   generateVerificationCode,
   hashVerificationCode,
@@ -326,7 +327,8 @@ async function confirmFailure(
 
 // Status → confirmed, only while the hold is still live; the room-free
 // trigger re-runs on the status change (Bilag 1: availability is checked
-// again before the booking is confirmed).
+// again before the booking is confirmed). Mail 8 tells admin (docs/agents/
+// email.md); Mail 4 to the booker is wired by #11.
 async function confirmBooking(
   supabase: SessionClient,
   bookingId: string
@@ -345,6 +347,7 @@ async function confirmBooking(
     return errorState(errors.holdExpired);
   }
   revalidatePath("/bookings");
+  await notifyAdminNewBooking(supabase, bookingId);
   return { status: "success" };
 }
 

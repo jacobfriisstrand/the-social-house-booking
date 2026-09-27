@@ -6,7 +6,10 @@
 // these entries to create or update the Resend template by alias.
 import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
+import { bookingCancelledAdmin } from "./admin-booking-cancelled.ts";
 import { adminCompanyCompleted } from "./admin-company-completed.ts";
+import { adminNewBooking } from "./admin-new-booking.ts";
+import { bookingCancelled } from "./booking-cancelled.ts";
 import { companyChangeCompleted } from "./company-change-completed.ts";
 import { companyChangeNewEmail } from "./company-change-new-email.ts";
 import { companyChangeReview } from "./company-change-review.ts";
@@ -29,7 +32,10 @@ export interface EmailTemplate {
 
 export const emailTemplates: Partial<Record<OutboundEmailKind, EmailTemplate>> =
   {
+    "admin-booking-cancelled": bookingCancelledAdmin,
     "admin-company-completed": adminCompanyCompleted,
+    "admin-new-booking": adminNewBooking,
+    "booking-cancelled": bookingCancelled,
     "company-change-completed": companyChangeCompleted,
     "company-change-new-email": companyChangeNewEmail,
     "company-change-review": companyChangeReview,

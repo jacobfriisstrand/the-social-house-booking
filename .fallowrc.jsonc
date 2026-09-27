@@ -93,8 +93,9 @@
     }
   ],
   // Kept intentionally before first use, not dead code:
+  // - lib/bookings/admin-cancel-actions.ts: #9 and #12 wire these actions to admin screens
   // - lib/format.ts: formatDateTime lands with the booking overview (#8)
-  "ignoreFindings": ["lib/format.ts"],
+  "ignoreFindings": ["lib/bookings/admin-cancel-actions.ts", "lib/format.ts"],
   // netlify-cli is a manual CLI tool (docs/agents/deploy.md), never imported
   // from source, so the unused-devDependency finding is a false positive.
   "ignoreDependencies": ["netlify-cli"],

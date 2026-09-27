@@ -26,10 +26,14 @@ export const emailNotice = (content: string): string => `
 export const emailLayout = ({
   body,
   preheader,
+  signOff = true,
   title,
 }: {
   body: string;
   preheader: string;
+  // "De bedste hilsner / The Social House" — for people, not for admin
+  // advisories (Mail 8, Mail 9), which end with the body.
+  signOff?: boolean;
   title: string;
 }): string => `<!doctype html>
 <html lang="da">
@@ -46,9 +50,8 @@ export const emailLayout = ({
 <tr><td style="height:6px;background:${COLORS.primary};font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td style="padding:25px 28px 28px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr><td style="padding-bottom:25px;color:${COLORS.foreground};font-size:13px;font-weight:700;letter-spacing:1.8px;line-height:18px;text-transform:uppercase;">THE SOCIAL HOUSE</td></tr>
 ${body}
-<tr><td style="padding-top:28px;color:${COLORS.muted};font-size:13px;line-height:20px;">De bedste hilsner<br><strong style="color:${COLORS.foreground};">The Social House</strong></td></tr>
+${signOff ? `<tr><td style="padding-top:28px;color:${COLORS.muted};font-size:13px;line-height:20px;">De bedste hilsner<br><strong style="color:${COLORS.foreground};">The Social House</strong></td></tr>` : ""}
 </table>
 </td></tr>
 </table>

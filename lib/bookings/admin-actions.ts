@@ -6,7 +6,8 @@
 // row is written under the admin's session and RLS; it is confirmed at
 // once, without a hold or a verification code (ADR-0023). The price
 // snapshot uses the company's discount, which is 0 for an external company
-// (companies_external_no_discount). Mail 4 and Mail 8 are wired by #11.
+// (companies_external_no_discount). Mail 8 tells admin about the booking;
+// Mail 4 to the booker is wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
 import type { AddOnLine } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +29,7 @@ import {
   type Step,
   slotFailureMessage,
 } from "./new-booking";
+import { notifyAdminNewBooking } from "./notify-admin-booking";
 
 const { errors } = messages.booking;
 const adminErrors = messages.booking.admin.errors;
@@ -111,6 +113,7 @@ async function insertConfirmedBooking(
       status: "error",
     };
   }
+  await notifyAdminNewBooking(supabase, bookingId);
   return {
     bookingId,
     bookingNumber: inserted.bookingNumber,

@@ -169,9 +169,10 @@ export const messages = {
       inPast: "Starttidspunktet skal ligge i fremtiden.",
       mailFailed:
         "Bekræftelseskoden kunne ikke sendes. Kontrollér arbejdsemailen og prøv igen.",
+      notCancellable: "Bookingen kan ikke afbookes.",
       offGrid: "Vælg tidspunkter i hele og halve timer.",
       outsideOpeningHours:
-        "Bookingen og de 30 minutters buffer skal ligge inden for lokalets åbningstider.",
+        "Bookingen skal ligge inden for lokalets åbningstider.",
       participantsInvalid: "Indtast antal deltagere.",
       required: "Feltet skal udfyldes.",
       roomCapacity: "Lokalet har ikke plads til så mange deltagere.",
@@ -257,6 +258,25 @@ export const messages = {
     noCancellationFee: "-",
     noDiscount: "Ingen",
     quantity: (quantity: number) => `${quantity} stk.`,
+    roomRental: "Lokaleleje",
+    sheet: {
+      addOns: "Tilkøb",
+      cancel: "Aflys booking",
+      cancelledAt: "Afbooket",
+      cancelling: "Aflyser …",
+      confirmCancel: "Ja, aflys bookingen",
+      confirmSentence: (fee: string) =>
+        `Bookingen aflyses, og lokalet frigives med det samme. Afbestillingsgebyret bliver ${fee} ekskl. moms.`,
+      confirmSentenceFree:
+        "Bookingen aflyses, og lokalet frigives med det samme. Der kommer intet afbestillingsgebyr.",
+      keep: "Fortryd",
+      participants: (count: number) => `${count} deltagere`,
+      successWithFee: (fee: string) =>
+        `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
+      successWithoutFee: "Bookingen er aflyst, og lokalet er frigivet.",
+      termsTitle: "Afbestillingsregler",
+      title: "Bookingsdetaljer",
+    },
     status: {
       cancelled: "Aflyst",
       confirmed: "Bekræftet",
@@ -269,6 +289,33 @@ export const messages = {
       past: "Tidligere",
       upcoming: "Kommende",
     },
+  },
+  cancellation: {
+    alreadyCancelled: "Bookingen er allerede afbooket.",
+    // Platform message 1 (#5, Bilag 1 "Afbooking"): the screen that shows
+    // the live fee before the user confirms. The final fee is recomputed
+    // server-side at the exact confirm moment.
+    confirm: "Bekræft afbooking",
+    confirming: "Afbooker …",
+    feeLine: (fee: string) => `Afbestillingsgebyr lige nu: ${fee} ekskl. moms.`,
+    feeNote:
+      "Gebyret beregnes igen, i det øjeblik afbookingen bekræftes, og er det beløb, der registreres.",
+    invalidLink:
+      "Linket er ikke gyldigt. Brug linket fra bekræftelses- eller påmindelsesmailen.",
+    keepBooking: "Behold bookingen",
+    memberPriceLine: (price: string) =>
+      `Gebyret beregnes af lokalelejen efter rabat: ${price} ekskl. moms.`,
+    noLongerUpcoming:
+      "Bookingen kan ikke afbookes, fordi starttidspunktet er passeret. Kontakt The Social House.",
+    rules: [
+      "Mere end 72 timer før: intet afbestillingsgebyr.",
+      "Fra og med 24 timer til og med 72 timer før: 50 %.",
+      "Mindre end 24 timer før: 100 %.",
+    ],
+    rulesTitle: "Afbestillingsregler",
+    success: "Bookingen er nu afbooket, og lokalet er igen ledigt.",
+    title: "Afbook bookingen",
+    tooltip: "Afbestillingsregler",
   },
   common: {
     breadcrumb: "Brødkrumme",
@@ -472,9 +519,12 @@ export const messages = {
     exclVat: "ekskl. moms",
   },
   login: {
+    copyEmail: "Kopiér emailadresse",
     email: "Email",
     emailChangedAlert: (email: string) =>
       `Din email er ændret til ${email}. Alle aktive sessioner er afsluttet – log ind med den nye email.`,
+    emailCopied: "Emailadressen er kopieret.",
+    emailCopyFailed: "Emailadressen kunne ikke kopieres. Prøv igen.",
     failed: "Forkert email eller adgangskode",
     forgotPassword: "Glemt adgangskode?",
     invalidEmail: "Indtast en gyldig email",
