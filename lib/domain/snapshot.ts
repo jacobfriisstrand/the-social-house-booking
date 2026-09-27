@@ -5,7 +5,7 @@ export interface BookingSnapshot {
   discountPercent: number;
   hours: number;
   memberPriceOre: number;
-  roomHourlyPriceOre: number;
+  roomTotalOre: number;
   totalOre: number;
 }
 
@@ -31,7 +31,7 @@ export function buildSnapshot(input: {
     discountPercent: input.discountPercent,
     hours: input.hours,
     memberPriceOre: member,
-    roomHourlyPriceOre: input.roomHourlyPriceOre,
+    roomTotalOre: roomTotal,
     totalOre: total,
   };
 }

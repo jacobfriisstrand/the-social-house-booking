@@ -58,6 +58,7 @@ import {
   type PriceOverviewModel,
   priceOverview,
 } from "@/lib/domain/price-overview";
+import { roomTotalOre } from "@/lib/domain/pricing";
 import { buildSnapshot } from "@/lib/domain/snapshot";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
@@ -246,6 +247,7 @@ const livePriceOverview = (
   >,
   discountPercent: number
 ): PriceOverviewModel => {
+  const hours = hoursOf(values.startAt, values.endAt);
   const input = {
     addOnsOre: linesTotalOre(
       addonLines(
@@ -254,10 +256,17 @@ const livePriceOverview = (
       )
     ),
     discountPercent,
-    hours: hoursOf(values.startAt, values.endAt),
+    hours,
     roomHourlyPriceOre: room.hourlyPriceOre,
   };
-  return priceOverview({ ...input, totalOre: buildSnapshot(input).totalOre });
+  // The overview's room line is the room's total for the chosen hours —
+  // rounded here, at the only place that still derives it from the hourly
+  // price; every frozen surface reads booking_room_price_ore directly.
+  return priceOverview({
+    ...input,
+    roomTotalOre: roomTotalOre(room.hourlyPriceOre, hours),
+    totalOre: buildSnapshot(input).totalOre,
+  });
 };
 
 const addOnNames = (room: DialogRoom, addOnIds: string[]): string =>

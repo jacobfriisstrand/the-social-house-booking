@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import { priceOverview } from "./price-overview";
 
 describe("priceOverview", () => {
-  it("shows the issue's example: 800 kr/h × 3h at 50 % discount", () => {
+  it("shows the issue's example: a 3h room at 2400 kr, 50 % discount", () => {
     const overview = priceOverview({
       addOnsOre: 0,
       discountPercent: 50,
-      hours: 3,
-      roomHourlyPriceOre: 80_000,
+      roomTotalOre: 240_000,
       totalOre: 120_000,
     });
 
@@ -26,8 +25,7 @@ describe("priceOverview", () => {
     const overview = priceOverview({
       addOnsOre: 45_000,
       discountPercent: 50,
-      hours: 3,
-      roomHourlyPriceOre: 80_000,
+      roomTotalOre: 240_000,
       totalOre: 165_000,
     });
 
@@ -39,12 +37,11 @@ describe("priceOverview", () => {
     expect(overview.totalOre).toBe(165_000);
   });
 
-  it("shows no savings banner and no strike for a company without a discount", () => {
+  it("shows no savings banner for a company without a discount", () => {
     const overview = priceOverview({
       addOnsOre: 0,
       discountPercent: 0,
-      hours: 2,
-      roomHourlyPriceOre: 80_000,
+      roomTotalOre: 160_000,
       totalOre: 160_000,
     });
 
@@ -53,13 +50,13 @@ describe("priceOverview", () => {
     expect(overview.roomMemberTotalOre).toBe(overview.roomNormalTotalOre);
   });
 
-  it("rounds half-up on fractional hour totals", () => {
-    // 805.5 øre at 0.5 h = 402.75 → normal 403; 10 % → member 362.7 → 363.
+  it("takes the room total as the caller rounded it", () => {
+    // The live preview derives 806 øre/h × 0.5 h = 402.75 → 403 with
+    // roomTotalOre() before this model sees it; 10 % → member 362.7 → 363.
     const overview = priceOverview({
       addOnsOre: 0,
       discountPercent: 10,
-      hours: 0.5,
-      roomHourlyPriceOre: 806,
+      roomTotalOre: 403,
       totalOre: 363,
     });
 
@@ -72,8 +69,7 @@ describe("priceOverview", () => {
     const overview = priceOverview({
       addOnsOre: 0,
       discountPercent: 50,
-      hours: 3,
-      roomHourlyPriceOre: 80_000,
+      roomTotalOre: 240_000,
       totalOre: 120_000,
     });
 
