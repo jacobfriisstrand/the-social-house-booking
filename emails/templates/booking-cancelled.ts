@@ -25,6 +25,26 @@ import type { EmailTemplate } from "./registry";
 
 const text = (value: string): string => escapeHtml(value);
 
+interface BookingCancelledDetailsInput {
+  bookingNumber: string;
+  cancelledAt: string;
+  companyDisplayName: string;
+  endAt: string;
+  roomName: string;
+  startAt: string;
+}
+
+export const bookingCancelledDetailsVariables = (
+  input: BookingCancelledDetailsInput
+): Record<string, string> => ({
+  BOOKING_DATE: text(formatDate(input.startAt)),
+  BOOKING_NUMBER: text(input.bookingNumber),
+  BOOKING_TIME: text(`${formatTime(input.startAt)}–${formatTime(input.endAt)}`),
+  CANCELLED_AT: text(formatDateTime(input.cancelledAt)),
+  COMPANY_DISPLAY_NAME: text(input.companyDisplayName),
+  ROOM_NAME: text(input.roomName),
+});
+
 // The PRISOVERSIGT section: itemized when there is a fee or registered
 // costs, otherwise the Bilag 2 fallback line. Built here — with the copy —
 // so the action stays thin; the amounts are already escaped by formatOre.
@@ -46,26 +66,17 @@ export const bookingCancelledPriceOverviewHtml = (input: {
   );
 };
 
-export const bookingCancelledVariables = (input: {
-  addOnsOre: number;
-  bookingNumber: string;
-  cancelledAt: string;
-  companyDisplayName: string;
-  endAt: string;
-  feeOre: number | null;
-  roomName: string;
-  startAt: string;
-}): Record<string, string> => ({
-  BOOKING_DATE: text(formatDate(input.startAt)),
-  BOOKING_NUMBER: text(input.bookingNumber),
-  BOOKING_TIME: text(`${formatTime(input.startAt)}–${formatTime(input.endAt)}`),
-  CANCELLED_AT: text(formatDateTime(input.cancelledAt)),
-  COMPANY_DISPLAY_NAME: text(input.companyDisplayName),
+export const bookingCancelledVariables = (
+  input: BookingCancelledDetailsInput & {
+    addOnsOre: number;
+    feeOre: number | null;
+  }
+): Record<string, string> => ({
+  ...bookingCancelledDetailsVariables(input),
   PRICE_OVERVIEW_HTML: bookingCancelledPriceOverviewHtml({
     addOnsOre: input.addOnsOre,
     feeOre: input.feeOre,
   }),
-  ROOM_NAME: text(input.roomName),
 });
 
 export const bookingCancelled = {

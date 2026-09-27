@@ -22,12 +22,61 @@ import { messages } from "@/messages/da";
 const copy = messages.cancellation;
 const bookingIdSchema = z.guid();
 
+type CancellationPageState =
+  | { kind: "dead"; message: string }
+  | {
+      bookingId: string;
+      kind: "confirm";
+      preview: ReturnType<typeof cancellationPreviewOf>;
+      token: string;
+    };
+
 function Screen({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       {children}
     </main>
   );
+}
+
+// Keep each bearer-link and booking-state refusal explicit before rendering
+// any booking details.
+// fallow-ignore-next-line complexity
+async function cancellationPageState(
+  rawBookingId: string,
+  token: string
+): Promise<CancellationPageState> {
+  const parsed = bookingIdSchema.safeParse(rawBookingId);
+  if (!parsed.success) {
+    return { kind: "dead", message: copy.invalidLink };
+  }
+  if (!cancellationLinkIsValid(env.BOOKING_CANCEL_SECRET, parsed.data, token)) {
+    return { kind: "dead", message: copy.invalidLink };
+  }
+
+  const booking = await loadBookingForCancellation(
+    createAdminClient(),
+    parsed.data
+  );
+  if (!booking) {
+    return {
+      kind: "dead",
+      message: refusalMessage("not_cancellable"),
+    };
+  }
+
+  const now = new Date();
+  const refusal = refuseCancellation(booking, now);
+  if (refusal) {
+    return { kind: "dead", message: refusalMessage(refusal) };
+  }
+
+  return {
+    bookingId: parsed.data,
+    kind: "confirm",
+    preview: cancellationPreviewOf(booking, now),
+    token,
+  };
 }
 
 // One message for every way the link is dead: a malformed id, a wrong or
@@ -55,41 +104,21 @@ export default async function CancelBookingPage({
   params: Promise<{ bookingId: string }>;
   searchParams: Promise<{ token?: string }>;
 }) {
-  const { bookingId } = await params;
-  const { token = "" } = await searchParams;
-  const parsed = bookingIdSchema.safeParse(bookingId);
-  const linkIsDead = !(
-    parsed.success &&
-    cancellationLinkIsValid(env.BOOKING_CANCEL_SECRET, parsed.data, token)
-  );
-  if (linkIsDead) {
-    return <DeadLink message={copy.invalidLink} />;
-  }
-
-  const booking = await loadBookingForCancellation(
-    createAdminClient(),
-    parsed.data
-  );
-  const now = new Date();
-  // A valid token for a booking that is gone or not live reads as a
-  // refusal, so the screen never discloses whether the id exists.
-  const refusal = booking
-    ? refuseCancellation(booking, now)
-    : "not_cancellable";
-  if (!booking || refusal) {
-    return (
-      <DeadLink
-        message={refusal ? refusalMessage(refusal) : copy.invalidLink}
-      />
-    );
+  const [{ bookingId }, { token = "" }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+  const state = await cancellationPageState(bookingId, token);
+  if (state.kind === "dead") {
+    return <DeadLink message={state.message} />;
   }
 
   return (
     <Screen>
       <CancelConfirmForm
-        bookingId={parsed.data}
-        preview={cancellationPreviewOf(booking, now)}
-        token={token}
+        bookingId={state.bookingId}
+        preview={state.preview}
+        token={state.token}
       />
     </Screen>
   );

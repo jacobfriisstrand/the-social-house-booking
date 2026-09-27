@@ -7,13 +7,9 @@
 // implementation.
 
 import { z } from "zod";
-import {
-  formatDate,
-  formatDateTime,
-  formatOre,
-  formatTime,
-} from "../../lib/format.ts";
+import { formatOre } from "../../lib/format.ts";
 import { escapeHtml } from "../../supabase/functions/send-email/handler.ts";
+import { bookingCancelledDetailsVariables } from "./booking-cancelled.ts";
 import {
   emailHeading,
   emailLayout,
@@ -41,14 +37,8 @@ export const bookingCancelledAdminVariables = (input: {
   const feeOre = input.feeOre ?? 0;
   const charged = feeOre + input.addOnsOre;
   return {
+    ...bookingCancelledDetailsVariables(input),
     BOOKER_NAME: text(input.bookerName),
-    BOOKING_DATE: text(formatDate(input.startAt)),
-    BOOKING_NUMBER: text(input.bookingNumber),
-    BOOKING_TIME: text(
-      `${formatTime(input.startAt)}–${formatTime(input.endAt)}`
-    ),
-    CANCELLED_AT: text(formatDateTime(input.cancelledAt)),
-    COMPANY_DISPLAY_NAME: text(input.companyDisplayName),
     PRICE_OVERVIEW_HTML:
       charged === 0
         ? emailParagraph(
@@ -59,7 +49,6 @@ export const bookingCancelledAdminVariables = (input: {
               `Øvrige registrerede omkostninger: ${formatOre(input.addOnsOre)} ekskl. moms<br>` +
               `Samlet beløb til faktureringsgrundlaget: <strong>${formatOre(charged)}</strong> ekskl. moms`
           ),
-    ROOM_NAME: text(input.roomName),
   };
 };
 

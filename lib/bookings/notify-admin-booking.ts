@@ -81,6 +81,41 @@ const sentryTags = (booking: BookingNotifyRow) => ({
   company_id: booking.booking_company_id,
 });
 
+// Null-safe fallbacks for the optional joined company, room, and add-ons
+// account for the complexity score; the function only maps mail variables.
+// fallow-ignore-next-line complexity
+const adminNewBookingVariablesOf = (
+  booking: BookingNotifyRow
+): Record<string, string> => {
+  const addOns = booking.booking_addons ?? [];
+  const addOnIds = new Set(addOns.map((line) => line.booking_addon_addon_id));
+  return adminNewBookingVariables({
+    actionUrl: `${env.NEXT_PUBLIC_SITE_URL}/admin/bookings`,
+    addOnLines: addOns.map((line) => ({
+      addonName: line.addons?.addon_name ?? null,
+      quantity: line.booking_addon_quantity,
+      totalOre: line.booking_addon_total_ore,
+    })),
+    bookerEmail: booking.booking_booker_email,
+    bookerName: booking.booking_booker_name,
+    bookerPhone: booking.booking_booker_phone,
+    bookingEndAt: booking.booking_end_at,
+    bookingExpectedTotalOre: booking.booking_expected_total_ore,
+    bookingNumber: booking.booking_number,
+    bookingParticipantCount: booking.booking_participant_count,
+    bookingPracticalNotes: booking.booking_practical_notes,
+    bookingRoomPriceOre: booking.booking_room_price_ore,
+    bookingStartAt: booking.booking_start_at,
+    companyDisplayName: booking.companies?.company_display_name ?? "",
+    companyLegalName: booking.companies?.company_legal_name ?? null,
+    discountPercent: booking.booking_discount_percent,
+    hasCatering: addOnIds.has(LUNCH_ADDON_ID),
+    hasHouseHost: addOnIds.has(HOUSE_HOST_ADDON_ID),
+    hasHouseService: addOnIds.has(HOUSE_SERVICE_ADDON_ID),
+    roomName: booking.rooms?.room_name ?? "",
+  });
+};
+
 export async function notifyAdminNewBooking(
   client: Client,
   bookingId: string
@@ -97,40 +132,13 @@ export async function notifyAdminNewBooking(
     );
     return;
   }
-  const addOnIds = (booking.booking_addons ?? []).map(
-    (line) => line.booking_addon_addon_id
-  );
   try {
     await sendMail({
       bookingId: booking.booking_id,
       companyId: booking.booking_company_id,
       kind: "admin-new-booking",
       to,
-      variables: adminNewBookingVariables({
-        actionUrl: `${env.NEXT_PUBLIC_SITE_URL}/admin/bookings`,
-        addOnLines: (booking.booking_addons ?? []).map((line) => ({
-          addonName: line.addons?.addon_name ?? null,
-          quantity: line.booking_addon_quantity,
-          totalOre: line.booking_addon_total_ore,
-        })),
-        bookerEmail: booking.booking_booker_email,
-        bookerName: booking.booking_booker_name,
-        bookerPhone: booking.booking_booker_phone,
-        bookingEndAt: booking.booking_end_at,
-        bookingExpectedTotalOre: booking.booking_expected_total_ore,
-        bookingNumber: booking.booking_number,
-        bookingParticipantCount: booking.booking_participant_count,
-        bookingPracticalNotes: booking.booking_practical_notes,
-        bookingRoomPriceOre: booking.booking_room_price_ore,
-        bookingStartAt: booking.booking_start_at,
-        companyDisplayName: booking.companies?.company_display_name ?? "",
-        companyLegalName: booking.companies?.company_legal_name ?? null,
-        discountPercent: booking.booking_discount_percent,
-        hasCatering: addOnIds.includes(LUNCH_ADDON_ID),
-        hasHouseHost: addOnIds.includes(HOUSE_HOST_ADDON_ID),
-        hasHouseService: addOnIds.includes(HOUSE_SERVICE_ADDON_ID),
-        roomName: booking.rooms?.room_name ?? "",
-      }),
+      variables: adminNewBookingVariablesOf(booking),
     });
   } catch (error) {
     captureException(error, { tags: sentryTags(booking) });

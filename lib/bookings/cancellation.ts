@@ -15,12 +15,10 @@ import {
   type CancellationBasis,
   memberPriceOreForBooking,
 } from "@/lib/domain/cancellation";
-import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { sendMail } from "@/lib/email/send-mail";
 import { env } from "@/lib/env";
 import type { Database } from "@/lib/supabase/database.types";
 import { messages } from "@/messages/da";
-import { bookingPriceOverview } from "./new-booking";
 
 export type CancellationClient = SupabaseClient<Database>;
 
@@ -102,6 +100,9 @@ export interface CancellationPreview {
 
 // What Platform message 1 shows before the user confirms: the booking, the
 // member price the fee is computed on, and the fee as it stands right now.
+// Null-safe fallbacks for optional company and room joins account for the
+// complexity score; the function only maps the cancellation preview.
+// fallow-ignore-next-line complexity
 export const cancellationPreviewOf = (
   booking: CancellationBooking,
   now: Date
@@ -117,46 +118,25 @@ export const cancellationPreviewOf = (
   startAt: booking.booking_start_at,
 });
 
-// The price overview a confirmed booking's sheet shows — the frozen
-// snapshot (ADR-0005), never live prices.
-export const cancellationPriceOverviewOf = (
-  booking: Pick<
-    CancellationBooking,
-    | "booking_addon_total_ore"
-    | "booking_discount_percent"
-    | "booking_end_at"
-    | "booking_expected_total_ore"
-    | "booking_room_price_ore"
-    | "booking_start_at"
-  >
-): PriceOverviewModel => bookingPriceOverview(booking);
-
 const sentryTags = (booking: CancellationBooking) => ({
   booking_number: booking.booking_number,
   company_id: booking.booking_company_id,
 });
 
-// Mail 7 to the booker and Mail 9 to the admin advisory address (docs/
-// agents/email.md). A failed send never rolls the cancellation back: the
-// row is the system's registered decision, the failure is logged in
-// outbound_emails, and Sentry gets the error keyed on booking number and
-// company id only. Unset ADMIN_NOTIFY_EMAIL skips Mail 9 with a report,
-// like Mail 10. The mails quote the registered cancellation time — the
-// same instant the row carries, never a later one.
-export async function sendCancellationMails(
-  booking: CancellationBooking,
-  input: { cancelledAt: string; feeOre: number }
-): Promise<void> {
-  const variablesBase = {
-    addOnsOre: booking.booking_addon_total_ore,
-    bookingNumber: booking.booking_number,
-    cancelledAt: input.cancelledAt,
-    endAt: booking.booking_end_at,
-    feeOre: input.feeOre,
-    roomName: booking.rooms?.room_name ?? "",
-    startAt: booking.booking_start_at,
-  };
+interface CancellationMailVariables {
+  addOnsOre: number;
+  bookingNumber: string;
+  cancelledAt: string;
+  endAt: string;
+  feeOre: number;
+  roomName: string;
+  startAt: string;
+}
 
+async function sendBookerCancellationMail(
+  booking: CancellationBooking,
+  variables: CancellationMailVariables
+): Promise<void> {
   try {
     await sendMail({
       bookingId: booking.booking_id,
@@ -164,14 +144,22 @@ export async function sendCancellationMails(
       kind: "booking-cancelled",
       to: booking.booking_booker_email,
       variables: bookingCancelledVariables({
-        ...variablesBase,
+        ...variables,
         companyDisplayName: booking.companies?.company_display_name ?? "",
       }),
     });
   } catch (error) {
     captureException(error, { tags: sentryTags(booking) });
   }
+}
 
+// The missing-recipient and failed-delivery branches must not block a
+// registered cancellation.
+// fallow-ignore-next-line complexity
+async function sendAdminCancellationMail(
+  booking: CancellationBooking,
+  variables: CancellationMailVariables
+): Promise<void> {
   const adminTo = env.ADMIN_NOTIFY_EMAIL;
   if (!adminTo) {
     captureException(
@@ -187,7 +175,7 @@ export async function sendCancellationMails(
       kind: "admin-booking-cancelled",
       to: adminTo,
       variables: bookingCancelledAdminVariables({
-        ...variablesBase,
+        ...variables,
         bookerName: booking.booking_booker_name,
         companyDisplayName: booking.companies?.company_display_name ?? "",
       }),
@@ -195,6 +183,31 @@ export async function sendCancellationMails(
   } catch (error) {
     captureException(error, { tags: sentryTags(booking) });
   }
+}
+
+// Mail 7 to the booker and Mail 9 to the admin advisory address (docs/
+// agents/email.md). A failed send never rolls the cancellation back: the
+// row is the system's registered decision, the failure is logged in
+// outbound_emails, and Sentry gets the error keyed on booking number and
+// company id only. Unset ADMIN_NOTIFY_EMAIL skips Mail 9 with a report,
+// like Mail 10. The mails quote the registered cancellation time — the
+// same instant the row carries, never a later one.
+export async function sendCancellationMails(
+  booking: CancellationBooking,
+  input: { cancelledAt: string; feeOre: number }
+): Promise<void> {
+  const variables: CancellationMailVariables = {
+    addOnsOre: booking.booking_addon_total_ore,
+    bookingNumber: booking.booking_number,
+    cancelledAt: input.cancelledAt,
+    endAt: booking.booking_end_at,
+    feeOre: input.feeOre,
+    roomName: booking.rooms?.room_name ?? "",
+    startAt: booking.booking_start_at,
+  };
+
+  await sendBookerCancellationMail(booking, variables);
+  await sendAdminCancellationMail(booking, variables);
 }
 
 export interface CancellationOutcome {

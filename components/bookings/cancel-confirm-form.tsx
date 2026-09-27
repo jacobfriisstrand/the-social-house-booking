@@ -7,6 +7,7 @@
 // reach this form — the page refuses them first.
 import Link from "next/link";
 import { startTransition, useActionState, useCallback } from "react";
+import { DetailRow } from "@/components/bookings/detail-row";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,15 +29,31 @@ const copy = messages.cancellation;
 const columnCopy = messages.bookings.columns;
 const initialState: CancelByLinkState = { status: "idle" };
 
-function Detail({ label, value }: { label: string; value: string }) {
+const terminalMessage = (state: CancelByLinkState): string | null => {
+  if (state.status === "success") {
+    return copy.success;
+  }
+  if (state.status === "error" && state.linkInvalid) {
+    return state.error;
+  }
+  return null;
+};
+
+function CancellationResultCard({ message }: { message: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b py-2 last:border-b-0">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
+    <Card className="w-full max-w-xl">
+      <CardHeader>
+        <CardTitle className="text-lg">{copy.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground text-sm">{message}</p>
+      </CardContent>
+    </Card>
   );
 }
 
+// Success, invalid-link, retryable-error, and pending states share one form.
+// fallow-ignore-next-line complexity
 export function CancelConfirmForm({
   bookingId,
   preview,
@@ -58,30 +75,9 @@ export function CancelConfirmForm({
     [bookingId, formAction, token]
   );
 
-  if (state.status === "success") {
-    return (
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">{copy.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">{copy.success}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (state.status === "error" && state.linkInvalid) {
-    return (
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">{copy.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">{state.error}</p>
-        </CardContent>
-      </Card>
-    );
+  const message = terminalMessage(state);
+  if (message !== null) {
+    return <CancellationResultCard message={message} />;
   }
 
   return (
@@ -95,16 +91,16 @@ export function CancelConfirmForm({
             <p className="text-destructive text-sm">{state.error}</p>
           ) : null}
           <dl className="flex flex-col">
-            <Detail
+            <DetailRow
               label={columnCopy.bookingNumber}
               value={preview.bookingNumber}
             />
-            <Detail label={columnCopy.room} value={preview.roomName} />
-            <Detail
+            <DetailRow label={columnCopy.room} value={preview.roomName} />
+            <DetailRow
               label={columnCopy.date}
               value={formatDate(preview.startAt)}
             />
-            <Detail
+            <DetailRow
               label={columnCopy.time}
               value={`${formatTime(preview.startAt)} – ${formatTime(preview.endAt)}`}
             />
