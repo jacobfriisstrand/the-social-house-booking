@@ -7,6 +7,7 @@
 // entry 1 in docs/agents/supabase.md), since the table is admin-only and
 // the booker is not an auth user.
 import { captureException } from "@sentry/nextjs";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwnCompany } from "@/lib/auth/require-company";
 import type { AddOnLine } from "@/lib/domain/addons";
@@ -134,6 +135,8 @@ async function releaseHold(
   supabase: SessionClient,
   bookingId: string
 ): Promise<void> {
+  // The hold (or doomed booking) leaves the member bookings list.
+  revalidatePath("/bookings");
   await releasePendingBooking(supabase, bookingId);
 }
 
@@ -294,6 +297,8 @@ export async function createHold(
   if (!hold.ok) {
     return hold.state;
   }
+  // The hold joins the member bookings list.
+  revalidatePath("/bookings");
   return issueFirstCode(supabase, hold.value, company, expiresAt);
 }
 
@@ -339,6 +344,7 @@ async function confirmBooking(
   if (confirmed.data.length === 0) {
     return errorState(errors.holdExpired);
   }
+  revalidatePath("/bookings");
   return { status: "success" };
 }
 
