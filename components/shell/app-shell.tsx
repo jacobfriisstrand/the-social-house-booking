@@ -75,7 +75,7 @@ function CloseMobileSidebarOnNavigate() {
 // click instead.
 const badgeToneClass = {
   neutral: "bg-primary text-secondary-foreground",
-  warning: "border border-warning bg-warning/10 text-warning",
+  warning: "border border-warning bg-warning text-warning-foreground",
 } as const;
 
 function ShellNavLinkItem({

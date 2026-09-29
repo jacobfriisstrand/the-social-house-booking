@@ -10,7 +10,10 @@ import {
   upcomingBookingsFilter,
 } from "@/lib/bookings/filters";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
-import type { OutstandingInvoiceRow } from "@/lib/domain/booking-invoicing";
+import {
+  type OutstandingInvoiceRow,
+  outstandingInvoiceBasisOre,
+} from "@/lib/domain/booking-invoicing";
 import type {
   BookingAddonOverview,
   BookingOverviewRow,
@@ -178,29 +181,43 @@ interface OutstandingBookingRow {
   rooms: { room_name: string } | null;
 }
 
-// A cancelled row's whole invoicing basis is its payable fee (ADR-0006); a
-// confirmed row's is the frozen expected total (ADR-0005). The filter keeps
-// the cancelled rows to the ones with a payable fee, so the fallback never
-// fires on list data — it types the impossible, it does not handle it.
+// An embed the foreign keys guarantee (company, room) but that RLS could
+// still hide: a row without the name it must render fails loudly with the
+// booking number in the message.
+function requiredName(
+  name: string | undefined,
+  subject: string,
+  bookingId: string
+): string {
+  if (name === undefined) {
+    throw new Error(`booking ${bookingId} is missing its ${subject}`);
+  }
+  return name;
+}
+
+// The basis rule lives in lib/domain/booking-invoicing.ts with its tests;
+// this mapping only flattens the row the table shows.
 function toOutstandingInvoiceRow(
   booking: OutstandingBookingRow
 ): OutstandingInvoiceRow {
-  const companyName = booking.companies?.company_display_name;
-  const roomName = booking.rooms?.room_name;
-  if (!(companyName && roomName)) {
-    throw new Error(
-      `booking ${booking.booking_id} is missing its company or room`
-    );
-  }
+  const companyName = requiredName(
+    booking.companies?.company_display_name,
+    "company",
+    booking.booking_id
+  );
+  const roomName = requiredName(
+    booking.rooms?.room_name,
+    "room",
+    booking.booking_id
+  );
 
   return {
-    basisOre:
-      booking.booking_status === "cancelled"
-        ? (payableCancellationFeeOre(
-            booking.booking_cancellation_fee_ore,
-            booking.booking_cancellation_fee_waived
-          ) ?? 0)
-        : booking.booking_expected_total_ore,
+    basisOre: outstandingInvoiceBasisOre({
+      cancellationFeeOre: booking.booking_cancellation_fee_ore,
+      expectedTotalOre: booking.booking_expected_total_ore,
+      status: booking.booking_status,
+      waived: booking.booking_cancellation_fee_waived,
+    }),
     bookingEndAt: booking.booking_end_at,
     bookingId: booking.booking_id,
     bookingNumber: booking.booking_number,
