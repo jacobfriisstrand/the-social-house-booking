@@ -3,11 +3,15 @@ import { isShellLinkActive, shellAdminLinks, shellMainLinks } from "./nav";
 
 describe("shellMainLinks", () => {
   it("gives members the home and bookings links", () => {
-    expect(shellMainLinks(false).map((link) => link.href)).toEqual([
+    const links = shellMainLinks(false);
+    expect(links.map((link) => link.href)).toEqual([
       "/",
       "/bookings",
       "/rooms",
     ]);
+    expect(links.find((link) => link.href === "/bookings")?.badgeTone).toBe(
+      "neutral"
+    );
   });
 
   it("hides the member bookings link from admins", () => {
@@ -21,12 +25,20 @@ describe("shellMainLinks", () => {
 describe("shellAdminLinks", () => {
   it("lists the admin routes that exist", () => {
     expect(shellAdminLinks().map((link) => link.href)).toEqual([
+      "/admin/bookings",
       "/admin/rooms",
       "/admin/companies",
       "/admin/addons",
       "/admin/notices",
       "/admin/settings",
     ]);
+  });
+
+  it("marks the admin bookings item as the warning worklist", () => {
+    const link = shellAdminLinks().find(
+      (candidate) => candidate.href === "/admin/bookings"
+    );
+    expect(link?.badgeTone).toBe("warning");
   });
 });
 

@@ -42,7 +42,12 @@ function dateAndTime(instant: string): { date: string; time: string } {
   return { date: date ?? "", time: time ?? "" };
 }
 
-function BookingStatusBadge({ status }: { status: BookingOverviewStatus }) {
+// The booking status badge, shared with the admin Bookinger table.
+export function BookingStatusBadge({
+  status,
+}: {
+  status: BookingOverviewStatus;
+}) {
   if (status === "cancelled") {
     return <Badge variant="destructive">{copy.status.cancelled}</Badge>;
   }

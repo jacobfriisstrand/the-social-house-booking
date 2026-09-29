@@ -44,8 +44,7 @@ export function formatDateString(value: string): string {
 
 // formatDateTime("2026-09-02T17:00:00Z") → "02/09/2026 19:00" (Danish locale writes "19.00"; the spec wants "HH:mm").
 export function formatDateTime(instant: Date | string | number): string {
-  const date = new Date(instant);
-  return `${dateFormatter.format(date).replaceAll(".", "/")} ${timeFormatter.format(date).replace(".", ":")}`;
+  return `${formatDate(instant)} ${formatTime(instant)}`;
 }
 
 // formatTime("2026-09-02T17:00:00Z") → "19:00".

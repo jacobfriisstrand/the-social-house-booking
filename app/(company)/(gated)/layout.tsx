@@ -11,7 +11,10 @@ import {
   getOwnCompany,
   requireCompletedCompany,
 } from "@/lib/auth/require-company";
-import { countUpcomingOwnBookings } from "@/lib/bookings/data";
+import {
+  countOutstandingInvoices,
+  countUpcomingOwnBookings,
+} from "@/lib/bookings/data";
 import { getWifiSettings } from "@/lib/settings/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -46,7 +49,11 @@ async function sidebarBadgeCounts(
   supabase: SupabaseClient<Database>
 ): Promise<Record<string, number>> {
   if (session.appRole === "admin") {
-    return {};
+    // Admin sessions pass the company gate without a company row; the
+    // admin group still renders and counts the invoicing worklist.
+    return {
+      "/admin/bookings": await countOutstandingInvoices(supabase),
+    };
   }
   const { company } = await getOwnCompany();
   return company

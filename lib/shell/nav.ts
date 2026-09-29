@@ -48,6 +48,12 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
 export function shellAdminLinks(): ShellNavLink[] {
   return [
     {
+      badgeTone: "warning",
+      href: "/admin/bookings",
+      icon: CalendarIcon,
+      label: messages.shell.bookings,
+    },
+    {
       href: "/admin/rooms",
       icon: DoorOpenIcon,
       label: messages.rooms.listTitle,

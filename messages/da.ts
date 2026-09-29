@@ -225,6 +225,15 @@ export const messages = {
     },
   },
   bookings: {
+    admin: {
+      columns: {
+        company: "Virksomhed",
+        total: "Total ekskl. moms",
+      },
+      emptyDescription: "Afsluttede bookinger uden faktura vises her.",
+      emptyTitle: "Ingen bookinger til fakturering",
+      tableCaption: "Bookinger til fakturering",
+    },
     allPricesExclVat: "Alle priser ekskl. moms",
     columns: {
       addOns: "Tilkøb",

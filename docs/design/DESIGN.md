@@ -251,6 +251,8 @@ Every room as the 3-column card grid without search parameters and without the s
 
 ### Bookinger (admin)
 
+The minimal version shipped 2026-09-29: the outstanding-invoice worklist — ended bookings without an invoice, newest ended first, paginated, no filters, checkboxes or totals yet — the same set the sidebar badge counts. The description below is the full view it grows into.
+
 The invoicing view. Opens on the current month. Filter row: month picker, free period, company, room, invoicing status, member or external. Table with selection checkboxes, then booking number, company, room, date with the time range on a second muted line, hours, room price, discount, add-ons, fee, total excl. VAT, invoicing status badge. Totals row at the bottom for the filtered set. Bulk action "Markér som faktureret" as the page's primary button, enabled when rows are selected. House Events appear in this table with the info badge and "Ikke fakturerbar"; a filter hides them.
 
 ### Opslag (admin)
