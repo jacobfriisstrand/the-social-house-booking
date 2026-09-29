@@ -1,9 +1,12 @@
--- Notice board (#12): practical notices are member-visible by design;
--- admins curate them.
+-- Notice board (#12): every logged-in member reads the notices that are on
+-- and not past their end; admins read all of them and curate them.
 
-create policy notices_select_authenticated on public.notices
+create policy notices_select_visible_or_admin on public.notices
   for select to authenticated
-  using (true);
+  using (
+    (auth.jwt() ->> 'app_role') = 'admin'
+    or (notice_is_active and (notice_ends_at is null or notice_ends_at > now()))
+  );
 
 create policy notices_insert_admin on public.notices
   for insert to authenticated

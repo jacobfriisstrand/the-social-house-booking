@@ -524,7 +524,7 @@ export type Database = {
           notice_ends_at: string | null
           notice_id: string
           notice_is_active: boolean
-          notice_starts_at: string | null
+          notice_title: string
           notice_updated_at: string
         }
         Insert: {
@@ -533,7 +533,7 @@ export type Database = {
           notice_ends_at?: string | null
           notice_id?: string
           notice_is_active?: boolean
-          notice_starts_at?: string | null
+          notice_title: string
           notice_updated_at?: string
         }
         Update: {
@@ -542,7 +542,7 @@ export type Database = {
           notice_ends_at?: string | null
           notice_id?: string
           notice_is_active?: boolean
-          notice_starts_at?: string | null
+          notice_title?: string
           notice_updated_at?: string
         }
         Relationships: []
@@ -928,6 +928,7 @@ export type Database = {
           calendar_entry_kind: string | null
           calendar_entry_start_at: string | null
           company_display_name: string | null
+          house_event_description: string | null
           house_event_title: string | null
           room_id: string | null
           room_name: string | null
@@ -974,6 +975,17 @@ export type Database = {
       revoke_company_sessions: {
         Args: { p_auth_user_id: string }
         Returns: undefined
+      }
+      save_house_event: {
+        Args: {
+          p_description: string
+          p_end_at: string
+          p_house_event_id: string
+          p_room_ids: string[]
+          p_start_at: string
+          p_title: string
+        }
+        Returns: string
       }
     }
     Enums: {
