@@ -31,6 +31,10 @@ const loadOwnCompany = cache(
   }
 );
 
+// The same cached read without the guards: the gated layout uses it for the
+// sidebar badge counts after requireCompletedCompany has gated the session.
+export const getOwnCompany = loadOwnCompany;
+
 export async function requireOwnCompany(): Promise<{
   company: CompanyRow;
   session: Session;

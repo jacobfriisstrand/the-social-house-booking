@@ -5,6 +5,7 @@
 // here, at load, for confirmed upcoming bookings only.
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { cancellationFeeAt } from "@/lib/bookings/cancellation";
+import { upcomingBookingsFilter } from "@/lib/bookings/filters";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import type {
   BookingAddonOverview,
@@ -129,4 +130,27 @@ export async function listOwnBookingOverview(
   const bookings = rowsOrThrow<BookingRow>(bookingResult, "company bookings");
 
   return bookings.map((booking) => toOverviewRow(booking, now));
+}
+
+// The sidebar badge on the member Bookinger item: how many bookings are
+// upcoming, judged on the same terms splitBookingOverview splits at
+// (lib/bookings/filters.ts) — not cancelled, start not passed, a pending
+// verification only while its hold stands. RLS keeps the count inside the
+// company's own rows.
+export async function countUpcomingOwnBookings(
+  supabase: SupabaseClient<Database>,
+  companyId: string,
+  now = new Date()
+): Promise<number> {
+  const result = await supabase
+    .from("bookings")
+    .select("booking_id", { count: "exact", head: true })
+    .eq("booking_company_id", companyId)
+    .or(upcomingBookingsFilter(now.toISOString()));
+  if (result.error) {
+    throw new Error(
+      `could not count upcoming bookings: ${result.error.message}`
+    );
+  }
+  return result.count ?? 0;
 }

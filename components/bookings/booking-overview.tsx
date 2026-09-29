@@ -66,6 +66,23 @@ function InvoicingStatusBadge({ status }: { status: BookingInvoicingStatus }) {
   return <Badge variant="warning">{copy.invoicing.notInvoiced}</Badge>;
 }
 
+// The count chip on a tab (and the sidebar's): a tint, not a solid, reading
+// on both the white active tab and the secondary list ground; hidden at
+// zero, where it would only say nothing (DESIGN.md "Badges").
+function CountBadge({ count }: { count: number }) {
+  if (count === 0) {
+    return null;
+  }
+  return (
+    <Badge
+      className="min-w-5 justify-center bg-muted px-1.5 tabular-nums"
+      variant="outline"
+    >
+      {count}
+    </Badge>
+  );
+}
+
 function BookingDateCells({ booking }: { booking: BookingOverviewRow }) {
   const start = dateAndTime(booking.bookingStartAt);
   const end = dateAndTime(booking.endAt);
@@ -299,10 +316,22 @@ export function BookingOverview({
         onValueChange={handleTabChange}
       >
         <TabsList className="w-full">
-          <TabsTrigger value="all">{copy.tabs.all}</TabsTrigger>
-          <TabsTrigger value="upcoming">{copy.tabs.upcoming}</TabsTrigger>
-          <TabsTrigger value="past">{copy.tabs.past}</TabsTrigger>
-          <TabsTrigger value="cancelled">{copy.tabs.cancelled}</TabsTrigger>
+          <TabsTrigger value="all">
+            {copy.tabs.all}
+            <CountBadge count={bookings.all.length} />
+          </TabsTrigger>
+          <TabsTrigger value="upcoming">
+            {copy.tabs.upcoming}
+            <CountBadge count={bookings.upcoming.length} />
+          </TabsTrigger>
+          <TabsTrigger value="past">
+            {copy.tabs.past}
+            <CountBadge count={bookings.past.length} />
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            {copy.tabs.cancelled}
+            <CountBadge count={bookings.cancelled.length} />
+          </TabsTrigger>
         </TabsList>
         <TabsContent className="pt-4" value="all">
           <BookingPanel

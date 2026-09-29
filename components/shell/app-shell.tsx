@@ -28,6 +28,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -72,7 +73,18 @@ function CloseMobileSidebarOnNavigate() {
 // makes each page load SSR the whole sidebar server-side (six extra renders
 // right after login, on routes the user has not clicked). They fetch on
 // click instead.
-function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
+const badgeToneClass = {
+  neutral: "bg-secondary text-secondary-foreground",
+  warning: "border border-warning bg-warning/10 text-warning",
+} as const;
+
+function ShellNavLinkItem({
+  badge,
+  link,
+}: {
+  badge?: number;
+  link: ShellNavLink;
+}) {
   const pathname = usePathname();
   const Icon = link.icon;
 
@@ -90,6 +102,14 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
           {link.label}
         </span>
       </SidebarMenuButton>
+      {/* Zero counts hide the badge: an empty worklist says nothing. */}
+      {badge ? (
+        <SidebarMenuBadge
+          className={badgeToneClass[link.badgeTone ?? "neutral"]}
+        >
+          {badge}
+        </SidebarMenuBadge>
+      ) : null}
     </SidebarMenuItem>
   );
 }
@@ -125,13 +145,16 @@ function BookRoomButtons({ onOpen }: { onOpen: () => void }) {
 }
 
 function ShellSidebar({
+  badgeCounts,
   isAdmin,
   onOpenSearch,
 }: {
+  badgeCounts?: Record<string, number>;
   isAdmin: boolean;
   onOpenSearch: () => void;
 }) {
   const pathname = usePathname();
+  const badgeFor = (href: string): number | undefined => badgeCounts?.[href];
 
   return (
     <Sidebar collapsible="icon">
@@ -161,7 +184,11 @@ function ShellSidebar({
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {shellMainLinks(isAdmin).map((link) => (
-                <ShellNavLinkItem key={link.href} link={link} />
+                <ShellNavLinkItem
+                  badge={badgeFor(link.href)}
+                  key={link.href}
+                  link={link}
+                />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -174,7 +201,11 @@ function ShellSidebar({
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
                 {shellAdminLinks().map((link) => (
-                  <ShellNavLinkItem key={link.href} link={link} />
+                  <ShellNavLinkItem
+                    badge={badgeFor(link.href)}
+                    key={link.href}
+                    link={link}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -266,11 +297,13 @@ function ShellFooter({ wifi }: { wifi: WifiSettings }) {
 }
 
 export function AppShell({
+  badgeCounts,
   children,
   isAdmin,
   defaultOpen,
   wifi,
 }: {
+  badgeCounts?: Record<string, number>;
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
@@ -281,7 +314,11 @@ export function AppShell({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <CloseMobileSidebarOnNavigate />
-      <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
+      <ShellSidebar
+        badgeCounts={badgeCounts}
+        isAdmin={isAdmin}
+        onOpenSearch={openSearch}
+      />
       <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
       {/* min-w-0: the inset is a flex item next to the sidebar, and a page
           whose content has a minimum width (a wide table) must not widen
