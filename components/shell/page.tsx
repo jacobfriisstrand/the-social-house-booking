@@ -16,7 +16,9 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4">
+    // min-h-9: the row is as tall as the sidebar's header row, so the page
+    // title and the house mark beside it share one centre line (2026-09-29).
+    <div className="flex min-h-9 flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2">
         <SidebarTrigger
           aria-label={messages.shell.openMenu}

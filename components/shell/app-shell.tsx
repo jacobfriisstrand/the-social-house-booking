@@ -154,24 +154,43 @@ function ShellSidebar({
   onOpenSearch: () => void;
 }) {
   const pathname = usePathname();
+  const { toggleSidebar } = useSidebar();
   const badgeFor = (href: string): number | undefined => badgeCounts?.[href];
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* Fixed height: collapsing hides the logo, and the row must not
-            shrink or the whole nav shifts up. */}
+        {/* Only the house mark ("huset") is the shell's logo now
+            (2026-09-29); the row is as tall as the page header row, so the
+            mark sits on the same centre line as the page title beside it.
+            Collapsed hides the trigger: the mark itself toggles the sidebar
+            back open on the rail. */}
         <div className="flex h-9 items-center justify-between group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
             className="group-data-[collapsible=icon]:hidden"
-            height={30}
+            height={28}
             priority
-            src="/logo.svg"
+            src="/logo-mark.svg"
             unoptimized
-            width={130}
+            width={28}
           />
-          <SidebarTrigger />
+          <button
+            aria-label={messages.shell.toggleSidebar}
+            className="hidden justify-center rounded-md outline-hidden hover:bg-sidebar-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 group-data-[collapsible=icon]:flex"
+            onClick={toggleSidebar}
+            type="button"
+          >
+            <Image
+              alt="The Social House"
+              height={28}
+              priority
+              src="/logo-mark.svg"
+              unoptimized
+              width={28}
+            />
+          </button>
+          <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
         </div>
       </SidebarHeader>
       <SidebarGroup>

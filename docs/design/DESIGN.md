@@ -8,7 +8,7 @@ Danish UI, English code. Every label in an example here is Danish and uses the g
 
 ## Brand
 
-Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The logo is a 130x30 wordmark at `public/logo.svg`; render it at native size in the sidebar header.
+Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The shell carries only the house mark: `public/logo-mark.svg` — the icon mark without the white ground — at 28px in the sidebar header, on the same centre line as the page title beside it; on the collapsed rail the mark itself toggles the sidebar open (2026-09-29). The full 130x30 wordmark stays at `public/logo.svg` for the 404 page.
 
 Light mode only in v1.0. The `.dark` block in globals.css exists so shadcn components compile. Nobody designs or tests it.
 
@@ -76,7 +76,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 
 ```
 ┌──────────────┬──────────────────────────────────────────┐
-│ [logo]     ⊟ │  Page title                              │
+│ [huset]    ⊟ │  Page title                              │
 │ ┌──────────┐ │ ┌──────────────────────────────────────┐ │
 │ │Book lokale│ │ │ muted content panel                  │ │
 │ └──────────┘ │ │                                      │ │
@@ -98,7 +98,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 └──────────────┴──────────────────────────────────────────┘
 ```
 
-- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the logo and the collapse toggle. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
+- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the house mark and the collapse toggle, as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
 - Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style. A nav item can carry a count badge in the `SidebarMenuBadge` slot (neutral chip; warning tint on the admin worklist), hidden at zero and on the icon rail (2026-09-29).
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
