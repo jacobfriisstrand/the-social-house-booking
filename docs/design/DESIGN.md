@@ -48,16 +48,16 @@ Poppins, loaded in `app/layout.tsx` with weights 400 to 900. Geist Mono for book
 
 | Role | Size | Weight | Colour | Example |
 |---|---|---|---|---|
-| Page title (h1) | 18px / `text-xl` | 600 | foreground | "Administrer lokaler" |
-| Section title (h2) | 17px / `text-lg` | 500 | foreground | "Lokaler" above the rooms carousel |
-| Card title (h3) | 15px / `text-base` | 500 | foreground | "Room of Relations" on a room card |
-| Body | 13px / `text-sm` | 400 | foreground | descriptions, table cells |
-| Label, hint | 11px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
-| Group header | 11px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
-| Value, price | 15px to 18px | 500 | foreground | "800 kr/time" |
-| Big number | 26px / `text-3xl` | 600 | foreground | statistic tiles |
+| Page title (h1) | 20px / `text-xl` | 600 | foreground | "Administrer lokaler" |
+| Section title (h2) | 18px / `text-lg` | 500 | foreground | "Lokaler" above the rooms carousel |
+| Card title (h3) | 16px / `text-base` | 500 | foreground | "Room of Relations" on a room card |
+| Body | 14px / `text-sm` | 400 | foreground | descriptions, table cells |
+| Label, hint | 12px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
+| Group header | 12px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
+| Value, price | 16px to 20px | 500 | foreground | "800 kr/time" |
+| Big number | 30px / `text-3xl` | 600 | foreground | statistic tiles |
 
-The scale is 0.9 of Tailwind's defaults, set once in the `@theme` block of globals.css (`text-xs` 11px, `text-sm` 13px, `text-base` 15px, `text-lg` 17px, `text-xl` 18px, `text-2xl` 21px, `text-3xl` 26px). Decided 2026-09-16 in #4: the default scale read too large at the 0.22rem density, and titles step down one size each (page title `text-xl`, not `text-3xl`).
+The scale is Tailwind's defaults — 12 / 14 / 16 / 18 / 20 / 24 / 30 px, nothing set in globals.css. Restored 2026-09-29 from the 0.9 scale (decided 2026-09-16 in #4): the smaller scale read too small in daily use, and the count badges and pagination footer inherit the same tokens. Titles still step down one size each (page title `text-xl`, not `text-3xl`).
 
 No eyebrows. The old front page put "THE DAILY" over "Booking overview"; the rule now is one bold title and nothing above it. The uppercase small style is reserved for sidebar group headers.
 

@@ -208,18 +208,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Type scale at 0.9 of Tailwind's defaults (docs/design/DESIGN.md
-   "Typography"): 11 / 13 / 15 / 17 / 18 / 21 / 26 px. Line heights keep
-   Tailwind's ratios. */
-@theme {
-  --text-xs: 0.6875rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;
-  --text-xl: 1.125rem;
-  --text-2xl: 1.3125rem;
-  --text-3xl: 1.625rem;
-}
+/* Type scale: Tailwind's defaults (12 / 14 / 16 / 18 / 20 / 24 / 30 px),
+   restored 2026-09-29 from the 0.9 scale — the tokens are not set here at
+   all; the decision is recorded in docs/design/DESIGN.md "Typography". */
 
 @layer base {
   * {
