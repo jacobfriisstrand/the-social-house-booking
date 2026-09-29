@@ -727,6 +727,13 @@ export const messages = {
     title: "Opslag",
     visibilitySection: "Visning",
   },
+  pagination: {
+    next: "Næste side",
+    previous: "Forrige side",
+    rowsPerPage: "Rækker pr. side",
+    summary: (from: number, to: number, total: number) =>
+      `Viser ${from}–${to} af ${total}`,
+  },
   rooms: {
     activate: "Aktiver",
     activateFailed: "Statussen kunne ikke ændres. Prøv igen.",

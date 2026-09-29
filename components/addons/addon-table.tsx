@@ -15,9 +15,11 @@ import { GripVerticalIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AddonActiveButton } from "@/components/addons/addon-active-button";
 import { AddonSheet } from "@/components/addons/addon-sheet";
+import { TablePagination } from "@/components/pagination/table-pagination";
+import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardFooter } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -30,6 +32,7 @@ import { toast } from "@/components/ui/toast";
 import { reorderAddons } from "@/lib/addons/actions";
 import type { AddonDetail } from "@/lib/addons/data";
 import { formatKroner } from "@/lib/format";
+import { slicePage } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 
@@ -130,6 +133,9 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
   const [rows, setRows] = useState<TableRowData[]>(() =>
     addons.map((addon) => ({ addon, id: addon.addonId }))
   );
+  const paged = useTablePagination(rows.length);
+  const start = (paged.page - 1) * paged.pageSize;
+  const visible = slicePage(rows, paged.page, paged.pageSize);
 
   // Pick up refreshed add-ons (edit, status toggle) without resetting the
   // drag order — the persisted order equals the server's order.
@@ -148,20 +154,29 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent): Promise<void> => {
-      const reordered = move(rows, event);
-      const ids = reordered.map((row) => row.id);
-      if (ids.every((id, index) => id === rows[index]?.id)) {
+      // The sortable indices count the visible page, so the drag reorders
+      // that segment of the full list: rows outside the page keep their
+      // places, and the full order is what persists.
+      const reorderedVisible = move(visible, event);
+      const moved = reorderedVisible.some(
+        (row, index) => row.id !== visible[index]?.id
+      );
+      if (!moved) {
         return;
       }
       const previous = rows;
-      setRows(reordered);
-      const result = await reorderAddons(ids);
+      const next = [...previous];
+      reorderedVisible.forEach((row, index) => {
+        next[start + index] = row;
+      });
+      setRows(next);
+      const result = await reorderAddons(next.map((row) => row.id));
       if (result.status === "error") {
         setRows(previous);
         toast.add({ title: result.error, type: "error" });
       }
     },
-    [rows]
+    [rows, start, visible]
   );
 
   return (
@@ -178,12 +193,15 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
         </TableHeader>
         <TableBody>
           <DragDropProvider onDragEnd={handleDragEnd}>
-            {rows.map((row, index) => (
+            {visible.map((row, index) => (
               <SortableAddonRow addon={row.addon} index={index} key={row.id} />
             ))}
           </DragDropProvider>
         </TableBody>
       </Table>
+      <CardFooter className="py-2">
+        <TablePagination paged={paged} totalItems={rows.length} />
+      </CardFooter>
     </Card>
   );
 }
