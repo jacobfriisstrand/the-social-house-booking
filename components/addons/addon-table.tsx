@@ -180,7 +180,7 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
   );
 
   return (
-    <Card className="py-0">
+    <Card className="gap-0 py-0">
       <Table>
         <TableHeader>
           <TableRow>
@@ -199,7 +199,7 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
           </DragDropProvider>
         </TableBody>
       </Table>
-      <CardFooter className="py-2">
+      <CardFooter className="px-2 py-1">
         <TablePagination paged={paged} totalItems={rows.length} />
       </CardFooter>
     </Card>

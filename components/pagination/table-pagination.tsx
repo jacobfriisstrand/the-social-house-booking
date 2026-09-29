@@ -1,10 +1,10 @@
 "use client";
 
 // The footer of every paginated table, drawn after the shadcn "icons only"
-// example (2026-09-29): rows-per-page field on the left, the "Viser X–Y af
-// Z" summary and the icon Previous/Next on the right — the summary carries
-// the position, since there are no page-number buttons. Renders nothing for
-// an empty list.
+// example (2026-09-29): icon Previous/Next and the "Viser X–Y af Z" summary
+// on the left — the summary carries the position, since there are no
+// page-number buttons — and the rows-per-page field on the right. Renders
+// nothing for an empty list.
 import { useCallback, useId } from "react";
 import type { PagedList } from "@/components/pagination/use-table-pagination";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -71,6 +71,29 @@ export function TablePagination({
 
   return (
     <div className="flex flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex items-center gap-3">
+        <Pagination className="mx-0 w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                aria-label={copy.previous}
+                disabled={page <= 1}
+                onClick={handlePrevious}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                aria-label={copy.next}
+                disabled={page >= lastPage}
+                onClick={handleNext}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+        <p aria-live="polite" className="text-muted-foreground text-xs">
+          {copy.summary(from, to, totalItems)}
+        </p>
+      </div>
       <Field className="w-fit" orientation="horizontal">
         <FieldLabel htmlFor={selectId}>{copy.rowsPerPage}</FieldLabel>
         <Select
@@ -92,29 +115,6 @@ export function TablePagination({
           </SelectContent>
         </Select>
       </Field>
-      <div className="flex items-center gap-4">
-        <p aria-live="polite" className="text-muted-foreground text-xs">
-          {copy.summary(from, to, totalItems)}
-        </p>
-        <Pagination className="mx-0 w-auto">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                aria-label={copy.previous}
-                disabled={page <= 1}
-                onClick={handlePrevious}
-              />
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext
-                aria-label={copy.next}
-                disabled={page >= lastPage}
-                onClick={handleNext}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
     </div>
   );
 }

@@ -246,9 +246,11 @@ function BookingTable({
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-2 py-2">
-        <TablePagination paged={paged} totalItems={bookings.length} />
+      <CardFooter className="flex flex-col items-stretch gap-1 px-2 py-1">
+        {/* The "ekskl. moms" line sits right above the pagination arrows,
+            and the pagination row hugs the table (2026-09-29). */}
         <p className="text-muted-foreground text-xs">{copy.allPricesExclVat}</p>
+        <TablePagination paged={paged} totalItems={bookings.length} />
       </CardFooter>
     </Card>
   );

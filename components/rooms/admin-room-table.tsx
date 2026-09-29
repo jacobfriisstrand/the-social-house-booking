@@ -167,7 +167,7 @@ export function AdminRoomTable({
   const rows = slicePage(rooms, paged.page, paged.pageSize);
 
   return (
-    <Card className="py-0">
+    <Card className="gap-0 py-0">
       <Table>
         <TableHeader>
           <TableRow>
@@ -212,7 +212,7 @@ export function AdminRoomTable({
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="py-2">
+      <CardFooter className="px-2 py-1">
         <TablePagination paged={paged} totalItems={rooms.length} />
       </CardFooter>
     </Card>

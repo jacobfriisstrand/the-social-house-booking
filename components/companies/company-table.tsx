@@ -28,7 +28,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const rows = slicePage(companies, paged.page, paged.pageSize);
 
   return (
-    <Card className="overflow-x-auto py-0">
+    <Card className="min-w-0 gap-0 overflow-x-auto py-0">
       {/* table-fixed: column widths come from the header row only, so
           row content can never resize a column and the layout does not
           jump as data changes. */}
@@ -76,7 +76,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="py-2">
+      <CardFooter className="px-2 py-1">
         <TablePagination paged={paged} totalItems={companies.length} />
       </CardFooter>
     </Card>

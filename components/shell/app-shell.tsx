@@ -32,7 +32,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/toast";
@@ -74,8 +73,8 @@ function CloseMobileSidebarOnNavigate() {
 // right after login, on routes the user has not clicked). They fetch on
 // click instead.
 const badgeToneClass = {
-  neutral: "bg-primary text-secondary-foreground",
-  warning: "border border-warning bg-warning text-warning-foreground",
+  neutral: "bg-secondary text-secondary-foreground",
+  warning: "border border-warning bg-warning/10 text-warning",
 } as const;
 
 function ShellNavLinkItem({
@@ -154,43 +153,25 @@ function ShellSidebar({
   onOpenSearch: () => void;
 }) {
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
   const badgeFor = (href: string): number | undefined => badgeCounts?.[href];
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* Only the house mark ("huset") is the shell's logo now
-            (2026-09-29); the row is as tall as the page header row, so the
-            mark sits on the same centre line as the page title beside it.
-            Collapsed hides the trigger: the mark itself toggles the sidebar
-            back open on the rail. */}
-        <div className="flex h-9 items-center justify-between group-data-[collapsible=icon]:justify-center">
+        {/* Only the house mark is the shell's logo now (2026-09-29), and the
+            row is as tall as the page header row, so the mark sits on the
+            same centre line as the page title beside it. The sidebar toggle
+            lives outside the sidebar, on the page title row — it must stay
+            reachable with the sidebar collapsed or expanded. */}
+        <div className="flex h-9 items-center group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
-            className="group-data-[collapsible=icon]:hidden"
             height={28}
             priority
             src="/logo-mark.svg"
             unoptimized
             width={28}
           />
-          <button
-            aria-label={messages.shell.toggleSidebar}
-            className="hidden justify-center rounded-md outline-hidden hover:bg-sidebar-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 group-data-[collapsible=icon]:flex"
-            onClick={toggleSidebar}
-            type="button"
-          >
-            <Image
-              alt="The Social House"
-              height={28}
-              priority
-              src="/logo-mark.svg"
-              unoptimized
-              width={28}
-            />
-          </button>
-          <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
         </div>
       </SidebarHeader>
       <SidebarGroup>

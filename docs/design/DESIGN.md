@@ -8,7 +8,7 @@ Danish UI, English code. Every label in an example here is Danish and uses the g
 
 ## Brand
 
-Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The shell carries only the house mark: `public/logo-mark.svg` — the icon mark without the white ground — at 28px in the sidebar header, on the same centre line as the page title beside it; on the collapsed rail the mark itself toggles the sidebar open (2026-09-29). The full 130x30 wordmark stays at `public/logo.svg` for the 404 page.
+Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The shell carries only the house mark: `public/logo-mark.svg` — the icon mark without the white ground — at 28px in the sidebar header, on the same centre line as the page title beside it (2026-09-29). The full 130x30 wordmark stays at `public/logo.svg` for the 404 page.
 
 Light mode only in v1.0. The `.dark` block in globals.css exists so shadcn components compile. Nobody designs or tests it.
 
@@ -76,7 +76,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 
 ```
 ┌──────────────┬──────────────────────────────────────────┐
-│ [huset]    ⊟ │  Page title                              │
+│ [huset]      │ ⊟ Page title                             │
 │ ┌──────────┐ │ ┌──────────────────────────────────────┐ │
 │ │Book lokale│ │ │ muted content panel                  │ │
 │ └──────────┘ │ │                                      │ │
@@ -98,7 +98,8 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 └──────────────┴──────────────────────────────────────────┘
 ```
 
-- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the house mark and the collapse toggle, as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
+- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds only the house mark, in a row as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
+- The sidebar toggle sits outside the sidebar, on the page title row (2026-09-29): always visible, collapsed or expanded, flush with the column's left edge; on phone it opens the off-canvas sheet.
 - Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style. A nav item can carry a count badge in the `SidebarMenuBadge` slot (neutral chip; warning tint on the admin worklist), hidden at zero and on the icon rail (2026-09-29).
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
@@ -106,7 +107,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 - The content panel is `bg-muted rounded-xl p-3` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
 - The footer line sits under the panel, right-aligned on tablet and desktop and centred on phone, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in mono, foreground colour, no chip background. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
 - Content column: `max-w-[1400px]`, `gap-3` between title, panel and footer line. Every shell gutter equals the sidebar's own padding (`p-2`): from tablet up the column is `py-2 pr-2 pl-0`, so the menu sits centred between the screen edge and the content; on phone it is `px-2 py-2` (2026-09-20 in #4).
-- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button on the title row, left of the page title. "Book lokale" closes the sheet as the search dialog opens; the dialog is mounted by the shell outside the sidebar, never inside the sheet.
+- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet; the toggle on the title row opens it, and navigation closes it. "Book lokale" closes the sheet as the search dialog opens; the dialog is mounted by the shell outside the sidebar, never inside the sheet.
 
 Decisions the shell (#55) records on top of these rules:
 
@@ -180,7 +181,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Tables.** shadcn `Table` inside a `Card` with no padding, header row 12px muted, cells `p-2`, rows `h-12` with a border between. Numeric columns right-aligned with `tabular-nums`. Booking number in mono. Below `md` every wide table scrolls horizontally inside its card with the first column sticky; nothing stacks into cards. Selection checkboxes on the left when bulk actions exist (admin bookings). Totals row in the invoicing view is `font-medium` on a muted ground. A table is as tall as its content (changed 2026-09-29): the card grows with its rows instead of filling the panel, and a list longer than the page is paginated instead of scrolling inside the card — see Pagination.
 
-**Pagination.** Every list table paginates client-side: the rows are already in the browser, so a page is a slice and the URL carries `page` and `pageSize` (written with `window.history.replaceState`, defaults omitted). Footer drawn after the "icons only" example (2026-09-29): rows-per-page field on the left (20/40/60/80, 20 default, a new size restarts at page 1), the "Viser X–Y af Z" summary and icon-only Previous/Next on the right, both in the card's footer band. No page-number buttons; the summary carries the position. A tab switch starts the next tab on page 1. Card grids (rooms) do not paginate.
+**Pagination.** Every list table paginates client-side: the rows are already in the browser, so a page is a slice and the URL carries `page` and `pageSize` (written with `window.history.replaceState`, defaults omitted). Footer drawn after the "icons only" example (2026-09-29): icon-only Previous/Next with the "Viser X–Y af Z" summary on the left, the rows-per-page field on the right (20/40/60/80, 20 default, a new size restarts at page 1); the footer row hugs the table with no gap above it, and the member bookings card carries the "Alle priser ekskl. moms" line directly above the arrows. No page-number buttons; the summary carries the position. A tab switch starts the next tab on page 1. Card grids (rooms) do not paginate.
 
 **Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom; there the dialog's close button is a larger tap target (about 45px, 21px icon), and the booking dialog's calendar fills the width so the days are large tap targets. Dialogs fade and zoom in and out over 200ms, ease-out; the large booking dialog takes 300ms with a slight rise. Under reduced motion dialogs appear and disappear without animation.
 

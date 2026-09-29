@@ -95,7 +95,7 @@ export function AdminBookingsTable({
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="py-2">
+      <CardFooter className="px-2 py-1">
         <TablePagination paged={paged} totalItems={rows.length} />
       </CardFooter>
     </Card>
