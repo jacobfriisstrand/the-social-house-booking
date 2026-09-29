@@ -60,7 +60,7 @@ export function AdminBookingsTable({
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-40">
+            <TableHead className="sticky left-0 z-10 w-40 bg-muted/50">
               {bookingsCopy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.company}</TableHead>
