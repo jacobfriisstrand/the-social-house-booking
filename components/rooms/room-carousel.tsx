@@ -9,6 +9,7 @@ import {
   CardAction,
   CardContent,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Carousel,
@@ -32,18 +33,14 @@ export function RoomCarousel({
     return null;
   }
   return (
-    // shrink-0: the panel is a fixed-height scrolling column, and a card
-    // that clips its overflow would otherwise shrink to a sliver.
-    <Card className="shrink-0">
-      <Carousel
-        aria-labelledby="room-carousel-title"
-        className="flex flex-col gap-4"
-        opts={{ align: "start" }}
-      >
-        <CardHeader className="items-center">
-          <h2 className="font-medium text-lg" id="room-carousel-title">
-            {copy.roomsTitle}
-          </h2>
+    // The carousel wraps the card so the header's arrows and the content
+    // share its context. shrink-0: see the notice strip.
+    <Carousel className="shrink-0" opts={{ align: "start" }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            <h2>{copy.roomsTitle}</h2>
+          </CardTitle>
           <CardAction className="flex gap-2">
             <CarouselPrevious
               aria-label={copy.previousRooms}
@@ -77,7 +74,7 @@ export function RoomCarousel({
             ))}
           </CarouselContent>
         </CardContent>
-      </Carousel>
-    </Card>
+      </Card>
+    </Carousel>
   );
 }

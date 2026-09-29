@@ -190,13 +190,13 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 ### Hjem
 
-Three sections in this order, each with a section title:
+Three sections in this order. Each is a shadcn `Card` frame: the section title is its `CardTitle` (`text-lg`, an `h2` inside), the section's buttons its `CardAction`, the items its `CardContent` (decided 2026-09-29 in #12):
 
-1. **Opslag.** A white framing card with the section title (and the admin's edit button) inside it, holding one card per active message or today's House Event that has not ended. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
-2. **Dagens overblik.** The day grid (below). A date control on the right: "Vælg dato" secondary button, then a prev/next pair with the date between them.
-3. **Lokaler.** The same framing card as Opslag: the section title with prev/next ghost icon buttons top right, then a horizontal carousel of room cards. Cards open the room detail page.
+1. **Opslag.** One card per active message or today's House Event that has not ended. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
+2. **Dagens overblik.** The day grid (below), as a card inside the frame. The date control is the frame's action: "Vælg dato" secondary button, then a prev/next pair with the date between them. On phone it drops under the title.
+3. **Lokaler.** A horizontal carousel of room cards; the prev/next ghost icon buttons are the frame's action. Cards open the room detail page.
 
-Opslag and Lokaler are the two places a card sits inside a card: the frame groups the section, the inner cards are its items (decided 2026-09-29 in #12).
+These frames are the one place a card sits inside a card: the frame groups the section, the inner cards are its items.
 
 ### Day grid
 

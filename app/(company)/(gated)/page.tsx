@@ -5,6 +5,13 @@ import { NotAuthorizedAlert } from "@/components/not-authorized-alert";
 import { NoticeStrip } from "@/components/notice-board/notice-strip";
 import { RoomCarousel } from "@/components/rooms/room-carousel";
 import { PageHeader, PagePanel } from "@/components/shell/page";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/require-session";
 import { getBookingViewer, viewerDiscount } from "@/lib/bookings/viewer";
 import { cphDate } from "@/lib/domain/opening-hours";
@@ -68,25 +75,28 @@ export default async function HomePage({
       <PageHeader title={messages.shell.home} />
       <PagePanel>
         <NoticeStrip events={events} isAdmin={isAdmin} notices={notices} />
-        <section
-          aria-labelledby="day-grid-title"
-          className="flex flex-col gap-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="font-medium text-lg" id="day-grid-title">
-              {copy.dayTitle}
-            </h2>
-            <DateControl date={date} />
-          </div>
-          <DayGrid
-            columns={grid.columns}
-            date={date}
-            dateLabel={formatDateString(date)}
-            entries={grid.entries}
-            rows={grid.rows}
-            viewer={viewer}
-          />
-        </section>
+        {/* shrink-0: the panel is a fixed-height scrolling column. On phone
+            the date control drops under the title. */}
+        <Card className="shrink-0">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              <h2>{copy.dayTitle}</h2>
+            </CardTitle>
+            <CardAction className="max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start">
+              <DateControl date={date} />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <DayGrid
+              columns={grid.columns}
+              date={date}
+              dateLabel={formatDateString(date)}
+              entries={grid.entries}
+              rows={grid.rows}
+              viewer={viewer}
+            />
+          </CardContent>
+        </Card>
         <RoomCarousel discountPercent={viewerDiscount(viewer)} rooms={rooms} />
       </PagePanel>
     </>

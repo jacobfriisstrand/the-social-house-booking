@@ -73,36 +73,31 @@ export function NoticeStrip({
     // shrink-0: the panel is a fixed-height scrolling column, and a card
     // that clips its overflow would otherwise shrink to a sliver.
     <Card className="shrink-0">
-      <section
-        aria-labelledby="notice-strip-title"
-        className="flex flex-col gap-4"
-      >
-        <CardHeader className="items-center">
-          <h2 className="font-medium text-lg" id="notice-strip-title">
-            {copy.noticesTitle}
-          </h2>
-          {isAdmin ? (
-            <CardAction>
-              <Button
-                nativeButton={false}
-                render={<Link href="/admin/notices" />}
-                variant="ghost"
-              >
-                <PencilIcon data-icon="inline-start" />
-                {copy.editNotices}
-              </Button>
-            </CardAction>
-          ) : null}
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {notices.map((notice) => (
-            <NoticeCard key={notice.noticeId} notice={notice} />
-          ))}
-          {events.map((event) => (
-            <HouseEventCard event={event} key={event.id} />
-          ))}
-        </CardContent>
-      </section>
+      <CardHeader>
+        <CardTitle className="text-lg">
+          <h2>{copy.noticesTitle}</h2>
+        </CardTitle>
+        {isAdmin ? (
+          <CardAction>
+            <Button
+              nativeButton={false}
+              render={<Link href="/admin/notices" />}
+              variant="ghost"
+            >
+              <PencilIcon data-icon="inline-start" />
+              {copy.editNotices}
+            </Button>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {notices.map((notice) => (
+          <NoticeCard key={notice.noticeId} notice={notice} />
+        ))}
+        {events.map((event) => (
+          <HouseEventCard event={event} key={event.id} />
+        ))}
+      </CardContent>
     </Card>
   );
 }
