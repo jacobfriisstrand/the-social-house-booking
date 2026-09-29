@@ -16,12 +16,12 @@ ALTER TABLE "public"."notices"
   ALTER COLUMN "notice_title" DROP DEFAULT;
 
 CREATE OR REPLACE FUNCTION public.save_house_event (
-  p_house_event_id uuid,
-  p_title          text,
   p_description    text,
   p_start_at       timestamp with time zone,
   p_end_at         timestamp with time zone,
-  p_room_ids       uuid[]
+  p_room_ids       uuid[],
+  p_title          text DEFAULT NULL::text,
+  p_house_event_id uuid DEFAULT NULL::uuid
 )
   RETURNS uuid
   LANGUAGE plpgsql
@@ -114,12 +114,12 @@ CREATE POLICY "notices_select_visible_or_admin" ON "public"."notices"
   TO "authenticated"
   USING ((((auth.jwt() ->> 'app_role'::text) = 'admin'::text) OR (notice_is_active AND ((notice_ends_at IS NULL) OR (notice_ends_at > now())))));
 
-REVOKE ALL ON FUNCTION "public"."save_house_event"(uuid, text, text, timestamp WITH time zone, timestamp WITH time zone, uuid[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION "public"."save_house_event"(text, timestamp WITH time zone, timestamp WITH time zone, uuid[], text, uuid) FROM PUBLIC;
 
 -- Supabase's default privileges grant anon EXECUTE by name, which the
 -- PUBLIC revoke does not reach.
-REVOKE EXECUTE ON FUNCTION "public"."save_house_event"(uuid, text, text, timestamp WITH time zone, timestamp WITH time zone, uuid[]) FROM "anon";
+REVOKE EXECUTE ON FUNCTION "public"."save_house_event"(text, timestamp WITH time zone, timestamp WITH time zone, uuid[], text, uuid) FROM "anon";
 
-GRANT EXECUTE ON FUNCTION "public"."save_house_event"(uuid, text, text, timestamp WITH time zone, timestamp WITH time zone, uuid[]) TO "authenticated", "postgres", "service_role";
+GRANT EXECUTE ON FUNCTION "public"."save_house_event"(text, timestamp WITH time zone, timestamp WITH time zone, uuid[], text, uuid) TO "authenticated", "postgres", "service_role";
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE "public"."calendar_entries" TO "anon", "authenticated", "postgres", "service_role";

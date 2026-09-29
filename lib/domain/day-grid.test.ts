@@ -3,6 +3,7 @@ import {
   dayGridColumn,
   GRID_ROW_COUNT,
   type GridCell,
+  gridRows,
   gridSpan,
   roomStatusAt,
 } from "./day-grid";
@@ -184,5 +185,29 @@ describe("roomStatusAt", () => {
         specialDays: [{ closes: null, date, isClosed: true, opens: null }],
       })
     ).toEqual({ kind: "closed" });
+  });
+});
+
+describe("gridRows", () => {
+  it("files each cell under the row it starts in, left to right", () => {
+    const entry: GridCell = {
+      entryId: "a",
+      firstRow: 2,
+      kind: "entry",
+      rowSpan: 4,
+    };
+    const slot: GridCell = {
+      kind: "slot",
+      label: "10:00",
+      row: 2,
+      status: "available",
+    };
+    const rows = gridRows([[entry], [slot]]);
+    expect(rows).toHaveLength(GRID_ROW_COUNT);
+    expect(rows[2]).toEqual([
+      { cell: entry, column: 0 },
+      { cell: slot, column: 1 },
+    ]);
+    expect(rows[3]).toEqual([]);
   });
 });

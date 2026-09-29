@@ -91,14 +91,14 @@ create trigger house_events_rooms_period_free
 -- admin-only, and the room triggers above refuse any overlap. On an edit,
 -- rooms that leave the event go first, then the times change (checked
 -- against the rooms that stay), then new rooms join (checked at the new
--- times).
+-- times). A new event passes no id; the title is optional.
 create or replace function public.save_house_event(
-  p_house_event_id uuid,
-  p_title text,
   p_description text,
   p_start_at timestamptz,
   p_end_at timestamptz,
-  p_room_ids uuid[]
+  p_room_ids uuid[],
+  p_title text default null,
+  p_house_event_id uuid default null
 ) returns uuid
 language plpgsql
 security invoker
@@ -149,7 +149,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.save_house_event(uuid, text, text, timestamptz, timestamptz, uuid[])
+revoke execute on function public.save_house_event(text, timestamptz, timestamptz, uuid[], text, uuid)
   from public, anon;
-grant execute on function public.save_house_event(uuid, text, text, timestamptz, timestamptz, uuid[])
+grant execute on function public.save_house_event(text, timestamptz, timestamptz, uuid[], text, uuid)
   to authenticated, service_role;

@@ -24,6 +24,7 @@ describe("shellAdminLinks", () => {
       "/admin/rooms",
       "/admin/companies",
       "/admin/addons",
+      "/admin/notices",
       "/admin/settings",
     ]);
   });

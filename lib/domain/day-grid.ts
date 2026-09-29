@@ -157,3 +157,22 @@ export function roomStatusAt({
     ? { kind: "free" }
     : { kind: "closed" };
 }
+
+/** A cell with the column (room) it sits in. */
+export interface PlacedCell {
+  cell: GridCell;
+  column: number;
+}
+
+// The grid row by row, as its ARIA rows are built: each row holds the cells
+// that start in it, left to right. A cell spanning several rows belongs to
+// the row it starts in.
+export function gridRows(columns: GridCell[][]): PlacedCell[][] {
+  const rows: PlacedCell[][] = Array.from({ length: GRID_ROW_COUNT }, () => []);
+  for (const [column, cells] of columns.entries()) {
+    for (const cell of cells) {
+      rows[firstRowOf(cell)]?.push({ cell, column });
+    }
+  }
+  return rows;
+}

@@ -9,6 +9,7 @@ import {
   DoorOpenIcon,
   HouseIcon,
   type LucideIcon,
+  MegaphoneIcon,
   SettingsIcon,
   ShoppingBagIcon,
 } from "lucide-react";
@@ -55,6 +56,11 @@ export function shellAdminLinks(): ShellNavLink[] {
       href: "/admin/addons",
       icon: ShoppingBagIcon,
       label: messages.addons.title,
+    },
+    {
+      href: "/admin/notices",
+      icon: MegaphoneIcon,
+      label: messages.shell.notices,
     },
     {
       href: "/admin/settings",

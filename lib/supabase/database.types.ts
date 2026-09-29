@@ -980,10 +980,10 @@ export type Database = {
         Args: {
           p_description: string
           p_end_at: string
-          p_house_event_id: string
+          p_house_event_id?: string
           p_room_ids: string[]
           p_start_at: string
-          p_title: string
+          p_title?: string
         }
         Returns: string
       }

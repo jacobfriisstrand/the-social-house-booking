@@ -26,7 +26,7 @@ insert into public.bookings (booking_id, booking_company_id, booking_room_id, bo
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 select throws_ok(
-  $$select public.save_house_event(null, 'x', 'x', timestamptz '2026-10-02 09:00+02', timestamptz '2026-10-02 10:00+02', array['44444444-4444-4444-4444-444444444002']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'x', p_start_at := timestamptz '2026-10-02 09:00+02', p_end_at := timestamptz '2026-10-02 10:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'x')$$,
   '42501', null,
   'a company cannot save a house event');
 
@@ -34,14 +34,14 @@ select throws_ok(
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
 
 select throws_ok(
-  $$select public.save_house_event(null, 'x', 'x', timestamptz '2026-10-02 09:00+02', timestamptz '2026-10-02 10:00+02', array[]::uuid[])$$,
+  $$select public.save_house_event(p_description := 'x', p_start_at := timestamptz '2026-10-02 09:00+02', p_end_at := timestamptz '2026-10-02 10:00+02', p_room_ids := array[]::uuid[], p_title := 'x')$$,
   '22023', null,
   'an event without rooms is refused');
 
 -- Both rooms, but Room of Power is taken until 11:30 (buffer): the whole
 -- save is refused and no half-saved event remains.
 select throws_ok(
-  $$select public.save_house_event(null, 'Launch', 'Product launch', timestamptz '2026-10-01 11:00+02', timestamptz '2026-10-01 12:00+02', array['44444444-4444-4444-4444-444444444002', '44444444-4444-4444-4444-444444444001']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'Product launch', p_start_at := timestamptz '2026-10-01 11:00+02', p_end_at := timestamptz '2026-10-01 12:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002', '44444444-4444-4444-4444-444444444001']::uuid[], p_title := 'Launch')$$,
   '23P01', null,
   'an event on a booked room (incl. its buffer) is refused');
 select is((select count(*) from public.house_events), 0::bigint, 'a refused save leaves no event behind');
@@ -49,7 +49,7 @@ select is((select count(*) from public.house_event_rooms), 0::bigint, 'a refused
 
 -- A free period on both rooms is saved with both rooms.
 select lives_ok(
-  $$select public.save_house_event(null, 'Launch', 'Product launch', timestamptz '2026-10-01 12:00+02', timestamptz '2026-10-01 14:00+02', array['44444444-4444-4444-4444-444444444001', '44444444-4444-4444-4444-444444444002']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'Product launch', p_start_at := timestamptz '2026-10-01 12:00+02', p_end_at := timestamptz '2026-10-01 14:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444001', '44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'Launch')$$,
   'an event on free rooms is saved');
 select is(
   (select count(*) from public.house_event_rooms her join public.house_events he on he.house_event_id = her.house_event_room_event_id where he.house_event_title = 'Launch'),
@@ -59,7 +59,7 @@ select is(
 -- Edit: drop Room of Power and move earlier, into the slot Room of Power's
 -- booking holds. Allowed, because the room leaves the event first.
 select lives_ok(
-  $$select public.save_house_event((select house_event_id from public.house_events where house_event_title = 'Launch'), 'Launch', 'Moved', timestamptz '2026-10-01 10:00+02', timestamptz '2026-10-01 11:00+02', array['44444444-4444-4444-4444-444444444002']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'Moved', p_start_at := timestamptz '2026-10-01 10:00+02', p_end_at := timestamptz '2026-10-01 11:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'Launch', p_house_event_id := (select house_event_id from public.house_events where house_event_title = 'Launch'))$$,
   'an edit that drops a room can move into that room''s booked time');
 select is(
   (select array_agg(her.house_event_room_room_id) from public.house_event_rooms her),
@@ -69,12 +69,12 @@ select is(
 -- Edit: add Room of Power back at the booked time. Refused, and the event
 -- keeps its previous state.
 select throws_ok(
-  $$select public.save_house_event((select house_event_id from public.house_events where house_event_title = 'Launch'), 'Launch', 'Again', timestamptz '2026-10-01 10:00+02', timestamptz '2026-10-01 11:00+02', array['44444444-4444-4444-4444-444444444001', '44444444-4444-4444-4444-444444444002']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'Again', p_start_at := timestamptz '2026-10-01 10:00+02', p_end_at := timestamptz '2026-10-01 11:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444001', '44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'Launch', p_house_event_id := (select house_event_id from public.house_events where house_event_title = 'Launch'))$$,
   '23P01', null,
   'an edit that adds a booked room is refused');
 
 select throws_ok(
-  $$select public.save_house_event('99999999-9999-9999-9999-999999999999', 'x', 'x', timestamptz '2026-10-03 09:00+02', timestamptz '2026-10-03 10:00+02', array['44444444-4444-4444-4444-444444444002']::uuid[])$$,
+  $$select public.save_house_event(p_description := 'x', p_start_at := timestamptz '2026-10-03 09:00+02', p_end_at := timestamptz '2026-10-03 10:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'x', p_house_event_id := '99999999-9999-9999-9999-999999999999')$$,
   'P0002', null,
   'editing an unknown event is refused');
 
