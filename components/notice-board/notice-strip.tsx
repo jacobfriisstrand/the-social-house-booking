@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatTime } from "@/lib/format";
+import { formatDate, formatTime, formatWeekday } from "@/lib/format";
 import type { StripHouseEvent } from "@/lib/notice-board/data";
 import type { Notice } from "@/lib/notices/data";
 import { messages } from "@/messages/da";
@@ -61,10 +61,12 @@ export function NoticeStrip({
   events,
   isAdmin,
   notices,
+  now,
 }: {
   events: StripHouseEvent[];
   isAdmin: boolean;
   notices: Notice[];
+  now: Date;
 }) {
   if (notices.length === 0 && events.length === 0) {
     return null;
@@ -77,6 +79,10 @@ export function NoticeStrip({
         <CardTitle className="text-lg">
           <h2>{copy.noticesTitle}</h2>
         </CardTitle>
+        {/* Always today, whichever day the grid below shows. */}
+        <CardDescription className="tabular-nums">
+          {copy.noticesToday(formatWeekday(now), formatDate(now))}
+        </CardDescription>
         {isAdmin ? (
           <CardAction>
             <Button

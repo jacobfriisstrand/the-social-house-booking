@@ -192,7 +192,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 Three sections in this order. Each is a shadcn `Card` frame: the section title is its `CardTitle` (`text-lg`, an `h2` inside), the section's buttons its `CardAction`, the items its `CardContent` (decided 2026-09-29 in #12):
 
-1. **Opslag.** One card per active message or today's House Event that has not ended. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
+1. **Dagens opslag.** One card per active message or today's House Event that has not ended. The frame's description says it is today ("I dag, tirsdag 29/09/2026"), since the grid below can show another day. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
 2. **Dagens overblik.** The day grid (below), as a card inside the frame. The date control is the frame's action: "Vælg dato" secondary button, then a prev/next pair with the date between them. On phone it drops under the title.
 3. **Lokaler.** A horizontal carousel of room cards; the prev/next ghost icon buttons are the frame's action. Cards open the room detail page.
 
@@ -204,7 +204,7 @@ The signature component, same for admin and members.
 
 - Rows are 30-minute slots from 09:00 to 22:00, fixed. Row height `h-9`. The time column is 72px, sticky, 14px muted-foreground `tabular-nums`.
 - Columns are rooms in display order, headers 14px foreground, centred, `h-14`. Column dividers and row lines are `border`.
-- On today's date each room header carries a 12px muted status line, the notice board's "when occupied rooms free up": "Ledig nu", "Ledig fra 14:00" (the end of what occupies the room, without the buffer, decided in #12) or "Lukket" outside opening hours. Other dates show no status line.
+- On today's date each room header carries a 12px muted status line, the notice board's "when occupied rooms free up": "Ledig nu"; "Ledig fra 14:00" (the end of what occupies the room, without the buffer, decided in #12); "Åbner kl. 08:00" before opening; "Lukket for i dag" after closing, on a closed day, or when what occupies the room runs to closing time or past it. Other dates show no status line.
 - A booking is a solid primary block spanning its slots, `rounded-lg`, 1px darker edge (`chart-2`). Text inside is `text-sm text-primary-foreground`: company display name top left, time range bottom left ("19:00 - 21:30"). Below `h-9`-worth of height only the name shows. Members see the company display name and nothing else, per the spec's visibility rules. The company's own bookings add the booker's name after the company name.
 - The 30-minute buffer is a muted block with a border, no text, directly below the booking. It is never billed and never labelled.
 - A House Event is an info block with the event title ("House Event" when it has none). It renders in every affected room's column, with the buffer below it like a booking: Postgres blocks the room for 30 minutes after an event too (#24).

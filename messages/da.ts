@@ -532,7 +532,9 @@ export const messages = {
     houseEventWhen: (rooms: string, time: string) => `${rooms} · ${time}`,
     nextDay: "Næste dag",
     nextRooms: "Næste lokaler",
-    noticesTitle: "Opslag",
+    noticesTitle: "Dagens opslag",
+    noticesToday: (weekday: string, date: string) =>
+      `I dag, ${weekday} ${date}`,
     pickDate: "Vælg dato",
     previousDay: "Forrige dag",
     previousRooms: "Forrige lokaler",
@@ -558,9 +560,10 @@ export const messages = {
     },
     slotLabel: (room: string, time: string) => `Book ${room} kl. ${time}`,
     status: {
-      closed: "Lukket",
+      closedToday: "Lukket for i dag",
       free: "Ledig nu",
       freeAt: (time: string) => `Ledig fra ${time}`,
+      opensAt: (time: string) => `Åbner kl. ${time}`,
     },
   },
   // House Events (admin, #12, Bilag 1 "Kalender og opslagstavle"): date,

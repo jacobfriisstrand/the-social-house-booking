@@ -120,10 +120,11 @@ describe("roomStatusLabel", () => {
     ).toBe("Ledig fra 14:00");
   });
 
-  it("says free and closed", () => {
-    expect(roomStatusLabel({ kind: "free" })).toBe(messages.home.status.free);
-    expect(roomStatusLabel({ kind: "closed" })).toBe(
-      messages.home.status.closed
+  it("says when a room opens, is free, or is closed for today", () => {
+    expect(roomStatusLabel({ kind: "opens", opensAt: "08:00" })).toBe(
+      "Åbner kl. 08:00"
     );
+    expect(roomStatusLabel({ kind: "free" })).toBe(messages.home.status.free);
+    expect(roomStatusLabel({ kind: "closed_today" })).toBe("Lukket for i dag");
   });
 });

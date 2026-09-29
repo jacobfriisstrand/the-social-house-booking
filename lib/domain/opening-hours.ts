@@ -4,7 +4,7 @@
 // Copenhagen local time before the comparison. Postgres stores the rows;
 // this module computes the fit (#4 availability check).
 
-import { cphWallClock } from "./time";
+import { cphToUtc, cphWallClock } from "./time";
 
 /** One weekly row per weekday. 0 = Monday … 6 = Sunday. */
 export interface WeeklyOpeningHour {
@@ -133,4 +133,29 @@ function fitsWithin(
   // Midnight of the next date counts as 24:00 (1440) of the start date.
   const endMinutes = endsAtMidnight ? 1440 : end.hour * 60 + end.minute;
   return startMinutes >= opens && endMinutes <= closes;
+}
+
+/** One date's hours as Copenhagen wall clock, "HH:mm". */
+export interface DayHours {
+  closes: string;
+  opens: string;
+}
+
+// The hours a room keeps on a Copenhagen date: the special closing day's
+// when there is one, else the weekday's row. Null when the room is closed
+// all day (or has no row for the weekday).
+export function openingHoursOn(
+  date: string,
+  weekly: WeeklyOpeningHour[],
+  specialDays: SpecialClosingDay[] = []
+): DayHours | null {
+  const specialDay = specialDays.find((day) => day.date === date);
+  if (specialDay) {
+    return specialDay.isClosed || !specialDay.opens || !specialDay.closes
+      ? null
+      : { closes: specialDay.closes, opens: specialDay.opens };
+  }
+  const weekday = dayOfWeek(cphToUtc(date, "12:00"));
+  const row = weekly.find((hour) => hour.dayOfWeek === weekday);
+  return !row || row.isClosed ? null : { closes: row.closes, opens: row.opens };
 }

@@ -14,7 +14,8 @@ import {
 import { SLOT_MINUTES } from "./booking-window";
 import { bufferEndAt } from "./buffer";
 import {
-  bookingWithinOpeningHours,
+  cphDate,
+  openingHoursOn,
   type SpecialClosingDay,
   type WeeklyOpeningHour,
 } from "./opening-hours";
@@ -134,28 +135,42 @@ export function dayGridColumn({
 }
 
 export type RoomStatus =
-  | { kind: "closed" }
+  | { kind: "closed_today" }
   | { kind: "free" }
+  | { kind: "opens"; opensAt: string }
   | { freeAt: Date; kind: "occupied" };
 
-// The notice board's "when occupied rooms free up" (Bilag 1): a room in use
-// frees up at the end of what occupies it. The buffer is not added (decided
-// in #12). A room that is not in use is free while it is open.
+const CLOSED_TODAY: RoomStatus = { kind: "closed_today" };
+
+// The notice board's "when occupied rooms free up" (Bilag 1), today in
+// Copenhagen: a room in use frees up at the end of what occupies it, the
+// buffer not added (decided in #12). A room that only frees up at or after
+// its closing time, has closed, or is closed all day is closed for today;
+// before opening it says when it opens.
 export function roomStatusAt({
   entries,
   now,
   specialDays,
   weekly,
 }: RoomDay & { now: Date }): RoomStatus {
+  const date = cphDate(now);
+  const hours = openingHoursOn(date, weekly, specialDays);
+  if (!hours) {
+    return CLOSED_TODAY;
+  }
+  const closesAt = cphToUtc(date, hours.closes);
   const current = entries.find(
     (entry) => entry.startAt <= now && now < entry.endAt
   );
   if (current) {
-    return { freeAt: current.endAt, kind: "occupied" };
+    return current.endAt < closesAt
+      ? { freeAt: current.endAt, kind: "occupied" }
+      : CLOSED_TODAY;
   }
-  return bookingWithinOpeningHours(now, now, weekly, specialDays)
-    ? { kind: "free" }
-    : { kind: "closed" };
+  if (now < cphToUtc(date, hours.opens)) {
+    return { kind: "opens", opensAt: hours.opens };
+  }
+  return now < closesAt ? { kind: "free" } : CLOSED_TODAY;
 }
 
 /** A cell with the column (room) it sits in. */

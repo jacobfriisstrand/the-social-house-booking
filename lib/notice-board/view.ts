@@ -132,8 +132,14 @@ export function houseEventView(
 }
 
 export function roomStatusLabel(status: RoomStatus): string {
-  if (status.kind === "occupied") {
-    return copy.status.freeAt(formatTime(status.freeAt));
+  switch (status.kind) {
+    case "occupied":
+      return copy.status.freeAt(formatTime(status.freeAt));
+    case "opens":
+      return copy.status.opensAt(status.opensAt);
+    case "free":
+      return copy.status.free;
+    default:
+      return copy.status.closedToday;
   }
-  return status.kind === "free" ? copy.status.free : copy.status.closed;
 }

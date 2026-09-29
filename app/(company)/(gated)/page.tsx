@@ -74,7 +74,12 @@ export default async function HomePage({
       {params.unauthorized ? <NotAuthorizedAlert /> : null}
       <PageHeader title={messages.shell.home} />
       <PagePanel>
-        <NoticeStrip events={events} isAdmin={isAdmin} notices={notices} />
+        <NoticeStrip
+          events={events}
+          isAdmin={isAdmin}
+          notices={notices}
+          now={now}
+        />
         {/* shrink-0: the panel is a fixed-height scrolling column. On phone
             the date control drops under the title. */}
         <Card className="shrink-0">

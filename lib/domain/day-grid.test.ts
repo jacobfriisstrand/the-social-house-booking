@@ -152,6 +152,12 @@ describe("dayGridColumn", () => {
 
 describe("roomStatusAt", () => {
   const room = { entries: [booking], specialDays: [], weekly };
+  // 17:00-20:00 local: runs past the 18:00 close.
+  const lateBooking = {
+    endAt: new Date("2026-09-16T18:00:00Z"),
+    id: "late",
+    startAt: new Date("2026-09-16T15:00:00Z"),
+  };
 
   it("is occupied until the end of what is on, without the buffer", () => {
     expect(
@@ -171,20 +177,37 @@ describe("roomStatusAt", () => {
     });
   });
 
-  it("is closed outside opening hours", () => {
+  it("says when it opens before opening time", () => {
     expect(roomStatusAt({ ...room, now: earlyMorning })).toEqual({
-      kind: "closed",
+      kind: "opens",
+      opensAt: "09:00",
     });
   });
 
-  it("is closed on a special closing day", () => {
+  it("is closed for today after closing time", () => {
+    expect(
+      roomStatusAt({ ...room, now: new Date("2026-09-16T16:30:00Z") })
+    ).toEqual({ kind: "closed_today" });
+  });
+
+  it("is closed for today when what is on runs to or past closing", () => {
     expect(
       roomStatusAt({
         ...room,
-        now: new Date("2026-09-16T12:00:00Z"),
+        entries: [lateBooking],
+        now: new Date("2026-09-16T15:30:00Z"),
+      })
+    ).toEqual({ kind: "closed_today" });
+  });
+
+  it("is closed for today on a special closing day", () => {
+    expect(
+      roomStatusAt({
+        ...room,
+        now: new Date("2026-09-16T08:00:00Z"),
         specialDays: [{ closes: null, date, isClosed: true, opens: null }],
       })
-    ).toEqual({ kind: "closed" });
+    ).toEqual({ kind: "closed_today" });
   });
 });
 
