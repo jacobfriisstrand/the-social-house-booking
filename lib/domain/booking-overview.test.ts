@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  addOnsTotalOre,
+  type BookingAddonOverview,
   type BookingOverviewEntry,
   type BookingOverviewStatus,
   splitBookingOverview,
@@ -104,5 +106,22 @@ describe("splitBookingOverview", () => {
     expect(result.all.map(({ bookingId }) => bookingId)).toEqual(["confirmed"]);
     expect(result.past).toHaveLength(0);
     expect(result.cancelled).toHaveLength(0);
+  });
+});
+
+describe("addOnsTotalOre", () => {
+  const addOn = (totalOre: number): BookingAddonOverview => ({
+    addonId: "addon",
+    name: "Lunch",
+    quantity: 1,
+    totalOre,
+  });
+
+  it("sums each add-on line's total", () => {
+    expect(addOnsTotalOre([addOn(50_000), addOn(180_000)])).toBe(230_000);
+  });
+
+  it("reads an empty list as zero", () => {
+    expect(addOnsTotalOre([])).toBe(0);
   });
 });

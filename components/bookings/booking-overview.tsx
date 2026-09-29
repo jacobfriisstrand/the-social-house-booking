@@ -25,11 +25,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type {
-  BookingInvoicingStatus,
-  BookingOverviewLists,
-  BookingOverviewRow,
-  BookingOverviewStatus,
+import {
+  addOnsTotalOre,
+  type BookingInvoicingStatus,
+  type BookingOverviewLists,
+  type BookingOverviewRow,
+  type BookingOverviewStatus,
 } from "@/lib/domain/booking-overview";
 import { formatDateTime, formatOre } from "@/lib/format";
 import { slicePage } from "@/lib/pagination";
@@ -124,34 +125,25 @@ function BookingDiscountCell({ booking }: { booking: BookingOverviewRow }) {
   );
 }
 
+// One value per cell, in the table's one text size: the add-ons total
+// (not each add-on as its own row, 2026-09-29), the discount as its
+// percentage (decided 2026-09-23 while reviewing #81).
 function BookingAddOnsCell({ booking }: { booking: BookingOverviewRow }) {
-  if (booking.addOns.length === 0) {
-    return <TableCell>{copy.noAddOns}</TableCell>;
-  }
-
   return (
-    <TableCell>
-      <div className="flex min-w-40 flex-col gap-1">
-        {booking.addOns.map((addOn) => (
-          <div className="flex justify-between gap-3" key={addOn.addonId}>
-            <span className="max-w-44 truncate">
-              {addOn.name ?? copy.inactiveAddOn}
-              {addOn.quantity > 1 ? ` (${copy.quantity(addOn.quantity)})` : ""}
-            </span>
-            <span className="shrink-0 tabular-nums">
-              {formatOre(addOn.totalOre)}
-            </span>
-          </div>
-        ))}
-      </div>
+    <TableCell className="text-right tabular-nums">
+      {booking.addOns.length === 0
+        ? copy.noAddOns
+        : formatOre(addOnsTotalOre(booking.addOns))}
     </TableCell>
   );
 }
 
+// The two badges stack vertically (2026-09-29): the row keeps its height,
+// and neither badge pushes the other wide.
 function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   return (
     <TableCell>
-      <div className="flex min-w-36 flex-wrap gap-1">
+      <div className="flex flex-col items-start gap-1">
         <BookingStatusBadge status={booking.bookingStatus} />
         <InvoicingStatusBadge status={booking.invoicingStatus} />
       </div>
@@ -215,7 +207,9 @@ function BookingTable({
             <TableHead>{copy.columns.price}</TableHead>
             <TableHead>{copy.columns.discount}</TableHead>
             <TableHead>{copy.columns.addOns}</TableHead>
-            <TableHead>{copy.columns.cancellationFee}</TableHead>
+            <TableHead className="w-28">
+              {copy.columns.cancellationFee}
+            </TableHead>
             <TableHead>{copy.columns.status}</TableHead>
           </TableRow>
         </TableHeader>
@@ -246,11 +240,15 @@ function BookingTable({
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="flex flex-col items-stretch gap-1 px-2 py-1">
-        {/* The "ekskl. moms" line sits right above the pagination arrows,
-            and the pagination row hugs the table (2026-09-29). */}
-        <p className="text-muted-foreground text-xs">{copy.allPricesExclVat}</p>
-        <TablePagination paged={paged} totalItems={bookings.length} />
+      <CardFooter className="px-2 py-1">
+        {/* The "ekskl. moms" line sits directly above the pagination arrows,
+            inside the pagination block, so the row hugs the table
+            (2026-09-29). */}
+        <TablePagination
+          note={copy.allPricesExclVat}
+          paged={paged}
+          totalItems={bookings.length}
+        />
       </CardFooter>
     </Card>
   );
