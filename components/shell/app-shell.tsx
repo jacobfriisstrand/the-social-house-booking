@@ -72,9 +72,15 @@ function CloseMobileSidebarOnNavigate() {
 // makes each page load SSR the whole sidebar server-side (six extra renders
 // right after login, on routes the user has not clicked). They fetch on
 // click instead.
-const badgeToneClass = {
-  neutral: "bg-secondary text-secondary-foreground",
-  warning: "border border-warning bg-warning/10 text-warning",
+// Count badges are the shared Badge (DESIGN.md "Badges"): the member's
+// list counts sit on the muted outline chip, the admin worklist wears the
+// warning tint. Zero counts hide the badge entirely.
+const badgeByTone = {
+  neutral: {
+    className: "justify-center bg-muted px-1.5 tabular-nums",
+    variant: "outline",
+  },
+  warning: { variant: "warning" },
 } as const;
 
 function ShellNavLinkItem({
@@ -103,9 +109,7 @@ function ShellNavLinkItem({
       </SidebarMenuButton>
       {/* Zero counts hide the badge: an empty worklist says nothing. */}
       {badge ? (
-        <SidebarMenuBadge
-          className={badgeToneClass[link.badgeTone ?? "neutral"]}
-        >
+        <SidebarMenuBadge {...badgeByTone[link.badgeTone ?? "neutral"]}>
           {badge}
         </SidebarMenuBadge>
       ) : null}

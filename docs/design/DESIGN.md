@@ -166,7 +166,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Forms.** shadcn `Field` with `react-hook-form` and zod (see `docs/agents/ui.md`). Label above, 12px muted. Input `h-9`, white, border, ring on focus. Hint below in 12px muted ("Maks. 5"). Error below in 12px destructive, replacing the hint. Required is the default; optional fields say "(valgfrit)" in the label. Selects use the shadcn Base UI `Select` with an `items` prop. Time selects list 30-minute steps.
 
-**Badges.** shadcn `Badge`, tinted: `rounded-md px-2 py-0.5 text-xs font-medium`. Count chips (2026-09-29): the booking tabs and the sidebar's nav items carry counts as `Badge` variant `outline` on the muted ground (`bg-muted`), `tabular-nums`, hidden at zero; the sidebar renders them in the `SidebarMenuBadge` slot, and the admin's outstanding-invoice count wears the warning tint, matching the "Ikke faktureret" badge.
+**Badges.** shadcn `Badge`, tinted: `rounded-md px-2 py-0.5 text-xs font-medium`. Count chips (2026-09-29): the booking tabs and the sidebar's nav items carry counts as `Badge` variant `outline` on the muted ground (`bg-muted`), `tabular-nums`, hidden at zero; the sidebar's `SidebarMenuBadge` slot is that same `Badge`, positioned absolutely beside the menu button — it has no hover state of its own (2026-09-29), and the admin's outstanding-invoice count wears the warning tint, matching the "Ikke faktureret" badge.
 
 | State | Token | Label |
 |---|---|---|
