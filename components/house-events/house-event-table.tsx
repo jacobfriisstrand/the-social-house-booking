@@ -1,14 +1,10 @@
 // The admin's upcoming House Events (Opslag, "House Events" tab, #12):
 // date, time, the rooms it blocks, the title, and the row actions.
+
+import { EmptyCard } from "@/components/empty-card";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
 import { HouseEventDialog } from "@/components/house-events/house-event-dialog";
 import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -81,14 +77,7 @@ export function HouseEventTable({
 }) {
   if (events.length === 0) {
     return (
-      <Card className="py-16">
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
-            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <EmptyCard description={copy.emptyDescription} title={copy.emptyTitle} />
     );
   }
   return (

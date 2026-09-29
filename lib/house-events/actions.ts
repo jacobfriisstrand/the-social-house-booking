@@ -54,7 +54,7 @@ function revalidateHouseEvents(): void {
   revalidatePath("/admin/notices");
 }
 
-const when = (startAt: string, endAt: string): string =>
+const when = ({ endAt, startAt }: Period): string =>
   `${formatDate(startAt)} ${formatTime(startAt)} - ${formatTime(endAt)}`;
 
 type EntryRow = Pick<
@@ -73,16 +73,20 @@ const entryName = (entry: EntryRow): string =>
   entry.house_event_title ??
   messages.home.houseEventBadge;
 
-// The entry as a conflict when its buffered period meets the event's; the
-// view's columns are nullable by construction.
-function toConflicts(entry: EntryRow, period: Period): HouseEventConflict[] {
+// The view's columns are nullable by construction; a row without times
+// cannot collide.
+function periodOf(entry: EntryRow): Period | null {
   const { calendar_entry_end_at: endAt, calendar_entry_start_at: startAt } =
     entry;
-  if (!(startAt && endAt)) {
-    return [];
-  }
-  const other = { endAt: new Date(endAt), startAt: new Date(startAt) };
-  if (!periodsCollide(period, other)) {
+  return startAt && endAt
+    ? { endAt: new Date(endAt), startAt: new Date(startAt) }
+    : null;
+}
+
+// The entry as a conflict when its buffered period meets the event's.
+function toConflicts(entry: EntryRow, period: Period): HouseEventConflict[] {
+  const other = periodOf(entry);
+  if (!(other && periodsCollide(period, other))) {
     return [];
   }
   return [
@@ -90,7 +94,7 @@ function toConflicts(entry: EntryRow, period: Period): HouseEventConflict[] {
       entryId: `${entry.calendar_entry_id}-${entry.room_name}`,
       name: entryName(entry),
       roomName: entry.room_name ?? "",
-      when: when(startAt, endAt),
+      when: when(other),
     },
   ];
 }
@@ -126,6 +130,30 @@ async function findConflicts(
   return data.flatMap((entry) => toConflicts(entry, period));
 }
 
+// Saves through save_house_event; null on success, else the message. A
+// booking that lands between the lookup and the save trips the room
+// triggers.
+async function persist(
+  supabase: Client,
+  event: HouseEventFormValues,
+  period: Period
+): Promise<string | null> {
+  const { error } = await supabase.rpc("save_house_event", {
+    p_description: event.description,
+    p_end_at: period.endAt.toISOString(),
+    p_house_event_id: event.houseEventId,
+    p_room_ids: event.roomIds,
+    p_start_at: period.startAt.toISOString(),
+    p_title: event.title || undefined,
+  });
+  if (!error) {
+    return null;
+  }
+  return error.code === EXCLUSION_VIOLATION
+    ? copy.errors.conflictRace
+    : copy.errors.saveFailed;
+}
+
 export async function saveHouseEvent(
   _previousState: HouseEventFormState,
   values: HouseEventFormValues
@@ -147,20 +175,9 @@ export async function saveHouseEvent(
   if (conflicts.length > 0) {
     return { conflicts, error: copy.errors.conflict, status: "conflict" };
   }
-  const { error } = await supabase.rpc("save_house_event", {
-    p_description: event.description,
-    p_end_at: period.endAt.toISOString(),
-    p_house_event_id: event.houseEventId,
-    p_room_ids: event.roomIds,
-    p_start_at: period.startAt.toISOString(),
-    p_title: event.title || undefined,
-  });
-  if (error) {
-    const message =
-      error.code === EXCLUSION_VIOLATION
-        ? copy.errors.conflictRace
-        : copy.errors.saveFailed;
-    return { error: message, status: "error" };
+  const failure = await persist(supabase, event, period);
+  if (failure) {
+    return { error: failure, status: "error" };
   }
   revalidateHouseEvents();
   return { status: "success" };

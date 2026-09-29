@@ -4,21 +4,15 @@
 // text, the on/off switch and an optional last day it shows (decided in
 // #12). One schema with the server action (lib/validation/notices.ts).
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { type Control, useController, useForm } from "react-hook-form";
 import { DatePicker } from "@/components/forms/date-picker";
+import { FormDialog } from "@/components/forms/form-dialog";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Field,
   FieldDescription,
@@ -134,34 +128,17 @@ function NoticeForm({
   );
 }
 
-// The notice in edit mode; null in create mode. The form mounts with the
-// dialog, so every open starts from the saved values.
+// The notice in edit mode; null in create mode.
 export function NoticeDialog({
   initial,
 }: {
   initial: NoticeFormValues | null;
 }) {
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
-  const trigger = initial ? (
-    <Button size="sm" type="button" variant="outline" />
-  ) : (
-    <Button type="button" />
-  );
-
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={trigger}>
-        {initial ? copy.editLabel : copy.createButton}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {initial ? copy.editTitle : copy.createTitle}
-          </DialogTitle>
-        </DialogHeader>
+    <FormDialog copy={copy} editing={initial !== null}>
+      {(close) => (
         <NoticeForm initial={initial ?? EMPTY_NOTICE} onSaved={close} />
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   );
 }

@@ -1,16 +1,12 @@
 // The admin's notices (Opslag, "Beskeder" tab, #12): title, whether the
 // notice board shows it, the last day it shows, and the row actions.
+
+import { EmptyCard } from "@/components/empty-card";
 import { ActiveToggleButton } from "@/components/forms/active-toggle-button";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
 import { NoticeDialog } from "@/components/notices/notice-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -77,14 +73,7 @@ function NoticeRow({ row }: { row: NoticeTableRow }) {
 export function NoticeTable({ rows }: { rows: NoticeTableRow[] }) {
   if (rows.length === 0) {
     return (
-      <Card className="py-16">
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
-            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <EmptyCard description={copy.emptyDescription} title={copy.emptyTitle} />
     );
   }
   return (

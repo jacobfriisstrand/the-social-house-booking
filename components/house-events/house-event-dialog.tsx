@@ -6,13 +6,7 @@
 // them and saves nothing (decided in #12). One schema with the server
 // action (lib/validation/house-events.ts).
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  startTransition,
-  useActionState,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { startTransition, useActionState, useCallback, useEffect } from "react";
 import {
   type Control,
   type UseFormReturn,
@@ -21,20 +15,13 @@ import {
 } from "react-hook-form";
 import { DatePicker } from "@/components/forms/date-picker";
 import { applyFieldErrors } from "@/components/forms/field-errors";
+import { FormDialog } from "@/components/forms/form-dialog";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { TimeSelect } from "@/components/rooms/time-select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Field,
   FieldError,
@@ -202,8 +189,24 @@ function ConflictList({ conflicts }: { conflicts: HouseEventConflict[] }) {
   );
 }
 
-// Success closes the dialog; a conflict stays in the dialog as a list; any
-// other failure is a toast plus the field errors (DESIGN.md "Toasts").
+type FailedState = Extract<
+  HouseEventFormState,
+  { status: "conflict" | "error" }
+>;
+
+// A conflict stays in the dialog as a list; both failures toast, and an
+// error puts its field errors on the inputs (DESIGN.md "Toasts").
+function reportFailure(
+  state: FailedState,
+  form: UseFormReturn<HouseEventFormValues>
+): void {
+  toast.add({ title: state.error, type: "error" });
+  if (state.status === "error") {
+    applyFieldErrors(form, state.fieldErrors ?? {});
+  }
+}
+
+// Success toasts and closes the dialog.
 function useSaveResult(
   state: HouseEventFormState,
   form: UseFormReturn<HouseEventFormValues>,
@@ -213,13 +216,8 @@ function useSaveResult(
     if (state.status === "success") {
       toast.add({ title: copy.saved, type: "success" });
       onSaved();
-      return;
-    }
-    if (state.status === "conflict" || state.status === "error") {
-      toast.add({ title: state.error, type: "error" });
-    }
-    if (state.status === "error") {
-      applyFieldErrors(form, state.fieldErrors ?? {});
+    } else if (state.status !== "idle") {
+      reportFailure(state, form);
     }
   }, [state, form, onSaved]);
 }
@@ -289,8 +287,7 @@ function HouseEventForm({
   );
 }
 
-// The event in edit mode; null in create mode. The form mounts with the
-// dialog, so every open starts from the saved values.
+// The event in edit mode; null in create mode.
 export function HouseEventDialog({
   initial,
   rooms,
@@ -298,31 +295,15 @@ export function HouseEventDialog({
   initial: HouseEventFormValues | null;
   rooms: HouseEventRoom[];
 }) {
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
-  const trigger = initial ? (
-    <Button size="sm" type="button" variant="outline" />
-  ) : (
-    <Button type="button" />
-  );
-
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={trigger}>
-        {initial ? copy.editLabel : copy.createButton}
-      </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {initial ? copy.editTitle : copy.createTitle}
-          </DialogTitle>
-        </DialogHeader>
+    <FormDialog copy={copy} editing={initial !== null}>
+      {(close) => (
         <HouseEventForm
           initial={initial ?? EMPTY_EVENT}
           onSaved={close}
           rooms={rooms}
         />
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   );
 }

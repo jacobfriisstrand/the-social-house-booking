@@ -10,9 +10,9 @@ import { getBookingViewer, viewerDiscount } from "@/lib/bookings/viewer";
 import { cphDate } from "@/lib/domain/opening-hours";
 import { formatDateString } from "@/lib/format";
 import {
-  groupHouseEvents,
   listDayBookingDetails,
   listDayEntries,
+  listTodayHouseEvents,
 } from "@/lib/notice-board/data";
 import { buildDayGrid } from "@/lib/notice-board/grid";
 import { listShownNotices } from "@/lib/notices/data";
@@ -26,6 +26,8 @@ type SearchParams = Promise<{ dato?: string; unauthorized?: string }>;
 
 // The day to show: ?dato=yyyy-mm-dd, or today in Copenhagen (ADR-0021).
 const dayParam = z.iso.date();
+const pageDate = (dato: string | undefined, today: string): string =>
+  dayParam.safeParse(dato).data ?? today;
 
 // Hjem, the notice board (#12, DESIGN.md "Hjem"): notices and today's
 // House Events, the day grid with each room's status, and the rooms. One
@@ -40,18 +42,17 @@ export default async function HomePage({
   const [params, session] = await Promise.all([searchParams, requireSession()]);
   const now = new Date();
   const today = cphDate(now);
-  const date = dayParam.safeParse(params.dato).data ?? today;
+  const date = pageDate(params.dato, today);
   const isAdmin = session.appRole === "admin";
   const supabase = await createClient();
-  const [viewer, rooms, entries, todayEntries, details, notices] =
-    await Promise.all([
-      getBookingViewer(supabase, session),
-      listPublicRooms(supabase),
-      listDayEntries(supabase, date),
-      date === today ? null : listDayEntries(supabase, today),
-      listDayBookingDetails(supabase, date, isAdmin),
-      listShownNotices(supabase, now),
-    ]);
+  const [viewer, rooms, entries, events, details, notices] = await Promise.all([
+    getBookingViewer(supabase, session),
+    listPublicRooms(supabase),
+    listDayEntries(supabase, date),
+    listTodayHouseEvents(supabase, now),
+    listDayBookingDetails(supabase, date, isAdmin),
+    listShownNotices(supabase, now),
+  ]);
   const grid = buildDayGrid({
     date,
     details,
@@ -60,9 +61,6 @@ export default async function HomePage({
     now,
     rooms,
   });
-  const events = groupHouseEvents(todayEntries ?? entries).filter(
-    (event) => event.endAt > now
-  );
 
   return (
     <>

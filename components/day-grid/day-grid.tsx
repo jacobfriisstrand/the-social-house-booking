@@ -124,7 +124,7 @@ function SlotCell({
   cell: Extract<GridCell, { kind: "slot" }>;
   column: number;
   onBook: (target: BookingTarget) => void;
-  roomName: string;
+  roomName: string | undefined;
 }) {
   const book = useCallback(
     () => onBook({ column, start: cell.label }),
@@ -134,7 +134,7 @@ function SlotCell({
     <TableCell className={BLOCK_CELL_CLASS}>
       {cell.status === "available" ? (
         <button
-          aria-label={copy.slotLabel(roomName, cell.label)}
+          aria-label={copy.slotLabel(roomName ?? "", cell.label)}
           className="absolute inset-0 cursor-pointer outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           onClick={book}
           type="button"
@@ -148,7 +148,7 @@ interface CellHandlers {
   entries: Record<string, GridEntryView>;
   onBook: (target: BookingTarget) => void;
   onOpen: (key: string) => void;
-  roomName: string;
+  roomNames: string[];
 }
 
 function GridCellView({
@@ -165,7 +165,7 @@ function GridCellView({
         cell={cell}
         column={column}
         onBook={handlers.onBook}
-        roomName={handlers.roomName}
+        roomName={handlers.roomNames[column]}
       />
     );
   }
@@ -182,18 +182,18 @@ function GridCellView({
 
 function GridRow({
   cells,
-  columns,
   entries,
   label,
   onBook,
   onOpen,
+  roomNames,
 }: {
   cells: PlacedCell[];
-  columns: DayGridColumn[];
   entries: Record<string, GridEntryView>;
   label: string;
   onBook: (target: BookingTarget) => void;
   onOpen: (key: string) => void;
+  roomNames: string[];
 }) {
   return (
     <TableRow className={ROW_CLASS}>
@@ -203,17 +203,55 @@ function GridRow({
       >
         {label}
       </TableHead>
-      {cells.map((placed) => {
-        const room = columns[placed.column]?.room;
-        return (
-          <GridCellView
-            handlers={{ entries, onBook, onOpen, roomName: room?.name ?? "" }}
-            key={room?.roomId}
-            placed={placed}
-          />
-        );
-      })}
+      {cells.map((placed) => (
+        <GridCellView
+          handlers={{ entries, onBook, onOpen, roomNames }}
+          key={placed.column}
+          placed={placed}
+        />
+      ))}
     </TableRow>
+  );
+}
+
+const entryFor = (
+  entries: Record<string, GridEntryView>,
+  key: string | null
+): GridEntryView | null => (key ? (entries[key] ?? null) : null);
+
+// The booking dialog for the slot last clicked. It stays mounted after it
+// closes so the close animation plays; a new slot remounts it with a fresh
+// form.
+function GridBookingDialog({
+  columns,
+  date,
+  onOpenChange,
+  open,
+  target,
+  viewer,
+}: {
+  columns: DayGridColumn[];
+  date: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  target: BookingTarget | null;
+  viewer: BookingViewer;
+}) {
+  const column = target ? columns[target.column] : undefined;
+  if (!(target && column)) {
+    return null;
+  }
+  return (
+    <BookingDialog
+      initialDate={date}
+      initialPeriods={column.periods}
+      key={`${target.column}-${target.start}`}
+      onOpenChange={onOpenChange}
+      open={open}
+      prefill={{ dato: date, fra: target.start }}
+      room={column.room}
+      viewer={viewer}
+    />
   );
 }
 
@@ -246,7 +284,7 @@ export function DayGrid({
     setDialogOpen(true);
   }, []);
 
-  const targetColumn = target ? columns[target.column] : undefined;
+  const roomNames = columns.map((column) => column.room.name);
 
   return (
     <>
@@ -276,34 +314,30 @@ export function DayGrid({
             {rows.map((cells, row) => (
               <GridRow
                 cells={cells}
-                columns={columns}
                 entries={entries}
                 key={ROW_LABELS[row]}
                 label={ROW_LABELS[row] ?? ""}
                 onBook={book}
                 onOpen={openSheet}
+                roomNames={roomNames}
               />
             ))}
           </TableBody>
         </Table>
       </Card>
       <EntrySheet
-        entry={openEntry ? (entries[openEntry] ?? null) : null}
+        entry={entryFor(entries, openEntry)}
         onOpenChange={setSheetOpen}
         open={sheetOpen}
       />
-      {target && targetColumn ? (
-        <BookingDialog
-          initialDate={date}
-          initialPeriods={targetColumn.periods}
-          key={`${target.column}-${target.start}`}
-          onOpenChange={setDialogOpen}
-          open={dialogOpen}
-          prefill={{ dato: date, fra: target.start }}
-          room={targetColumn.room}
-          viewer={viewer}
-        />
-      ) : null}
+      <GridBookingDialog
+        columns={columns}
+        date={date}
+        onOpenChange={setDialogOpen}
+        open={dialogOpen}
+        target={target}
+        viewer={viewer}
+      />
     </>
   );
 }

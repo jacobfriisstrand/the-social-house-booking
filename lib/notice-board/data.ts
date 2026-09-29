@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import { bufferEndAt } from "@/lib/domain/buffer";
+import { cphDate } from "@/lib/domain/opening-hours";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { cphToUtc } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
@@ -43,7 +44,7 @@ export type BookingDetail =
 
 // The instants a Copenhagen date covers, widened on the left by the buffer:
 // a period that ended just before midnight still blocks through it.
-function dayWindow(date: string): { from: string; to: string } {
+function dayWindow(date: string): DayWindow {
   const start = cphToUtc(date, "00:00");
   const bufferMs = bufferEndAt(start).getTime() - start.getTime();
   return {
@@ -99,25 +100,55 @@ export async function listDayEntries(
   return data.flatMap(toDayEntry);
 }
 
+interface DayWindow {
+  from: string;
+  to: string;
+}
+
+const LIVE_STATUSES: BookingStatus[] = ["pending_verification", "confirmed"];
+
+// The filters both detail reads share: live bookings touching the window.
+interface WindowQuery<Self> {
+  gt: (column: "booking_end_at", value: string) => Self;
+  in: (column: "booking_status", values: BookingStatus[]) => Self;
+  lt: (column: "booking_start_at", value: string) => Self;
+}
+
+const liveInWindow = <Query extends WindowQuery<Query>>(
+  query: Query,
+  window: DayWindow
+): Query =>
+  query
+    .in("booking_status", LIVE_STATUSES)
+    .lt("booking_start_at", window.to)
+    .gt("booking_end_at", window.from);
+
+function rowsOrThrow<Row>(
+  result: { data: Row[] | null; error: { message: string } | null },
+  subject: string
+): Row[] {
+  if (result.error) {
+    throw new Error(`could not list ${subject}: ${result.error.message}`);
+  }
+  return result.data ?? [];
+}
+
 const ADMIN_COLUMNS =
   "booking_id, booking_number, booking_booker_name, booking_booker_email, booking_booker_phone, booking_participant_count, booking_practical_notes, booking_internal_note, booking_status, booking_addon_total_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_room_price_ore, booking_start_at";
 
 async function listAdminDetails(
   supabase: Client,
-  window: { from: string; to: string }
+  window: DayWindow
 ): Promise<Map<string, BookingDetail>> {
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(ADMIN_COLUMNS)
-    .in("booking_status", ["pending_verification", "confirmed"])
-    .lt("booking_start_at", window.to)
-    .gt("booking_end_at", window.from)
-    .limit(500);
-  if (error) {
-    throw new Error(`could not list booking details: ${error.message}`);
-  }
+  const rows = rowsOrThrow(
+    await liveInWindow(
+      supabase.from("bookings").select(ADMIN_COLUMNS),
+      window
+    ).limit(500),
+    "booking details"
+  );
   return new Map(
-    data.map((row) => [
+    rows.map((row) => [
       row.booking_id,
       {
         bookerEmail: row.booking_booker_email,
@@ -139,20 +170,17 @@ async function listAdminDetails(
 // its own rows, and no other column is selected.
 async function listOwnDetails(
   supabase: Client,
-  window: { from: string; to: string }
+  window: DayWindow
 ): Promise<Map<string, BookingDetail>> {
-  const { data, error } = await supabase
-    .from("bookings")
-    .select("booking_id, booking_booker_name")
-    .in("booking_status", ["pending_verification", "confirmed"])
-    .lt("booking_start_at", window.to)
-    .gt("booking_end_at", window.from)
-    .limit(500);
-  if (error) {
-    throw new Error(`could not list own bookings: ${error.message}`);
-  }
+  const rows = rowsOrThrow(
+    await liveInWindow(
+      supabase.from("bookings").select("booking_id, booking_booker_name"),
+      window
+    ).limit(500),
+    "own bookings"
+  );
   return new Map(
-    data.map((row) => [
+    rows.map((row) => [
       row.booking_id,
       { bookerName: row.booking_booker_name, kind: "own" },
     ])
@@ -183,9 +211,9 @@ export interface StripHouseEvent {
   title: string | null;
 }
 
-// Today's House Events for the strip: one card per event, its rooms
-// gathered from the per-room rows of the projection.
-export function groupHouseEvents(entries: DayEntry[]): StripHouseEvent[] {
+// One card per event, its rooms gathered from the per-room rows of the
+// projection.
+function groupHouseEvents(entries: DayEntry[]): StripHouseEvent[] {
   const byId = new Map<string, StripHouseEvent>();
   for (const entry of entries) {
     if (entry.kind === "house_event") {
@@ -202,4 +230,13 @@ export function groupHouseEvents(entries: DayEntry[]): StripHouseEvent[] {
     }
   }
   return [...byId.values()];
+}
+
+// Today's House Events for the strip, while they have not ended.
+export async function listTodayHouseEvents(
+  supabase: Client,
+  now: Date
+): Promise<StripHouseEvent[]> {
+  const entries = await listDayEntries(supabase, cphDate(now));
+  return groupHouseEvents(entries).filter((event) => event.endAt > now);
 }
