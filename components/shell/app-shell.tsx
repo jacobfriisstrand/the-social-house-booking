@@ -162,14 +162,25 @@ function ShellSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* Only the house mark is the shell's logo now (2026-09-29), and the
-            row is as tall as the page header row, so the mark sits on the
-            same centre line as the page title beside it. The sidebar toggle
-            lives outside the sidebar, on the page title row — it must stay
-            reachable with the sidebar collapsed or expanded. */}
+        {/* The full logo when expanded, only the house mark on the icon
+            rail (2026-09-29); the row is as tall as the page header row, so
+            the logo sits on the same centre line as the page title beside
+            it. The sidebar toggle lives outside the sidebar, on the page
+            title row — it must stay reachable with the sidebar collapsed
+            or expanded. */}
         <div className="flex h-9 items-center group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
+            className="group-data-[collapsible=icon]:hidden"
+            height={30}
+            priority
+            src="/logo.svg"
+            unoptimized
+            width={130}
+          />
+          <Image
+            alt="The Social House"
+            className="hidden group-data-[collapsible=icon]:block"
             height={28}
             priority
             src="/logo-mark.svg"

@@ -97,7 +97,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 └──────────────┴──────────────────────────────────────────┘
 ```
 
-- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds only the house mark, in a row as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
+- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the full logo expanded and only the house mark on the icon rail (2026-09-29), in a row as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
 - The sidebar toggle sits outside the sidebar, on the page title row (2026-09-29): always visible, collapsed or expanded, flush with the column's left edge; on phone it opens the off-canvas sheet.
 - Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style. A nav item can carry a count badge in the `SidebarMenuBadge` slot (neutral chip; warning tint on the admin worklist), hidden at zero and on the icon rail (2026-09-29).
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
