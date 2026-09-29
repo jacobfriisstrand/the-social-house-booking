@@ -62,7 +62,12 @@ function SelectContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  // false: the popup opens like any dropdown, below or above the trigger —
+  // the animation runs (the preset's data-[align-trigger=true]:animate-none
+  // turns it off for the item-aligned combobox style, where the popup's
+  // size and position depend on the selected item). Pass true to get that
+  // style back, without animation.
+  alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
