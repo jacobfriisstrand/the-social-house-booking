@@ -192,7 +192,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 Three sections in this order, each with a section title:
 
-1. **Opslag.** A strip of cards, one per active message or today's House Event. House Event cards carry the info badge. Admin sees a ghost edit button on the strip; members do not. Hidden entirely when empty.
+1. **Opslag.** A strip of cards, one per active message or today's House Event that has not ended. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
 2. **Dagens overblik.** The day grid (below). A date control on the right: "Vælg dato" secondary button, then a prev/next pair with the date between them.
 3. **Lokaler.** A horizontal carousel of room cards with prev/next ghost icon buttons top right. Cards open the room detail page.
 
@@ -202,9 +202,10 @@ The signature component, same for admin and members.
 
 - Rows are 30-minute slots from 09:00 to 22:00, fixed. Row height `h-9`. The time column is 72px, sticky, 14px muted-foreground `tabular-nums`.
 - Columns are rooms in display order, headers 14px foreground, centred, `h-14`. Column dividers and row lines are `border`.
+- On today's date each room header carries a 12px muted status line, the notice board's "when occupied rooms free up": "Ledig nu", "Ledig fra 14:00" (the end of what occupies the room, without the buffer, decided in #12) or "Lukket" outside opening hours. Other dates show no status line.
 - A booking is a solid primary block spanning its slots, `rounded-lg`, 1px darker edge (`chart-2`). Text inside is `text-sm text-primary-foreground`: company display name top left, time range bottom left ("19:00 - 21:30"). Below `h-9`-worth of height only the name shows. Members see the company display name and nothing else, per the spec's visibility rules. The company's own bookings add the booker's name after the company name.
 - The 30-minute buffer is a muted block with a border, no text, directly below the booking. It is never billed and never labelled.
-- A House Event is an info block with the event title. It renders in every affected room's column.
+- A House Event is an info block with the event title ("House Event" when it has none). It renders in every affected room's column, with the buffer below it like a booking: Postgres blocks the room for 30 minutes after an event too (#24).
 - Click a block to open the booking sheet (admin sees the internal note, booker contact and pricing; members see room, time, company). Click an empty slot to open the booking dialog with room, date and start pre-filled. No hover effects beyond the cursor.
 - Below `md` the grid scrolls horizontally inside its card with the time column sticky.
 
@@ -250,7 +251,7 @@ The invoicing view. Opens on the current month. Filter row: month picker, free p
 
 ### Opslag (admin)
 
-Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening a dialog. A House Event dialog has date, start, end, affected rooms as checkboxes, optional title, short explanation. Messages have title, text, visible from and to.
+Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening a dialog. A House Event dialog has date, start, end, affected rooms as checkboxes, optional title, short explanation. When bookings or other House Events are in the way (the 30-minute buffer counts), the dialog saves nothing and lists them in a destructive `Alert` under the fields. The House Events tab lists events that have not ended. Messages have title, text, an on/off switch ("Vis på forsiden") and an optional last day ("Vis til og med"); there is no start date, a message shows from the moment it is on (decided in #12). The messages table shows a status badge: "Vises", "Slået fra" or "Udløbet".
 
 ### Statistik (admin)
 
@@ -280,7 +281,7 @@ Per-component behaviour is listed where it differs: sidebar (rail, sheet), table
 
 - Text contrast: foreground on background is 14.8:1, muted-foreground on background is 7.0:1, foreground on primary is 5.9:1. Warning tint text uses `text-warning-foreground` on `bg-warning/20`, never warning-on-white at 12px.
 - Every icon-only button has an `aria-label` from `messages/da.ts`.
-- The day grid is a `role="grid"` with `aria-label` per block ("Room of Power, 19:00 til 21:30, The Social House"). Blocks and empty slots are buttons, so keyboard users can open them.
+- The day grid is a `<table>` with room column headers and time row headers; a block is a cell spanning its rows (`rowSpan`), so screen readers move through it by room and time. Blocks carry an `aria-label` ("Room of Power, 19:00 til 21:30, The Social House") and empty bookable slots one like "Book Room of Power kl. 10:00". Both are buttons, so keyboard users can open them (#12).
 - Focus ring is `ring` at 50% (from `outline-ring/50` in globals.css). Never remove it.
 - Photos of rooms carry the room name as alt text; decorative arrows are hidden from screen readers.
 

@@ -153,7 +153,7 @@ function RoomsField({
   );
   return (
     <FieldSet data-invalid={fieldState.invalid}>
-      <FieldLegend required variant="label">
+      <FieldLegend className="flex gap-2" required variant="label">
         {copy.fields.rooms}
       </FieldLegend>
       <div className="grid gap-3 sm:grid-cols-2">
