@@ -74,7 +74,7 @@ function CloseMobileSidebarOnNavigate() {
 // right after login, on routes the user has not clicked). They fetch on
 // click instead.
 const badgeToneClass = {
-  neutral: "bg-secondary text-secondary-foreground",
+  neutral: "bg-primary text-secondary-foreground",
   warning: "border border-warning bg-warning/10 text-warning",
 } as const;
 

@@ -14,6 +14,38 @@ export const DEFAULT_PAGE_SIZE: PageSize = 20;
 export const PAGE_PARAM = "page";
 export const PAGE_SIZE_PARAM = "pageSize";
 
+// The URL contract for the pagination params, applied over the current
+// query: the defaults drop out of the URL, a change overwrites its key, an
+// explicit null drops the key, and any key the updates do not mention —
+// the page size survives a page change, the page survives a size reset —
+// plus any unrelated params (a room search, an invite status) stay
+// untouched. Returns the bare query — empty when nothing is left.
+export function updatedPaginationQuery(
+  updates: { page?: number | null; pageSize?: number | null },
+  currentSearch: string
+): string {
+  const params = new URLSearchParams(currentSearch);
+
+  if (updates.page !== undefined) {
+    const { page } = updates;
+    if (page === null || page <= 1) {
+      params.delete(PAGE_PARAM);
+    } else {
+      params.set(PAGE_PARAM, String(page));
+    }
+  }
+  if (updates.pageSize !== undefined) {
+    const { pageSize } = updates;
+    if (pageSize === null || pageSize === DEFAULT_PAGE_SIZE) {
+      params.delete(PAGE_SIZE_PARAM);
+    } else {
+      params.set(PAGE_SIZE_PARAM, String(pageSize));
+    }
+  }
+
+  return params.toString();
+}
+
 // Anything that is not one of the offered sizes reads as the default.
 export function parsePageSize(value: string | null): PageSize {
   const parsed = Number(value);

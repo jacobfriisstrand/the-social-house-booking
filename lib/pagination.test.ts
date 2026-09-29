@@ -7,6 +7,7 @@ import {
   parsePageSize,
   slicePage,
   totalPages,
+  updatedPaginationQuery,
 } from "./pagination";
 
 describe("parsePageSize", () => {
@@ -91,5 +92,44 @@ describe("pageWindow", () => {
 
   it("reads a clamped empty page as nothing shown", () => {
     expect(pageWindow(1, 20, 0)).toEqual({ from: 1, to: 0 });
+  });
+});
+
+describe("updatedPaginationQuery", () => {
+  it("keeps a page beyond the first and drops the first", () => {
+    expect(updatedPaginationQuery({ page: 2 }, "")).toBe("page=2");
+    expect(updatedPaginationQuery({ page: 1 }, "?page=3")).toBe("");
+  });
+
+  it("keeps a non-default size and drops the default", () => {
+    expect(updatedPaginationQuery({ pageSize: 40 }, "")).toBe("pageSize=40");
+    expect(updatedPaginationQuery({ pageSize: 20 }, "?pageSize=60")).toBe("");
+  });
+
+  it("restarts the page when the size changes", () => {
+    expect(
+      updatedPaginationQuery(
+        { page: null, pageSize: 60 },
+        "?page=4&pageSize=20"
+      )
+    ).toBe("pageSize=60");
+  });
+
+  it("leaves unrelated params untouched", () => {
+    expect(
+      updatedPaginationQuery({ page: 5 }, "?dato=2026-10-01&personer=6&page=3")
+    ).toBe("dato=2026-10-01&personer=6&page=5");
+  });
+
+  it("reads a null page as a reset", () => {
+    expect(updatedPaginationQuery({ page: null }, "?page=7&pageSize=40")).toBe(
+      "pageSize=40"
+    );
+  });
+
+  it("leaves the page size alone when only the page changes", () => {
+    expect(updatedPaginationQuery({ page: 2 }, "?pageSize=40")).toBe(
+      "pageSize=40&page=2"
+    );
   });
 });

@@ -10,12 +10,12 @@ import { useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import {
   clampPage,
-  DEFAULT_PAGE_SIZE,
   PAGE_PARAM,
   PAGE_SIZE_PARAM,
   type PageSize,
   parsePage,
   parsePageSize,
+  updatedPaginationQuery,
 } from "@/lib/pagination";
 
 export interface PagedList {
@@ -25,26 +25,7 @@ export interface PagedList {
   setPageSize: (size: PageSize) => void;
 }
 
-function writeParams(updates: {
-  page?: number | null;
-  pageSize?: number | null;
-}): void {
-  const params = new URLSearchParams(window.location.search);
-  const page = updates.page ?? null;
-  const pageSize = updates.pageSize ?? null;
-
-  if (page === null || page <= 1) {
-    params.delete(PAGE_PARAM);
-  } else {
-    params.set(PAGE_PARAM, String(page));
-  }
-  if (pageSize === null || pageSize === DEFAULT_PAGE_SIZE) {
-    params.delete(PAGE_SIZE_PARAM);
-  } else {
-    params.set(PAGE_SIZE_PARAM, String(pageSize));
-  }
-
-  const query = params.toString();
+function writeQuery(query: string): void {
   window.history.replaceState(
     null,
     "",
@@ -55,17 +36,10 @@ function writeParams(updates: {
 // A new view of the same table (tab switch) starts on its first page; the
 // chosen page size carries over.
 export function resetPaginationPage(): void {
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has(PAGE_PARAM)) {
+  if (!new URLSearchParams(window.location.search).has(PAGE_PARAM)) {
     return;
   }
-  params.delete(PAGE_PARAM);
-  const query = params.toString();
-  window.history.replaceState(
-    null,
-    "",
-    query ? `?${query}` : window.location.pathname
-  );
+  writeQuery(updatedPaginationQuery({ page: null }, window.location.search));
 }
 
 export function useTablePagination(totalItems: number): PagedList {
@@ -78,12 +52,17 @@ export function useTablePagination(totalItems: number): PagedList {
   );
 
   const setPage = useCallback((next: number) => {
-    writeParams({ page: next });
+    writeQuery(updatedPaginationQuery({ page: next }, window.location.search));
   }, []);
   const setPageSize = useCallback((next: PageSize) => {
     // A new size restarts the view: a page beyond the shorter list would
     // read as an empty slice.
-    writeParams({ page: null, pageSize: next });
+    writeQuery(
+      updatedPaginationQuery(
+        { page: null, pageSize: next },
+        window.location.search
+      )
+    );
   }, []);
 
   return { page, pageSize, setPage, setPageSize };
