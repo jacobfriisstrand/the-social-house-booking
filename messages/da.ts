@@ -525,14 +525,16 @@ export const messages = {
       `${room}, ${start} til ${end}, ${name}`,
     buffer: "Buffer",
     dateLabel: "Dato",
-    dayTitle: "Dagens overblik",
+    dayTitle: "Bookingoverblik",
     editNotices: "Rediger",
     gridLabel: (date: string) => `Lokaler den ${date}`,
     houseEventBadge: "House Event",
     houseEventWhen: (rooms: string, time: string) => `${rooms} · ${time}`,
     nextDay: "Næste dag",
     nextRooms: "Næste lokaler",
-    noticesDate: (weekday: string, date: string) => `${weekday} ${date}`,
+    // A heading of its own, so the weekday takes a capital: "Tirsdag 29/09/2026".
+    noticesDate: (weekday: string, date: string) =>
+      `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${date}`,
     noticesTitle: "Opslagstavle",
     pickDate: "Vælg dato",
     previousDay: "Forrige dag",

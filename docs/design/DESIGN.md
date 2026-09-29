@@ -192,8 +192,8 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 Three sections in this order. Each is a shadcn `Card` frame: the section title is its `CardTitle` (`text-lg`, an `h2` inside), the section's buttons its `CardAction`, the items its `CardContent` (decided 2026-09-29 in #12):
 
-1. **Opslagstavle.** One card per active message or today's House Event that has not ended. The frame's description is today's date ("tirsdag 29/09/2026"), since the grid below can show another day. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
-2. **Dagens overblik.** The day grid (below), as a card inside the frame. The date control is the frame's action: "Vælg dato" secondary button, then a prev/next pair with the date between them. On phone it drops under the title.
+1. **Opslagstavle.** One card per active message or today's House Event that has not ended. The frame's description is today's date with a capital weekday ("Tirsdag 29/09/2026"), since the grid below can show another day. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
+2. **Bookingoverblik.** The day grid (below), as a card inside the frame. The date control is the frame's action: "Vælg dato" secondary button, then a prev/next pair with the date between them. On phone it drops under the title.
 3. **Lokaler.** A horizontal carousel of room cards; the prev/next ghost icon buttons are the frame's action. Cards open the room detail page.
 
 These frames are the one place a card sits inside a card: the frame groups the section, the inner cards are its items.
