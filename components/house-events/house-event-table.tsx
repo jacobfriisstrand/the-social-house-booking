@@ -1,4 +1,4 @@
-// The admin's upcoming House Events (Opslag, "House Events" tab, #12):
+// The admin's House Events from today on (Opslag, "House Events" tab, #12):
 // date, time, the rooms it blocks, the title, and the row actions.
 
 import { EmptyCard } from "@/components/empty-card";

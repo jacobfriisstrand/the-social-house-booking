@@ -594,7 +594,7 @@ export const messages = {
     editTitle: "Rediger House Event",
     emptyDescription:
       "Opret et House Event for at blokere lokaler til et internt arrangement.",
-    emptyTitle: "Ingen kommende House Events",
+    emptyTitle: "Ingen House Events fra i dag og frem",
     errors: {
       conflict: "Lokalerne er optaget i tidsrummet.",
       conflictRace: "Et af lokalerne blev booket imens. Prøv igen.",

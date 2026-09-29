@@ -2,6 +2,8 @@
 // the base tables are admin-only; members see events only through the
 // calendar_entries projection.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cphDate } from "@/lib/domain/opening-hours";
+import { cphToUtc } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
 
 export interface HouseEventRoom {
@@ -42,18 +44,21 @@ const toHouseEvent = (row: HouseEventRow): HouseEvent => ({
   title: row.house_event_title,
 });
 
-// Events that have not ended, soonest first, with their rooms embedded so
-// the table costs one round trip.
-export async function listUpcomingHouseEvents(
+// Today's events and later ones, soonest first, with their rooms embedded
+// so the table costs one round trip. Today counts from midnight in
+// Copenhagen (ADR-0021), so an event that ended earlier today stays
+// editable until the day is over.
+export async function listHouseEventsFromToday(
   supabase: SupabaseClient<Database>,
   now: Date
 ): Promise<HouseEvent[]> {
+  const startOfToday = cphToUtc(cphDate(now), "00:00");
   const { data, error } = await supabase
     .from("house_events")
     .select(
       "house_event_description, house_event_end_at, house_event_id, house_event_start_at, house_event_title, house_event_rooms(house_event_room_room_id, rooms(room_name))"
     )
-    .gt("house_event_end_at", now.toISOString())
+    .gt("house_event_end_at", startOfToday.toISOString())
     .order("house_event_start_at", { ascending: true })
     // Bounded: a few internal events a month.
     .limit(200);

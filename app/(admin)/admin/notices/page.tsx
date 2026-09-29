@@ -10,8 +10,8 @@ import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { noticeLastDay, noticeStatus } from "@/lib/domain/notice";
 import {
+  listHouseEventsFromToday,
   listRoomOptions,
-  listUpcomingHouseEvents,
 } from "@/lib/house-events/data";
 import { listNotices, type Notice } from "@/lib/notices/data";
 import { createClient } from "@/lib/supabase/server";
@@ -47,7 +47,7 @@ export default async function AdminNoticesPage() {
   const now = new Date();
   const [notices, events, rooms] = await Promise.all([
     listNotices(supabase),
-    listUpcomingHouseEvents(supabase, now),
+    listHouseEventsFromToday(supabase, now),
     listRoomOptions(supabase),
   ]);
 
