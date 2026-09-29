@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { HouseEventDialog } from "@/components/house-events/house-event-dialog";
+import { HouseEventSheet } from "@/components/house-events/house-event-sheet";
 import { HouseEventTable } from "@/components/house-events/house-event-table";
-import { NoticeDialog } from "@/components/notices/notice-dialog";
+import { NoticeSheet } from "@/components/notices/notice-sheet";
 import {
   NoticeTable,
   type NoticeTableRow,
@@ -40,8 +40,8 @@ const toRow = (notice: Notice, now: Date): NoticeTableRow => {
 
 // Opslag (admin, #12; DESIGN.md "Opslag (admin)"): the notice board's
 // content. "Beskeder" holds the practical notices, "House Events" the
-// internal events that block rooms. Each tab has its own create button; a
-// dialog creates and edits.
+// internal events that block rooms. Each tab has its own create button;
+// the admin side panel creates and edits.
 export default async function AdminNoticesPage() {
   const supabase = await createClient();
   const now = new Date();
@@ -64,7 +64,7 @@ export default async function AdminNoticesPage() {
           </TabsList>
           <TabsContent className="flex flex-col gap-4 pt-4" value="notices">
             <div className="flex justify-end">
-              <NoticeDialog initial={null} />
+              <NoticeSheet initial={null} />
             </div>
             <NoticeTable rows={notices.map((notice) => toRow(notice, now))} />
           </TabsContent>
@@ -73,7 +73,7 @@ export default async function AdminNoticesPage() {
             value="house-events"
           >
             <div className="flex justify-end">
-              <HouseEventDialog initial={null} rooms={rooms} />
+              <HouseEventSheet initial={null} rooms={rooms} />
             </div>
             <HouseEventTable events={events} rooms={rooms} />
           </TabsContent>

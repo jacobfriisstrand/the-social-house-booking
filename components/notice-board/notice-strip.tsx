@@ -1,13 +1,15 @@
-// The notice board's first section (DESIGN.md "Hjem" 1): one card per
-// notice that is shown and per House Event today. House Event cards carry
-// the info badge. Admins get a ghost edit link to Opslag; members do not.
-// Hidden entirely when there is nothing to show.
+// The notice board's first section (DESIGN.md "Hjem" 1): a framing card
+// with the section title and one card per notice that is shown and per
+// House Event today. House Event cards carry the info badge. Admins get a
+// ghost edit link to Opslag; members do not. Hidden entirely when there is
+// nothing to show.
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -68,33 +70,39 @@ export function NoticeStrip({
     return null;
   }
   return (
-    <section
-      aria-labelledby="notice-strip-title"
-      className="flex flex-col gap-3"
-    >
-      <div className="flex min-h-9 items-center justify-between gap-4">
-        <h2 className="font-medium text-lg" id="notice-strip-title">
-          {copy.noticesTitle}
-        </h2>
-        {isAdmin ? (
-          <Button
-            nativeButton={false}
-            render={<Link href="/admin/notices" />}
-            variant="ghost"
-          >
-            <PencilIcon data-icon="inline-start" />
-            {copy.editNotices}
-          </Button>
-        ) : null}
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {notices.map((notice) => (
-          <NoticeCard key={notice.noticeId} notice={notice} />
-        ))}
-        {events.map((event) => (
-          <HouseEventCard event={event} key={event.id} />
-        ))}
-      </div>
-    </section>
+    // shrink-0: the panel is a fixed-height scrolling column, and a card
+    // that clips its overflow would otherwise shrink to a sliver.
+    <Card className="shrink-0">
+      <section
+        aria-labelledby="notice-strip-title"
+        className="flex flex-col gap-4"
+      >
+        <CardHeader className="items-center">
+          <h2 className="font-medium text-lg" id="notice-strip-title">
+            {copy.noticesTitle}
+          </h2>
+          {isAdmin ? (
+            <CardAction>
+              <Button
+                nativeButton={false}
+                render={<Link href="/admin/notices" />}
+                variant="ghost"
+              >
+                <PencilIcon data-icon="inline-start" />
+                {copy.editNotices}
+              </Button>
+            </CardAction>
+          ) : null}
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {notices.map((notice) => (
+            <NoticeCard key={notice.noticeId} notice={notice} />
+          ))}
+          {events.map((event) => (
+            <HouseEventCard event={event} key={event.id} />
+          ))}
+        </CardContent>
+      </section>
+    </Card>
   );
 }

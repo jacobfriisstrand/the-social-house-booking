@@ -4,7 +4,7 @@
 import { EmptyCard } from "@/components/empty-card";
 import { ActiveToggleButton } from "@/components/forms/active-toggle-button";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
-import { NoticeDialog } from "@/components/notices/notice-dialog";
+import { NoticeSheet } from "@/components/notices/notice-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -50,7 +50,7 @@ function NoticeRow({ row }: { row: NoticeTableRow }) {
       </TableCell>
       <TableCell className="w-72">
         <div className="flex items-center justify-end gap-2">
-          <NoticeDialog initial={row.values} />
+          <NoticeSheet initial={row.values} />
           <ActiveToggleButton
             activateLabel={copy.activate}
             deactivateLabel={copy.deactivate}

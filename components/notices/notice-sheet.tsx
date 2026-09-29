@@ -1,18 +1,20 @@
 "use client";
 
-// Create or edit a notice (admin, #12; DESIGN.md "Opslag (admin)"): title,
-// text, the on/off switch and an optional last day it shows (decided in
-// #12). One schema with the server action (lib/validation/notices.ts).
+// Create or edit a notice (admin, #12; DESIGN.md "Opslag (admin)") in the
+// admin side panel: title, text, the on/off switch and an optional last
+// day it shows (decided in #12). One schema with the server action
+// (lib/validation/notices.ts).
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect } from "react";
 import { type Control, useController, useForm } from "react-hook-form";
 import { DatePicker } from "@/components/forms/date-picker";
-import { FormDialog } from "@/components/forms/form-dialog";
+import { FormSheet } from "@/components/forms/form-sheet";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
@@ -103,21 +105,37 @@ function NoticeForm({
 
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
-      <FieldGroup>
-        <TextField
-          control={form.control}
-          label={copy.fields.title}
-          maxLength={120}
-          name="title"
-        />
-        <TextareaField
-          control={form.control}
-          label={copy.fields.body}
-          name="body"
-        />
-        <LastDayField control={form.control} />
-        <ActiveField control={form.control} />
-      </FieldGroup>
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.contentSection}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <TextField
+              control={form.control}
+              label={copy.fields.title}
+              maxLength={120}
+              name="title"
+            />
+            <TextareaField
+              control={form.control}
+              label={copy.fields.body}
+              name="body"
+            />
+          </FieldGroup>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.visibilitySection}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <ActiveField control={form.control} />
+            <LastDayField control={form.control} />
+          </FieldGroup>
+        </CardContent>
+      </Card>
       <PendingButton
         idleLabel={copy.submit}
         pending={pending}
@@ -129,16 +147,12 @@ function NoticeForm({
 }
 
 // The notice in edit mode; null in create mode.
-export function NoticeDialog({
-  initial,
-}: {
-  initial: NoticeFormValues | null;
-}) {
+export function NoticeSheet({ initial }: { initial: NoticeFormValues | null }) {
   return (
-    <FormDialog copy={copy} editing={initial !== null}>
+    <FormSheet copy={copy} editing={initial !== null}>
       {(close) => (
         <NoticeForm initial={initial ?? EMPTY_NOTICE} onSaved={close} />
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

@@ -615,6 +615,8 @@ export const messages = {
     saved: "House Eventet er gemt",
     saving: "Gemmer …",
     submit: "Gem",
+    textSection: "Tekst til medlemmerne",
+    whenSection: "Tidspunkt og lokaler",
   },
   login: {
     copyEmail: "Kopiér emailadresse",
@@ -674,6 +676,7 @@ export const messages = {
       status: "Status",
       title: "Titel",
     },
+    contentSection: "Besked",
     createButton: "Nyt opslag",
     createTitle: "Nyt opslag",
     deactivate: "Slå fra",
@@ -718,6 +721,7 @@ export const messages = {
       notices: "Beskeder",
     },
     title: "Opslag",
+    visibilitySection: "Visning",
   },
   rooms: {
     activate: "Aktiver",

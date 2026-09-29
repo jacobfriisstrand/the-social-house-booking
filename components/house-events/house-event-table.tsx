@@ -3,7 +3,7 @@
 
 import { EmptyCard } from "@/components/empty-card";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
-import { HouseEventDialog } from "@/components/house-events/house-event-dialog";
+import { HouseEventSheet } from "@/components/house-events/house-event-sheet";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -56,7 +56,7 @@ function HouseEventRow({
       </TableCell>
       <TableCell className="w-48">
         <div className="flex items-center justify-end gap-2">
-          <HouseEventDialog initial={toFormValues(event)} rooms={rooms} />
+          <HouseEventSheet initial={toFormValues(event)} rooms={rooms} />
           <ConfirmDeleteButton
             copy={copy}
             id={event.houseEventId}

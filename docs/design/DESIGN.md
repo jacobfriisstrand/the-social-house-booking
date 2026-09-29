@@ -124,7 +124,7 @@ Login is outside the shell: a centred white card on the background with the logo
 
 **Page header.** Title left, at most one primary action right. Below it, when needed, a filter row (date, room, status) on one line that wraps on phone.
 
-**Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card.
+**Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card, except the framed sections on Hjem.
 
 **Empty state.** A white bordered card, `py-16`, centred: card-title line, one body sentence, optional secondary button. "Ingen kommende bookinger" / "Du har ingen kommende bookinger lige nu."
 
@@ -192,9 +192,11 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 Three sections in this order, each with a section title:
 
-1. **Opslag.** A strip of cards, one per active message or today's House Event that has not ended. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
+1. **Opslag.** A white framing card with the section title (and the admin's edit button) inside it, holding one card per active message or today's House Event that has not ended. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
 2. **Dagens overblik.** The day grid (below). A date control on the right: "Vælg dato" secondary button, then a prev/next pair with the date between them.
-3. **Lokaler.** A horizontal carousel of room cards with prev/next ghost icon buttons top right. Cards open the room detail page.
+3. **Lokaler.** The same framing card as Opslag: the section title with prev/next ghost icon buttons top right, then a horizontal carousel of room cards. Cards open the room detail page.
+
+Opslag and Lokaler are the two places a card sits inside a card: the frame groups the section, the inner cards are its items (decided 2026-09-29 in #12).
 
 ### Day grid
 
@@ -251,7 +253,7 @@ The invoicing view. Opens on the current month. Filter row: month picker, free p
 
 ### Opslag (admin)
 
-Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening a dialog. A House Event dialog has date, start, end, affected rooms as checkboxes, optional title, short explanation. When bookings or other House Events are in the way (the 30-minute buffer counts), the dialog saves nothing and lists them in a destructive `Alert` under the fields. The House Events tab lists events that have not ended. Messages have title, text, an on/off switch ("Vis på forsiden") and an optional last day ("Vis til og med"); there is no start date, a message shows from the moment it is on (decided in #12). The messages table shows a status badge: "Vises", "Slået fra" or "Udløbet".
+Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening the admin side panel (see "Other admin pages"). A House Event has date, start, end, affected rooms as checkboxes ("Tidspunkt og lokaler"), then optional title and short explanation ("Tekst til medlemmerne"). When bookings or other House Events are in the way (the 30-minute buffer counts), the panel saves nothing and lists them in a destructive `Alert` under the fields. The House Events tab lists events that have not ended. Messages have title, text, an on/off switch ("Vis på forsiden") and an optional last day ("Vis til og med"); there is no start date, a message shows from the moment it is on (decided in #12). The messages table shows a status badge: "Vises", "Slået fra" or "Udløbet".
 
 ### Statistik (admin)
 
@@ -261,7 +263,7 @@ Below, three white cards with monthly bar charts since January of the current ye
 
 ### Other admin pages
 
-Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
+Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card. Every admin create and edit uses the same side panel: a right-hand `Sheet` (`w-full sm:max-w-xl`, wider when the form needs it) with the title in its header, the fields in white cards with a section title, and the save button under them (decided 2026-09-29 in #12). Dialogs are for confirmations only. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
 
 ## Formatting
 
