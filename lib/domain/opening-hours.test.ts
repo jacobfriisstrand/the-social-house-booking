@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bookingWithinOpeningHours,
   dayOfWeek,
+  openingHoursOn,
   type WeeklyOpeningHours,
 } from "./opening-hours";
 
@@ -197,5 +198,41 @@ describe("dayOfWeek", () => {
     expect(dayOfWeek(new Date("2026-09-14T00:00:00Z"))).toBe(0);
     expect(dayOfWeek(new Date("2026-09-19T12:00:00Z"))).toBe(5); // Saturday
     expect(dayOfWeek(new Date("2026-09-20T12:00:00Z"))).toBe(6); // Sunday
+  });
+});
+
+describe("openingHoursOn", () => {
+  it("reads the weekday's row", () => {
+    // 2026-09-07 is a Monday.
+    expect(openingHoursOn("2026-09-07", standardWeek)).toEqual({
+      closes: "18:00",
+      opens: "08:00",
+    });
+  });
+
+  it("is null on a weekday the room is closed", () => {
+    // 2026-09-13 is a Sunday, closed in the standard week.
+    expect(openingHoursOn("2026-09-13", standardWeek)).toBeNull();
+  });
+
+  it("takes a special closing day's hours over the weekday's", () => {
+    expect(
+      openingHoursOn("2026-09-07", standardWeek, [
+        {
+          closes: "12:00",
+          date: "2026-09-07",
+          isClosed: false,
+          opens: "09:00",
+        },
+      ])
+    ).toEqual({ closes: "12:00", opens: "09:00" });
+  });
+
+  it("is null on a special closing day", () => {
+    expect(
+      openingHoursOn("2026-09-07", standardWeek, [
+        { closes: null, date: "2026-09-07", isClosed: true, opens: null },
+      ])
+    ).toBeNull();
   });
 });

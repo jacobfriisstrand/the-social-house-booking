@@ -100,7 +100,7 @@ A fixed add-on (500 kr excl. VAT) where The Social House prepares and resets the
 A fixed add-on (1,000 kr excl. VAT per event day) providing hosting during the meeting. For >5 participants, catering, >4 hours, or special setups. Admin can adjust the price per booking.
 
 **House Event**:
-An internal The Social House event that blocks selected rooms and is not part of the invoicing basis.
+An internal The Social House event that blocks selected rooms and is not part of the invoicing basis. It may not overlap a booking, the buffer included. Its title and short explanation are visible to members.
 _Avoid_: internal booking, block, closure
 
 **Practical notes**:
@@ -149,7 +149,11 @@ A mail sent 24 hours before a meeting, with booking details, the cancellation li
 _Avoid_: notification, alert
 
 **Notice board** (opslagstavle):
-The front page: today's bookings, free rooms, when occupied rooms free up, practical notices, and House Events.
+The front page: today's bookings, free rooms, when occupied rooms free up, practical notices, and House Events. An occupied room frees up at the end of what occupies it; the buffer is not added.
+
+**Notice** (besked):
+A practical message from The Social House on the notice board, with a title and a text. Admin switches it on or off and may set the last day it shows. Every logged-in member sees the notices that are on.
+_Avoid_: announcement, post, message
 
 **Outlook calendar**:
 The shared calendar `booking@thesocialhouse.dk` that mirrors all bookings and House Events one-way (platform → Outlook).

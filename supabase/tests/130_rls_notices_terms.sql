@@ -1,12 +1,15 @@
--- RLS tests for notices and terms (#19): notices are member-readable and
--- admin-curated (#12); published terms versions are member-readable, drafts
--- admin-only, and acceptances are own-insert immutable records (#15).
+-- RLS tests for notices and terms (#19): members read the notices that are
+-- on and not past their end, admins read and curate all of them (#12);
+-- published terms versions are member-readable, drafts admin-only, and
+-- acceptances are own-insert immutable records (#15).
 
 begin;
-select plan(14);
+select plan(16);
 
 -- Fixtures: one admin, one company, one foreign company, a published and a
--- draft terms version, one acceptance by the foreign company, one notice.
+-- draft terms version, one acceptance by the foreign company, and four
+-- notices: on without an end, on with a future end, on with a past end,
+-- and off.
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111001', 'authenticated', 'authenticated', 'admin@tsh.test', 'x', now(), '{"app_role":"admin"}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111002', 'authenticated', 'authenticated', 'rituals@tsh.test', 'x', now(), '{}', '{}', now(), now()),
@@ -23,15 +26,23 @@ insert into public.terms_versions (terms_version_id, terms_version_name, terms_v
 insert into public.terms_acceptances (terms_acceptance_id, terms_acceptance_company_id, terms_acceptance_terms_version_id) values
   ('CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCC1', '22222222-2222-2222-2222-222222222002', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01');
 
-insert into public.notices (notice_body) values ('Køkkenet er lukket i uge 42');
+insert into public.notices (notice_title, notice_body, notice_is_active, notice_ends_at) values
+  ('Køkkenet er lukket', 'Køkkenet er lukket i uge 42', true, null),
+  ('Hoveddøren', 'Hoveddøren låses kl. 18:00', true, now() + interval '1 day'),
+  ('Elevatoren', 'Elevatoren er ude af drift', true, now() - interval '1 minute'),
+  ('Kladde', 'Ikke klar endnu', false, null);
 
 -- Company session (Rituals).
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 
-select is((select count(*) from public.notices), 1::bigint, 'company reads the notice board');
+select is((select count(*) from public.notices), 2::bigint, 'company reads the notices that are on and not past their end');
+select is(
+  (select count(*) from public.notices where notice_title in ('Elevatoren', 'Kladde')),
+  0::bigint,
+  'company cannot read a notice that is off or past its end');
 select throws_ok(
-  'insert into public.notices (notice_body) values (''x'')',
+  'insert into public.notices (notice_title, notice_body) values (''x'', ''x'')',
   '42501', null,
   'company cannot post notices');
 select is((select count(*) from public.terms_versions), 1::bigint, 'company reads published terms only');
@@ -49,13 +60,14 @@ select throws_ok(
 
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
+select is((select count(*) from public.notices), 4::bigint, 'admin reads every notice, off and ended ones too');
 select is((select count(*) from public.terms_versions), 2::bigint, 'admin reads drafts too');
 select is((select count(*) from public.terms_acceptances), 2::bigint, 'admin reads all acceptances');
 select lives_ok(
   'update public.terms_versions set terms_version_published_at = now() where terms_version_version = ''1.0-draft''',
   'admin publishes a terms version');
 select lives_ok(
-  'update public.notices set notice_body = ''Køkkenet er lukket i uge 43''',
+  'update public.notices set notice_body = ''Køkkenet er lukket i uge 43'' where notice_title = ''Køkkenet er lukket''',
   'admin edits a notice');
 select lives_ok(
   'delete from public.notices',

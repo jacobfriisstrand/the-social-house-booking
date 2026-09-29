@@ -124,7 +124,7 @@ Login is outside the shell: a centred white card on the background with the logo
 
 **Page header.** Title left, at most one primary action right. Below it, when needed, a filter row (date, room, status) on one line that wraps on phone.
 
-**Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card.
+**Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card, except the framed sections on Hjem.
 
 **Empty state.** A white bordered card, `py-16`, centred: card-title line, one body sentence, optional secondary button. "Ingen kommende bookinger" / "Du har ingen kommende bookinger lige nu."
 
@@ -190,11 +190,13 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 ### Hjem
 
-Three sections in this order, each with a section title:
+Three sections in this order. Each is a shadcn `Card` frame: the section title is its `CardTitle` (`text-lg`, an `h2` inside), the section's buttons its `CardAction`, the items its `CardContent` (decided 2026-09-29 in #12):
 
-1. **Opslag.** A strip of cards, one per active message or today's House Event. House Event cards carry the info badge. Admin sees a ghost edit button on the strip; members do not. Hidden entirely when empty.
-2. **Dagens overblik.** The day grid (below). A date control on the right: "Vælg dato" secondary button, then a prev/next pair with the date between them.
-3. **Lokaler.** A horizontal carousel of room cards with prev/next ghost icon buttons top right. Cards open the room detail page.
+1. **Opslagstavle.** One card per active message or today's House Event that has not ended. The frame's description is today's date with a capital weekday ("Tirsdag 29/09/2026"), since the grid below can show another day. The admin's ghost edit button is the frame's action. House Event cards carry the info badge, the rooms and the time. Admin sees a ghost edit button on the strip, linking to Opslag; members do not. Hidden entirely when empty.
+2. **Bookingoverblik.** The day grid (below), as a card inside the frame. The date control is the frame's action: "Vælg dato" secondary button, then a prev/next pair with the date between them. On phone it drops under the title.
+3. **Lokaler.** A horizontal carousel of room cards; the prev/next ghost icon buttons are the frame's action. Cards open the room detail page.
+
+These frames are the one place a card sits inside a card: the frame groups the section, the inner cards are its items.
 
 ### Day grid
 
@@ -202,9 +204,10 @@ The signature component, same for admin and members.
 
 - Rows are 30-minute slots from 09:00 to 22:00, fixed. Row height `h-9`. The time column is 72px, sticky, 14px muted-foreground `tabular-nums`.
 - Columns are rooms in display order, headers 14px foreground, centred, `h-14`. Column dividers and row lines are `border`.
+- On today's date each room header carries a 12px muted status line, the notice board's "when occupied rooms free up": "Ledig nu"; "Ledig fra 14:00" (the end of what occupies the room, without the buffer, decided in #12); "Åbner kl. 08:00" before opening; "Lukket for i dag" after closing, on a closed day, or when what occupies the room runs to closing time or past it. Other dates show no status line.
 - A booking is a solid primary block spanning its slots, `rounded-lg`, 1px darker edge (`chart-2`). Text inside is `text-sm text-primary-foreground`: company display name top left, time range bottom left ("19:00 - 21:30"). Below `h-9`-worth of height only the name shows. Members see the company display name and nothing else, per the spec's visibility rules. The company's own bookings add the booker's name after the company name.
 - The 30-minute buffer is a muted block with a border, no text, directly below the booking. It is never billed and never labelled.
-- A House Event is an info block with the event title. It renders in every affected room's column.
+- A House Event is an info block with the event title ("House Event" when it has none). It renders in every affected room's column, with the buffer below it like a booking: Postgres blocks the room for 30 minutes after an event too (#24).
 - Click a block to open the booking sheet (admin sees the internal note, booker contact and pricing; members see room, time, company). Click an empty slot to open the booking dialog with room, date and start pre-filled. No hover effects beyond the cursor.
 - Below `md` the grid scrolls horizontally inside its card with the time column sticky.
 
@@ -250,7 +253,7 @@ The invoicing view. Opens on the current month. Filter row: month picker, free p
 
 ### Opslag (admin)
 
-Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening a dialog. A House Event dialog has date, start, end, affected rooms as checkboxes, optional title, short explanation. Messages have title, text, visible from and to.
+Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "Nyt House Event" primary button opening the admin side panel (see "Other admin pages"). A House Event has date, start, end, affected rooms as checkboxes ("Tidspunkt og lokaler"), then optional title and short explanation ("Tekst til medlemmerne"). When bookings or other House Events are in the way (the 30-minute buffer counts), the panel saves nothing and lists them in a destructive `Alert` under the fields. The House Events tab lists today's events, finished ones included, and later ones. Messages have title, text, an on/off switch ("Vis på forsiden") and an optional last day ("Vis til og med"); there is no start date, a message shows from the moment it is on (decided in #12). The messages table shows a status badge: "Vises", "Slået fra" or "Udløbet".
 
 ### Statistik (admin)
 
@@ -260,7 +263,7 @@ Below, three white cards with monthly bar charts since January of the current ye
 
 ### Other admin pages
 
-Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card, edit in a dialog or a sheet. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
+Lokaler, Virksomheder, Tilkøb, Rabatter, Indstillinger, Profil: shadcn tables and forms under the rules above. Page title, primary "Opret …" top right, table in a white card. Every admin create and edit uses the same side panel: a right-hand `Sheet` (`w-full sm:max-w-xl`, wider when the form needs it) with the title in its header, the fields in white cards with a section title, and the save button under them (decided 2026-09-29 in #12). Dialogs are for confirmations only. Rooms have photo upload, capacity, size, price per hour in øre, description, sort order and active flag. Nothing here needs a mockup.
 
 ## Formatting
 
@@ -280,7 +283,7 @@ Per-component behaviour is listed where it differs: sidebar (rail, sheet), table
 
 - Text contrast: foreground on background is 14.8:1, muted-foreground on background is 7.0:1, foreground on primary is 5.9:1. Warning tint text uses `text-warning-foreground` on `bg-warning/20`, never warning-on-white at 12px.
 - Every icon-only button has an `aria-label` from `messages/da.ts`.
-- The day grid is a `role="grid"` with `aria-label` per block ("Room of Power, 19:00 til 21:30, The Social House"). Blocks and empty slots are buttons, so keyboard users can open them.
+- The day grid is a `<table>` with room column headers and time row headers; a block is a cell spanning its rows (`rowSpan`), so screen readers move through it by room and time. Blocks carry an `aria-label` ("Room of Power, 19:00 til 21:30, The Social House") and empty bookable slots one like "Book Room of Power kl. 10:00". Both are buttons, so keyboard users can open them (#12).
 - Focus ring is `ring` at 50% (from `outline-ring/50` in globals.css). Never remove it.
 - Photos of rooms carry the room name as alt text; decorative arrows are hidden from screen readers.
 
