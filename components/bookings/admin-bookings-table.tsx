@@ -56,11 +56,11 @@ export function AdminBookingsTable({
 
   return (
     <Card className="min-w-0 gap-0 py-0">
-      <Table className="min-w-[60rem] [&_tr]:divide-x">
+      <Table className="min-w-[60rem]">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
-        <TableHeader className="bg-table-header">
+        <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-40 bg-table-header">
+            <TableHead className="sticky left-0 z-10 w-40">
               {bookingsCopy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.company}</TableHead>

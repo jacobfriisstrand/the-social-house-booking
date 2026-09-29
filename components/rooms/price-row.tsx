@@ -52,7 +52,7 @@ export function PriceRow({
   return (
     <div className={cn("flex items-end justify-between gap-4", className)}>
       {discounted ? <NormalPrice hourlyPriceOre={hourlyPriceOre} /> : null}
-      <div className="flex flex-col text-right">
+      <div className={cn("flex flex-col text-right", !discounted && "ml-auto")}>
         <span className="text-muted-foreground text-xs">{label}</span>
         <span className="font-medium text-lg">{perHour(shown)}</span>
       </div>

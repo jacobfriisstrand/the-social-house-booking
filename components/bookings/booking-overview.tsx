@@ -155,12 +155,12 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
 // fill-the-panel scroll): with pagination the rows fit the page, and a
 // list taller than the panel scrolls the panel as before. The vertical
 // sticky header is gone with the internal scroll; the horizontal scroll
-// keeps the sticky booking-number column. Rows and columns are both
-// separated by 1px lines in the border token, the near-white hairline
-// every other line uses. The header row sits on the table-header ground
-// (the panel is already muted, so muted would not read as a header), and
-// every title is left-aligned, numeric columns included (2026-09-26 in
-// #81).
+// keeps the sticky booking-number column. Rows are separated by 1px
+// lines in the border token, the near-white hairline every other line
+// uses — no vertical lines (2026-09-29). The header row sits on the
+// table-header ground (the panel is already muted, so muted would not
+// read as a header), and every title is left-aligned, numeric columns
+// included (2026-09-26 in #81).
 // A row opens the booking sheet (DESIGN.md "Bookinger (member)"): click and
 // keyboard both work, the booking number doubles as the accessible label.
 function openBookingWith(
@@ -193,7 +193,7 @@ function BookingTable({
 
   return (
     <Card className="min-w-0 gap-0 py-0">
-      <Table className="min-w-[78rem] [&_tr]:divide-x">
+      <Table className="min-w-[78rem]">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader className="bg-table-header">
           <TableRow>
