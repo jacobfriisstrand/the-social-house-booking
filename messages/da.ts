@@ -532,9 +532,8 @@ export const messages = {
     houseEventWhen: (rooms: string, time: string) => `${rooms} · ${time}`,
     nextDay: "Næste dag",
     nextRooms: "Næste lokaler",
-    noticesTitle: "Dagens opslag",
-    noticesToday: (weekday: string, date: string) =>
-      `I dag, ${weekday} ${date}`,
+    noticesDate: (weekday: string, date: string) => `${weekday} ${date}`,
+    noticesTitle: "Opslagstavle",
     pickDate: "Vælg dato",
     previousDay: "Forrige dag",
     previousRooms: "Forrige lokaler",

@@ -81,7 +81,7 @@ export function NoticeStrip({
         </CardTitle>
         {/* Always today, whichever day the grid below shows. */}
         <CardDescription className="tabular-nums">
-          {copy.noticesToday(formatWeekday(now), formatDate(now))}
+          {copy.noticesDate(formatWeekday(now), formatDate(now))}
         </CardDescription>
         {isAdmin ? (
           <CardAction>
