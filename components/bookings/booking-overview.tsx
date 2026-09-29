@@ -158,8 +158,9 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
 // keeps the sticky booking-number column. Rows are separated by 1px
 // lines in the border token, the near-white hairline every other line
 // uses — no vertical lines (2026-09-29). The header row sits on the
-// muted/50 ground like every table (2026-09-29), and every title is
-// left-aligned, numeric columns included (2026-09-26 in #81).
+// muted/50 ground like every table (2026-09-29), and every title aligns
+// with its values — the numeric titles right, over their right-aligned
+// amounts (2026-09-29; was left-aligned, 2026-09-26 in #81).
 // A row opens the booking sheet (DESIGN.md "Bookinger (member)"): click and
 // keyboard both work, the booking number doubles as the accessible label.
 function openBookingWith(
@@ -203,10 +204,12 @@ function BookingTable({
             <TableHead>{copy.columns.date}</TableHead>
             <TableHead>{copy.columns.time}</TableHead>
             <TableHead>{copy.columns.booker}</TableHead>
-            <TableHead>{copy.columns.price}</TableHead>
-            <TableHead>{copy.columns.discount}</TableHead>
-            <TableHead>{copy.columns.addOns}</TableHead>
-            <TableHead className="w-28">
+            <TableHead className="text-right">{copy.columns.price}</TableHead>
+            <TableHead className="text-right">
+              {copy.columns.discount}
+            </TableHead>
+            <TableHead className="text-right">{copy.columns.addOns}</TableHead>
+            <TableHead className="w-28 text-right">
               {copy.columns.cancellationFee}
             </TableHead>
             <TableHead>{copy.columns.status}</TableHead>

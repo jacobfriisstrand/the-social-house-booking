@@ -148,7 +148,7 @@ The mockups on the design canvas are drawn by hand to shadcn's default anatomy. 
 | Checkboxes, row selection | `Checkbox` | `size-4 rounded-[4px] border border-secondary`: the input border token is too light on a 16px box, so the box borrows the OTP slots' border (2026-09-23 in #81) |
 | Chips | `Badge` variant outline, `rounded-full` | `px-2 py-0.5 text-xs font-medium` |
 | Status badges | `Badge` with the tint classes from the table below | `rounded-md px-2 py-0.5 text-xs font-medium` |
-| Tables | `Table`, `TableHeader`, `TableRow`, `TableCell` | head `h-10 px-2 text-left` on `bg-muted/50`, cell `p-2 align-middle`, row `border-b`, no vertical lines |
+| Tables | `Table`, `TableHeader`, `TableRow`, `TableCell` | head `h-10 px-2` on `bg-muted/50`, cell `p-2 align-middle`, row `border-b`, no vertical lines; titles align with their values — numeric titles `text-right` over right-aligned amounts (2026-09-29) |
 | Cards, tile groups, chart cards | `Card`, `CardHeader`, `CardTitle`, `CardContent` | `rounded-xl border py-6 shadow-sm`, header and content `px-6` |
 | Tabs (member bookings, Opslag) | `Tabs`, `TabsList`, `TabsTrigger` | list `h-9 rounded-lg bg-secondary p-[3px]`, active tab `bg-background`: the list sits on the muted panel, so it takes the shell's warm grey instead of muted, which vanished (2026-09-26 in #81) |
 | Filter rows | `Field` + `Select` + `Button` in a flex row | controls all `h-9` |
