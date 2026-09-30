@@ -2,6 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { BookingSheet } from "@/components/bookings/booking-sheet";
+import { TablePagination } from "@/components/pagination/table-pagination";
+import {
+  resetPaginationPage,
+  useTablePagination,
+} from "@/components/pagination/use-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardFooter } from "@/components/ui/card";
 import {
@@ -20,13 +25,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type {
-  BookingInvoicingStatus,
-  BookingOverviewLists,
-  BookingOverviewRow,
-  BookingOverviewStatus,
+import {
+  addOnsTotalOre,
+  type BookingInvoicingStatus,
+  type BookingOverviewLists,
+  type BookingOverviewRow,
+  type BookingOverviewStatus,
 } from "@/lib/domain/booking-overview";
 import { formatDateTime, formatOre } from "@/lib/format";
+import { slicePage } from "@/lib/pagination";
 import { messages } from "@/messages/da";
 
 const copy = messages.bookings;
@@ -36,7 +43,12 @@ function dateAndTime(instant: string): { date: string; time: string } {
   return { date: date ?? "", time: time ?? "" };
 }
 
-function BookingStatusBadge({ status }: { status: BookingOverviewStatus }) {
+// The booking status badge, shared with the admin Bookinger table.
+export function BookingStatusBadge({
+  status,
+}: {
+  status: BookingOverviewStatus;
+}) {
   if (status === "cancelled") {
     return <Badge variant="destructive">{copy.status.cancelled}</Badge>;
   }
@@ -58,6 +70,23 @@ function InvoicingStatusBadge({ status }: { status: BookingInvoicingStatus }) {
     );
   }
   return <Badge variant="warning">{copy.invoicing.notInvoiced}</Badge>;
+}
+
+// The count chip on a tab (and the sidebar's): a tint, not a solid, reading
+// on both the white active tab and the secondary list ground; hidden at
+// zero, where it would only say nothing (DESIGN.md "Badges").
+function CountBadge({ count }: { count: number }) {
+  if (count === 0) {
+    return null;
+  }
+  return (
+    <Badge
+      className="min-w-5 justify-center bg-muted px-1.5 tabular-nums"
+      variant="outline"
+    >
+      {count}
+    </Badge>
+  );
 }
 
 function BookingDateCells({ booking }: { booking: BookingOverviewRow }) {
@@ -96,34 +125,25 @@ function BookingDiscountCell({ booking }: { booking: BookingOverviewRow }) {
   );
 }
 
+// One value per cell, in the table's one text size: the add-ons total
+// (not each add-on as its own row, 2026-09-29), the discount as its
+// percentage (decided 2026-09-23 while reviewing #81).
 function BookingAddOnsCell({ booking }: { booking: BookingOverviewRow }) {
-  if (booking.addOns.length === 0) {
-    return <TableCell>{copy.noAddOns}</TableCell>;
-  }
-
   return (
-    <TableCell>
-      <div className="flex min-w-40 flex-col gap-1">
-        {booking.addOns.map((addOn) => (
-          <div className="flex justify-between gap-3" key={addOn.addonId}>
-            <span className="max-w-44 truncate">
-              {addOn.name ?? copy.inactiveAddOn}
-              {addOn.quantity > 1 ? ` (${copy.quantity(addOn.quantity)})` : ""}
-            </span>
-            <span className="shrink-0 tabular-nums">
-              {formatOre(addOn.totalOre)}
-            </span>
-          </div>
-        ))}
-      </div>
+    <TableCell className="text-right tabular-nums">
+      {booking.addOns.length === 0
+        ? copy.noAddOns
+        : formatOre(addOnsTotalOre(booking.addOns))}
     </TableCell>
   );
 }
 
+// The two badges stack vertically (2026-09-29): the row keeps its height,
+// and neither badge pushes the other wide.
 function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   return (
     <TableCell>
-      <div className="flex min-w-36 flex-wrap gap-1">
+      <div className="flex flex-col items-start gap-1">
         <BookingStatusBadge status={booking.bookingStatus} />
         <InvoicingStatusBadge status={booking.invoicingStatus} />
       </div>
@@ -131,18 +151,16 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   );
 }
 
-// The card fills the panel whatever the row count and never outgrows it:
-// the rows scroll inside the card, the header row staying at the top and
-// the booking number at the left. The "ekskl. moms" line is a card footer
-// outside the scrolling table, so it stays on the card's bottom edge and
-// never slides off to the right with the columns. The shell and the tabs
-// never move (decided 2026-09-23 and 2026-09-26 while reviewing #81).
-// Rows and columns are both separated by 1px lines in the border token,
-// the near-white hairline every other line uses. The header row sits on
-// the table-header ground (the panel is already muted, so muted would
-// not read as a header), opaque so nothing shows through it while the
-// rows scroll under it, and every title is left-aligned, numeric columns
-// included (2026-09-26 in #81).
+// The card is as tall as its content (changed 2026-09-29 from the #81
+// fill-the-panel scroll): with pagination the rows fit the page, and a
+// list taller than the panel scrolls the panel as before. The vertical
+// sticky header is gone with the internal scroll; the horizontal scroll
+// keeps the sticky booking-number column. Rows are separated by 1px
+// lines in the border token, the near-white hairline every other line
+// uses — no vertical lines (2026-09-29). The header row sits on the
+// muted/50 ground like every table (2026-09-29), and every title aligns
+// with its values — the numeric titles right, over their right-aligned
+// amounts (2026-09-29; was left-aligned, 2026-09-26 in #81).
 // A row opens the booking sheet (DESIGN.md "Bookinger (member)"): click and
 // keyboard both work, the booking number doubles as the accessible label.
 function openBookingWith(
@@ -170,28 +188,35 @@ function BookingTable({
   bookings: BookingOverviewRow[];
   onOpen: (booking: BookingOverviewRow) => void;
 }) {
+  const paged = useTablePagination(bookings.length);
+  const rows = slicePage(bookings, paged.page, paged.pageSize);
+
   return (
-    <Card className="min-h-0 min-w-0 flex-1 gap-0 py-0 *:data-[slot=table-container]:grow">
-      <Table className="min-w-[78rem] [&_tr]:divide-x">
+    <Card className="min-w-0 gap-0 py-0">
+      <Table className="min-w-[78rem]">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
-        <TableHeader className="sticky top-0 z-20 bg-table-header">
+        <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-36 bg-table-header">
+            <TableHead className="sticky left-0 z-10 w-36 bg-muted/50">
               {copy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.room}</TableHead>
             <TableHead>{copy.columns.date}</TableHead>
             <TableHead>{copy.columns.time}</TableHead>
             <TableHead>{copy.columns.booker}</TableHead>
-            <TableHead>{copy.columns.price}</TableHead>
-            <TableHead>{copy.columns.discount}</TableHead>
-            <TableHead>{copy.columns.addOns}</TableHead>
-            <TableHead>{copy.columns.cancellationFee}</TableHead>
+            <TableHead className="text-right">{copy.columns.price}</TableHead>
+            <TableHead className="text-right">
+              {copy.columns.discount}
+            </TableHead>
+            <TableHead className="text-right">{copy.columns.addOns}</TableHead>
+            <TableHead className="w-28 text-right">
+              {copy.columns.cancellationFee}
+            </TableHead>
             <TableHead>{copy.columns.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {bookings.map((booking) => (
+          {rows.map((booking) => (
             <TableRow
               className="cursor-pointer"
               key={booking.bookingId}
@@ -217,8 +242,15 @@ function BookingTable({
           ))}
         </TableBody>
       </Table>
-      <CardFooter className="justify-end py-2 text-muted-foreground text-xs">
-        {copy.allPricesExclVat}
+      <CardFooter className="px-2 py-1">
+        {/* The "ekskl. moms" line sits directly above the pagination arrows,
+            inside the pagination block, so the row hugs the table
+            (2026-09-29). */}
+        <TablePagination
+          note={copy.allPricesExclVat}
+          paged={paged}
+          totalItems={bookings.length}
+        />
       </CardFooter>
     </Card>
   );
@@ -232,8 +264,8 @@ function BookingEmptyState({
   title: string;
 }) {
   return (
-    <Card className="flex flex-1 flex-col py-0">
-      <Empty className="flex-1 border-0 py-16">
+    <Card className="py-0">
+      <Empty className="border-0 py-16">
         <EmptyHeader>
           <EmptyTitle>{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
@@ -277,16 +309,38 @@ export function BookingOverview({
   }, []);
   const closeSheet = useCallback(() => setOpen(false), []);
 
+  // A new tab is a new view of the same table: it starts on its first page;
+  // the chosen page size carries over.
+  const handleTabChange = useCallback(() => {
+    resetPaginationPage();
+  }, []);
+
   return (
     <>
-      <Tabs className="min-h-0 w-full flex-1" defaultValue="all">
+      <Tabs
+        className="w-full"
+        defaultValue="all"
+        onValueChange={handleTabChange}
+      >
         <TabsList className="w-full">
-          <TabsTrigger value="all">{copy.tabs.all}</TabsTrigger>
-          <TabsTrigger value="upcoming">{copy.tabs.upcoming}</TabsTrigger>
-          <TabsTrigger value="past">{copy.tabs.past}</TabsTrigger>
-          <TabsTrigger value="cancelled">{copy.tabs.cancelled}</TabsTrigger>
+          <TabsTrigger value="all">
+            {copy.tabs.all}
+            <CountBadge count={bookings.all.length} />
+          </TabsTrigger>
+          <TabsTrigger value="upcoming">
+            {copy.tabs.upcoming}
+            <CountBadge count={bookings.upcoming.length} />
+          </TabsTrigger>
+          <TabsTrigger value="past">
+            {copy.tabs.past}
+            <CountBadge count={bookings.past.length} />
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            {copy.tabs.cancelled}
+            <CountBadge count={bookings.cancelled.length} />
+          </TabsTrigger>
         </TabsList>
-        <TabsContent className="flex min-h-0 flex-col pt-4" value="all">
+        <TabsContent className="pt-4" value="all">
           <BookingPanel
             bookings={bookings.all}
             emptyDescription={copy.empty.allDescription}
@@ -294,7 +348,7 @@ export function BookingOverview({
             onOpen={openBooking}
           />
         </TabsContent>
-        <TabsContent className="flex min-h-0 flex-col pt-4" value="upcoming">
+        <TabsContent className="pt-4" value="upcoming">
           <BookingPanel
             bookings={bookings.upcoming}
             emptyDescription={copy.empty.upcomingDescription}
@@ -302,7 +356,7 @@ export function BookingOverview({
             onOpen={openBooking}
           />
         </TabsContent>
-        <TabsContent className="flex min-h-0 flex-col pt-4" value="past">
+        <TabsContent className="pt-4" value="past">
           <BookingPanel
             bookings={bookings.past}
             emptyDescription={copy.empty.pastDescription}
@@ -310,7 +364,7 @@ export function BookingOverview({
             onOpen={openBooking}
           />
         </TabsContent>
-        <TabsContent className="flex min-h-0 flex-col pt-4" value="cancelled">
+        <TabsContent className="pt-4" value="cancelled">
           <BookingPanel
             bookings={bookings.cancelled}
             emptyDescription={copy.empty.cancelledDescription}

@@ -17,7 +17,6 @@
   --secondary-foreground: oklch(0.27 0 0);
   --muted: oklch(0.9791 0.008 93.9);
   --muted-foreground: oklch(0.457 0 0);
-  --table-header: oklch(0.935 0.008 95);
   --accent: oklch(0.869 0.008 98.9);
   --accent-foreground: oklch(0.27 0 0);
   --destructive: oklch(0.488 0.2 28.2);
@@ -85,7 +84,6 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --table-header: oklch(0.25 0 0);
   --accent: oklch(0.457 0 0);
   --accent-foreground: oklch(0.869 0.008 98.9);
   --destructive: oklch(0.704 0.191 22.216);
@@ -150,7 +148,6 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-table-header: var(--table-header);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -208,18 +205,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Type scale at 0.9 of Tailwind's defaults (docs/design/DESIGN.md
-   "Typography"): 11 / 13 / 15 / 17 / 18 / 21 / 26 px. Line heights keep
-   Tailwind's ratios. */
-@theme {
-  --text-xs: 0.6875rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;
-  --text-xl: 1.125rem;
-  --text-2xl: 1.3125rem;
-  --text-3xl: 1.625rem;
-}
+/* Type scale: Tailwind's defaults (12 / 14 / 16 / 18 / 20 / 24 / 30 px),
+   restored 2026-09-29 from the 0.9 scale — the tokens are not set here at
+   all; the decision is recorded in docs/design/DESIGN.md "Typography". */
 
 @layer base {
   * {

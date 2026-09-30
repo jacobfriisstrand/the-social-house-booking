@@ -16,6 +16,10 @@ import {
 import { messages } from "@/messages/da";
 
 export interface ShellNavLink {
+  // The tone of the item's count badge, when the layout supplies one.
+  // Neutral chips count what the item lists; the warning tint marks a
+  // worklist that waits on admin action.
+  badgeTone?: "neutral" | "warning";
   href: string;
   icon: LucideIcon;
   label: string;
@@ -27,6 +31,7 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
   ];
   if (!isAdmin) {
     links.push({
+      badgeTone: "neutral",
       href: "/bookings",
       icon: CalendarIcon,
       label: messages.shell.bookings,
@@ -42,6 +47,12 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
 
 export function shellAdminLinks(): ShellNavLink[] {
   return [
+    {
+      badgeTone: "warning",
+      href: "/admin/bookings",
+      icon: CalendarIcon,
+      label: messages.shell.bookings,
+    },
     {
       href: "/admin/rooms",
       icon: DoorOpenIcon,

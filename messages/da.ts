@@ -225,6 +225,15 @@ export const messages = {
     },
   },
   bookings: {
+    admin: {
+      columns: {
+        company: "Virksomhed",
+        total: "Total ekskl. moms",
+      },
+      emptyDescription: "Afsluttede bookinger uden faktura vises her.",
+      emptyTitle: "Ingen bookinger til fakturering",
+      tableCaption: "Bookinger til fakturering",
+    },
     allPricesExclVat: "Alle priser ekskl. moms",
     columns: {
       addOns: "Tilkøb",
@@ -726,6 +735,13 @@ export const messages = {
     },
     title: "Opslag",
     visibilitySection: "Visning",
+  },
+  pagination: {
+    next: "Næste side",
+    previous: "Forrige side",
+    rowsPerPage: "Rækker pr. side",
+    summary: (from: number, to: number, total: number) =>
+      `Viser ${from}–${to} af ${total}`,
   },
   rooms: {
     activate: "Aktiver",

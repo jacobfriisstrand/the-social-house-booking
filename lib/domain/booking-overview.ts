@@ -41,6 +41,16 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   roomName: string;
 }
 
+// The add-ons total for one row's tilkøb cell: the whole point of the
+// column (DESIGN.md "Bookinger (member)") — one value per cell, the sum,
+// not each add-on as its own row. Amounts integer øre, excl. VAT
+// (ADR-0019, ADR-0020).
+export function addOnsTotalOre(
+  addOns: readonly BookingAddonOverview[]
+): number {
+  return addOns.reduce((total, addOn) => total + addOn.totalOre, 0);
+}
+
 export interface BookingOverviewLists<T extends BookingOverviewEntry> {
   all: T[];
   cancelled: T[];

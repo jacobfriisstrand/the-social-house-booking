@@ -8,7 +8,7 @@ Danish UI, English code. Every label in an example here is Danish and uses the g
 
 ## Brand
 
-Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The logo is a 130x30 wordmark at `public/logo.svg`; render it at native size in the sidebar header.
+Two fixed inputs from The Social House: the tan primary and Poppins. Do not introduce a second accent colour or a second typeface. The shell carries only the house mark: `public/logo-mark.svg` — the icon mark without the white ground — at 28px in the sidebar header, on the same centre line as the page title beside it (2026-09-29). The full 130x30 wordmark stays at `public/logo.svg` for the 404 page.
 
 Light mode only in v1.0. The `.dark` block in globals.css exists so shadcn components compile. Nobody designs or tests it.
 
@@ -22,8 +22,7 @@ Tailwind classes come from `@theme inline` in globals.css, so `bg-primary`, `tex
 | foreground | 0.27 0 0 | #262626 | `text-foreground` | Headings, body, values. |
 | muted-foreground | 0.457 0 0 | #575757 | `text-muted-foreground` | Labels, hints, secondary text, struck prices. |
 | card | 1 0 0 | #ffffff | `bg-card` | Cards, tables, the day grid, dialogs. Always with `border`. |
-| muted | 0.9791 0.008 93.9 | #faf8f2 | `bg-muted` | The content panel, price summary panel, buffer strips, disabled slots, selected table rows. |
-| table-header | 0.935 0.008 95 | #ebe9e4 | `bg-table-header` | Sticky table header rows. Darker than muted, so a header inside a white card on the muted panel still reads as one; lighter than secondary, so it sits under the tab strip (2026-09-26 in #81). |
+| muted | 0.9791 0.008 93.9 | #faf8f2 | `bg-muted` | The content panel, price summary panel, buffer strips, disabled slots, selected table rows. At 50% also the table header rows and the pagination footer. |
 | secondary | 0.869 0.008 98.9 | #d5d4ce | `bg-secondary` | Secondary button ground, chips. |
 | border | 0.959 0.009 84.6 | #f4f1eb | `border-border` | Every 1px line. Also `input` and `ring`. |
 | primary | 0.718 0.103 67.3 | #cf975a | `bg-primary` | The tan. One primary action per view, selected calendar day, selected time slot, booking blocks. |
@@ -48,16 +47,16 @@ Poppins, loaded in `app/layout.tsx` with weights 400 to 900. Geist Mono for book
 
 | Role | Size | Weight | Colour | Example |
 |---|---|---|---|---|
-| Page title (h1) | 18px / `text-xl` | 600 | foreground | "Administrer lokaler" |
-| Section title (h2) | 17px / `text-lg` | 500 | foreground | "Lokaler" above the rooms carousel |
-| Card title (h3) | 15px / `text-base` | 500 | foreground | "Room of Relations" on a room card |
-| Body | 13px / `text-sm` | 400 | foreground | descriptions, table cells |
-| Label, hint | 11px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
-| Group header | 11px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
-| Value, price | 15px to 18px | 500 | foreground | "800 kr/time" |
-| Big number | 26px / `text-3xl` | 600 | foreground | statistic tiles |
+| Page title (h1) | 20px / `text-xl` | 600 | foreground | "Administrer lokaler" |
+| Section title (h2) | 18px / `text-lg` | 500 | foreground | "Lokaler" above the rooms carousel |
+| Card title (h3) | 16px / `text-base` | 500 | foreground | "Room of Relations" on a room card |
+| Body | 14px / `text-sm` | 400 | foreground | descriptions, table cells |
+| Label, hint | 12px / `text-xs` | 400 | muted-foreground | "Kapacitet", "Maks. 5" |
+| Group header | 12px / `text-xs` uppercase, `tracking-wider` | 500 | muted-foreground | "ADMIN" in the sidebar |
+| Value, price | 16px to 20px | 500 | foreground | "800 kr/time" |
+| Big number | 30px / `text-3xl` | 600 | foreground | statistic tiles |
 
-The scale is 0.9 of Tailwind's defaults, set once in the `@theme` block of globals.css (`text-xs` 11px, `text-sm` 13px, `text-base` 15px, `text-lg` 17px, `text-xl` 18px, `text-2xl` 21px, `text-3xl` 26px). Decided 2026-09-16 in #4: the default scale read too large at the 0.22rem density, and titles step down one size each (page title `text-xl`, not `text-3xl`).
+The scale is Tailwind's defaults — 12 / 14 / 16 / 18 / 20 / 24 / 30 px, nothing set in globals.css. Restored 2026-09-29 from the 0.9 scale (decided 2026-09-16 in #4): the smaller scale read too small in daily use, and the count badges and pagination footer inherit the same tokens. Titles still step down one size each (page title `text-xl`, not `text-3xl`).
 
 No eyebrows. The old front page put "THE DAILY" over "Booking overview"; the rule now is one bold title and nothing above it. The uppercase small style is reserved for sidebar group headers.
 
@@ -76,7 +75,7 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 
 ```
 ┌──────────────┬──────────────────────────────────────────┐
-│ [logo]     ⊟ │  Page title                              │
+│ [huset]      │ ⊟ Page title                             │
 │ ┌──────────┐ │ ┌──────────────────────────────────────┐ │
 │ │Book lokale│ │ │ muted content panel                  │ │
 │ └──────────┘ │ │                                      │ │
@@ -98,15 +97,16 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 └──────────────┴──────────────────────────────────────────┘
 ```
 
-- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the logo and the collapse toggle. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
-- Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style.
+- Sidebar is 16rem (256px, the shadcn default), white, no border, built on the shadcn Sidebar block for Base UI. Header holds the full logo expanded and only the house mark on the icon rail (2026-09-29), in a row as tall as the page title row so the two share a centre line. "Book lokale" is a full-width primary button directly under the header and is the only tan button in the shell.
+- The sidebar toggle sits outside the sidebar, on the page title row (2026-09-29): always visible, collapsed or expanded, flush with the column's left edge; on phone it opens the off-canvas sheet.
+- Nav items: 20px icon, 14px label, `sidebar-accent` background and foreground text when active, muted-foreground otherwise. Group headers use the group-header type style. A nav item can carry a count badge in the `SidebarMenuBadge` slot (neutral chip; warning tint on the admin worklist), hidden at zero and on the icon rail (2026-09-29).
 - The two "Bookinger" and two "Lokaler" entries are intentional. The member ones show the company's own bookings and all rooms; the admin ones are the invoicing view and room management. They are told apart by their group, not their label.
 - No top bar. The content column is three things: the page title, the content panel, and a footer line.
 - From tablet up the content column is exactly the viewport height (`md:h-svh`): the title, the panel and the footer line are always in view, and the panel scrolls inside (`md:overflow-y-auto`). The page itself never scrolls, in either direction: the content column is `min-w-0` next to the sidebar, so a page whose content has a minimum width (a wide table) scrolls inside its card instead of widening the column past the viewport (2026-09-23 in #81). Phone keeps the document scroll.
 - The content panel is `bg-muted rounded-xl p-3` and fills the column height. Everything a page shows lives inside it as white bordered cards, so the panel is the one muted layer on the page.
 - The footer line sits under the panel, right-aligned on tablet and desktop and centred on phone, 12px muted-foreground: a Wi-Fi icon, the network name, then "adgangskode" and the password in mono, foreground colour, no chip background. The values come from the single-row settings table and are admin-editable under Indstillinger; the seed defaults are `TheSocialHouseguest` / `SocialHouse`, which messages/da.ts also carries as the fallback on a fresh project. The text comes from `messages/da.ts` and is the same on every page. Identity lives in Profil and Log ud at the bottom of the sidebar, not here.
 - Content column: `max-w-[1400px]`, `gap-3` between title, panel and footer line. Every shell gutter equals the sidebar's own padding (`p-2`): from tablet up the column is `py-2 pr-2 pl-0`, so the menu sits centred between the screen edge and the content; on phone it is `px-2 py-2` (2026-09-20 in #4).
-- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet opened from a menu button on the title row, left of the page title. "Book lokale" closes the sheet as the search dialog opens; the dialog is mounted by the shell outside the sidebar, never inside the sheet.
+- Tablet (`md` to `lg`): sidebar collapses to an icon rail, labels in tooltips, "Book lokale" becomes an icon button. Phone (below `md`): sidebar is an off-canvas sheet; the toggle on the title row opens it, and navigation closes it. "Book lokale" closes the sheet as the search dialog opens; the dialog is mounted by the shell outside the sidebar, never inside the sheet.
 
 Decisions the shell (#55) records on top of these rules:
 
@@ -148,7 +148,7 @@ The mockups on the design canvas are drawn by hand to shadcn's default anatomy. 
 | Checkboxes, row selection | `Checkbox` | `size-4 rounded-[4px] border border-secondary`: the input border token is too light on a 16px box, so the box borrows the OTP slots' border (2026-09-23 in #81) |
 | Chips | `Badge` variant outline, `rounded-full` | `px-2 py-0.5 text-xs font-medium` |
 | Status badges | `Badge` with the tint classes from the table below | `rounded-md px-2 py-0.5 text-xs font-medium` |
-| Tables | `Table`, `TableHeader`, `TableRow`, `TableCell` | head `h-10 px-2 text-left`, cell `p-2 align-middle`, row `border-b` |
+| Tables | `Table`, `TableHeader`, `TableRow`, `TableCell` | head `h-10 px-2` on `bg-muted/50`, cell `p-2 align-middle`, row `border-b`, no vertical lines; titles align with their values — numeric titles `text-right` over right-aligned amounts (2026-09-29) |
 | Cards, tile groups, chart cards | `Card`, `CardHeader`, `CardTitle`, `CardContent` | `rounded-xl border py-6 shadow-sm`, header and content `px-6` |
 | Tabs (member bookings, Opslag) | `Tabs`, `TabsList`, `TabsTrigger` | list `h-9 rounded-lg bg-secondary p-[3px]`, active tab `bg-background`: the list sits on the muted panel, so it takes the shell's warm grey instead of muted, which vanished (2026-09-26 in #81) |
 | Filter rows | `Field` + `Select` + `Button` in a flex row | controls all `h-9` |
@@ -165,7 +165,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Forms.** shadcn `Field` with `react-hook-form` and zod (see `docs/agents/ui.md`). Label above, 12px muted. Input `h-9`, white, border, ring on focus. Hint below in 12px muted ("Maks. 5"). Error below in 12px destructive, replacing the hint. Required is the default; optional fields say "(valgfrit)" in the label. Selects use the shadcn Base UI `Select` with an `items` prop. Time selects list 30-minute steps.
 
-**Badges.** shadcn `Badge`, tinted: `rounded-md px-2 py-0.5 text-xs font-medium`.
+**Badges.** shadcn `Badge`, tinted: `rounded-md px-2 py-0.5 text-xs font-medium`. Count chips (2026-09-29): the booking tabs and the sidebar's nav items carry counts as `Badge` variant `outline` on the muted ground (`bg-muted`), `tabular-nums`, hidden at zero; the sidebar's `SidebarMenuBadge` slot is that same `Badge`, positioned absolutely beside the menu button — it has no hover state of its own (2026-09-29), and the admin's outstanding-invoice count wears the warning tint, matching the "Ikke faktureret" badge.
 
 | State | Token | Label |
 |---|---|---|
@@ -178,7 +178,9 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 | invoiced | success | "Faktureret" |
 | not invoicable | muted, muted-foreground | "Ikke fakturerbar" |
 
-**Tables.** shadcn `Table` inside a `Card` with no padding, header row 12px muted, cells `p-2`, rows `h-12` with a border between. Numeric columns right-aligned with `tabular-nums`. Booking number in mono. Below `md` every wide table scrolls horizontally inside its card with the first column sticky; nothing stacks into cards. Selection checkboxes on the left when bulk actions exist (admin bookings). Totals row in the invoicing view is `font-medium` on a muted ground.
+**Tables.** shadcn `Table` inside a `Card` with no padding, header row 12px muted, cells `p-2`, rows `h-12` with a border between. Numeric columns right-aligned with `tabular-nums`. Booking number in mono. Below `md` every wide table scrolls horizontally inside its card with the first column sticky; nothing stacks into cards. Selection checkboxes on the left when bulk actions exist (admin bookings). Totals row in the invoicing view is `font-medium` on a muted ground. A table is as tall as its content (changed 2026-09-29): the card grows with its rows instead of filling the panel, and a list longer than the page is paginated instead of scrolling inside the card — see Pagination.
+
+**Pagination.** Every list table paginates client-side: the rows are already in the browser, so a page is a slice and the URL carries `page` and `pageSize` (written with `window.history.replaceState`, defaults omitted). Footer drawn after the "icons only" example, sides settled 2026-09-29: the rows-per-page field on the left (20/40/60/80, 20 default, a new size restarts at page 1), and the "Viser X–Y af Z" summary with the icon-only Previous/Next on the right; the footer row hugs the table with no gap above it, and the member bookings card carries the "Alle priser ekskl. moms" line directly above the arrows. No page-number buttons; the summary carries the position. A tab switch starts the next tab on page 1. Card grids (rooms) do not paginate.
 
 **Dialogs and sheets.** Dialogs for flows the user starts (search, booking, confirmations). Sheets from the right for details of a thing the user clicked (a booking on the grid). Both white on a dimmed page, `shadow-lg`, radius, close icon top right. On phone every dialog is full-screen and every sheet slides from the bottom; there the dialog's close button is a larger tap target (about 45px, 21px icon), and the booking dialog's calendar fills the width so the days are large tap targets. Dialogs fade and zoom in and out over 200ms, ease-out; the large booking dialog takes 300ms with a slight rise. Under reduced motion dialogs appear and disappear without animation.
 
@@ -241,13 +243,15 @@ Under every step: "Tilbage" (outline, from the second step on) left, "Næste" (p
 
 ### Bookinger (member)
 
-ADR-0013's table. Columns: booking number (mono), room, date, time, booker, price, discount, add-ons, fee, status badge. Tabs above: "Kommende", "Tidligere", "Aflyste". One text size in the cells, the table's `text-sm`, and one value per cell: the total in the price column, the percentage in the discount column, nothing on a second line (decided 2026-09-23 while reviewing #81). The card fills the panel whatever the row count and never outgrows it: the rows scroll inside the card with the header row staying at the top, and the "Alle priser ekskl. moms" line is a card footer under the table, on the card's bottom edge, outside the scrolling area. The table scrolls sideways inside the card when its columns outgrow the width, with the booking number column staying put. Columns are separated by the same 1px `border` hairline as the rows, so the grid reads without any line standing out (2026-09-26 in #81). The header row sits on the `table-header` ground (muted would vanish against the panel), opaque because it is sticky, and every title is left-aligned; the numeric cells under them stay right-aligned (2026-09-26 in #81). The shell and the tabs never move. Row click opens the booking sheet with a destructive-flow "Aflys booking" button and the cancellation terms from the price snapshot.
+ADR-0013's table. Columns: booking number (mono), room, date, time, booker, price, discount, add-ons, fee, status badge. Tabs above: "Alle" (default), "Kommende", "Tidligere", "Aflyste", each with its count as a neutral chip (2026-09-29). One text size in the cells, the table's `text-sm`, and one value per cell: the total in the price column, the percentage in the discount column, nothing on a second line (decided 2026-09-23 while reviewing #81). The add-ons column shows the lines' total, not each add-on as its own row, the fee column stays narrow (`w-28`), and the status column stacks its two badges vertically — the deliberate second line (2026-09-29). The card is as tall as its content (changed 2026-09-29 from the #81 fill-the-panel scroll): the rows are paginated in the card footer instead of scrolling inside the card, a page taller than the panel scrolls the panel as before, and the vertical sticky header is gone with the internal scroll. The table still scrolls sideways inside the card when its columns outgrow the width, with the booking number column staying put. Rows are separated by the 1px `border` hairline — no vertical lines (2026-09-29) — and the header row sits on the muted/50 ground like every table, matching the pagination footer (2026-09-29; the `table-header` token is retired). The pagination footer hugs the card's bottom edge: rows-per-page left, summary and arrows right, and the "Alle priser ekskl. moms" line directly above the arrows (2026-09-29). The shell and the tabs never move. Row click opens the booking sheet with a destructive-flow "Aflys booking" button and the cancellation terms from the price snapshot.
 
 ### Lokaler (member)
 
 Every room as the 3-column card grid without search parameters and without the struck price row when there is no discount.
 
 ### Bookinger (admin)
+
+The minimal version shipped 2026-09-29: the outstanding-invoice worklist — ended bookings without an invoice, newest ended first, paginated, no filters, checkboxes or totals yet — the same set the sidebar badge counts. The description below is the full view it grows into.
 
 The invoicing view. Opens on the current month. Filter row: month picker, free period, company, room, invoicing status, member or external. Table with selection checkboxes, then booking number, company, room, date with the time range on a second muted line, hours, room price, discount, add-ons, fee, total excl. VAT, invoicing status badge. Totals row at the bottom for the filtered set. Bulk action "Markér som faktureret" as the page's primary button, enabled when rows are selected. House Events appear in this table with the info badge and "Ikke fakturerbar"; a filter hides them.
 
