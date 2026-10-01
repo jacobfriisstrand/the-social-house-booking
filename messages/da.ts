@@ -228,10 +228,38 @@ export const messages = {
     admin: {
       columns: {
         company: "Virksomhed",
+        manualAmounts: "Manuelt beløb",
         total: "Total ekskl. moms",
       },
       emptyDescription: "Afsluttede bookinger uden faktura vises her.",
       emptyTitle: "Ingen bookinger til fakturering",
+      manualAmounts: {
+        addButton: "Tilføj beløb",
+        // One entry's audit line (who/when): the admin who added it and when.
+        addedBy: (name: string | null, when: string) =>
+          name === null ? `Tilføjet ${when}` : `Tilføjet af ${name}, ${when}`,
+        emptyDescription:
+          "Beløb for ekstra tid eller eksterne omkostninger tilføjes her, når lokalet ikke er afleveret som aftalt.",
+        emptyTitle: "Ingen tilføjede beløb",
+        entriesTitle: "Tilføjede beløb",
+        errors: {
+          addFailed: "Beløbet kunne ikke tilføjes. Prøv igen.",
+          amountInvalid: "Beløbet skal være et helt tal over 0.",
+          noteRequired: "Skriv en kort forklaring.",
+          noteTooLong: "Forklaringen er for lang.",
+          tooEarly: "Beløbet kan først tilføjes, efter bookingen er afholdt.",
+        },
+        fields: {
+          amount: "Beløb (kr., ekskl. moms)",
+          amountHint: "Helt kroner, fx 250.",
+          note: "Forklaring",
+        },
+        none: "-",
+        saved: "Beløbet er tilføjet",
+        submit: "Tilføj beløb",
+        submitting: "Tilføjer …",
+        title: "Manuelt beløb",
+      },
       tableCaption: "Bookinger til fakturering",
     },
     allPricesExclVat: "Alle priser ekskl. moms",
@@ -240,12 +268,11 @@ export const messages = {
       booker: "Booker",
       bookingNumber: "Bookingnummer",
       cancellationFee: "Afbestillingsgebyr",
-      date: "Dato",
+      dateTime: "Dato og tid",
       discount: "Rabat",
       price: "Pris",
       room: "Lokale",
       status: "Status",
-      time: "Tid",
     },
     empty: {
       allDescription: "Du har ingen bookinger endnu.",
@@ -278,12 +305,14 @@ export const messages = {
         `Bookingen aflyses, og lokalet frigives med det samme. Afbestillingsgebyret bliver ${fee} ekskl. moms.`,
       confirmSentenceFree:
         "Bookingen aflyses, og lokalet frigives med det samme. Der kommer intet afbestillingsgebyr.",
+      date: "Dato",
       keep: "Fortryd",
       participants: (count: number) => `${count} deltagere`,
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
       successWithoutFee: "Bookingen er aflyst, og lokalet er frigivet.",
       termsTitle: "Afbestillingsregler",
+      time: "Tid",
       title: "Bookingsdetaljer",
     },
     status: {

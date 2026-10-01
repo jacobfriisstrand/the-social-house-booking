@@ -89,19 +89,20 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
+// One column, two lines (changed with #16 from the separate date and time
+// columns): the date, and the time range muted under it — the admin
+// bookings table's rendering.
 function BookingDateCells({ booking }: { booking: BookingOverviewRow }) {
   const start = dateAndTime(booking.bookingStartAt);
   const end = dateAndTime(booking.endAt);
 
   return (
-    <>
-      <TableCell>
-        <span className="block tabular-nums">{start.date}</span>
-      </TableCell>
-      <TableCell className="tabular-nums">
+    <TableCell className="tabular-nums">
+      <span className="block">{start.date}</span>
+      <span className="block text-muted-foreground text-xs">
         {start.time} - {end.time}
-      </TableCell>
-    </>
+      </span>
+    </TableCell>
   );
 }
 
@@ -201,8 +202,7 @@ function BookingTable({
               {copy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.room}</TableHead>
-            <TableHead>{copy.columns.date}</TableHead>
-            <TableHead>{copy.columns.time}</TableHead>
+            <TableHead>{copy.columns.dateTime}</TableHead>
             <TableHead>{copy.columns.booker}</TableHead>
             <TableHead className="text-right">{copy.columns.price}</TableHead>
             <TableHead className="text-right">

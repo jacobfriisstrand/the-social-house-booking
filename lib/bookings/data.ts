@@ -11,6 +11,7 @@ import {
 } from "@/lib/bookings/filters";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import {
+  manualAmountsTotalOre,
   type OutstandingInvoiceRow,
   outstandingInvoiceBasisOre,
 } from "@/lib/domain/booking-invoicing";
@@ -162,8 +163,9 @@ export async function countUpcomingOwnBookings(
   return result.count ?? 0;
 }
 
-// The shape the outstanding-invoice list reads: the booking's frozen basis
-// plus the names the table shows, embedded through the foreign keys.
+// The shape the outstanding-invoice list reads: the booking's frozen basis,
+// its manual amounts (#16), and the names the table shows, embedded through
+// the foreign keys.
 interface OutstandingBookingRow {
   booking_cancellation_fee_ore: number | null;
   booking_cancellation_fee_waived: boolean;
@@ -178,6 +180,13 @@ interface OutstandingBookingRow {
     | "expired"
     | "pending_verification";
   companies: { company_display_name: string } | null;
+  manual_amounts: Array<{
+    manual_amount_amount_ore: number;
+    manual_amount_created_at: string;
+    manual_amount_created_by: string | null;
+    manual_amount_id: string;
+    manual_amount_note: string;
+  }> | null;
   rooms: { room_name: string } | null;
 }
 
@@ -195,10 +204,36 @@ function requiredName(
   return name;
 }
 
+// The admins behind the manual amounts' creator ids (#16): one lookup for
+// the whole list, so every entry can show who added it. Admins are
+// auth users, which PostgREST cannot embed, and the admin session may read
+// the registry (policies/admins.sql).
+async function adminDisplayNames(
+  supabase: SupabaseClient<Database>,
+  adminIds: readonly (string | null)[]
+): Promise<Map<string, string>> {
+  const known = [...new Set(adminIds.filter((id) => id !== null))];
+  if (known.length === 0) {
+    return new Map();
+  }
+  const { data, error } = await supabase
+    .from("admins")
+    .select("admin_auth_user_id, admin_display_name")
+    .in("admin_auth_user_id", known);
+  if (error) {
+    throw new Error(`could not list admins: ${error.message}`);
+  }
+  return new Map(
+    data.map((admin) => [admin.admin_auth_user_id, admin.admin_display_name])
+  );
+}
+
 // The basis rule lives in lib/domain/booking-invoicing.ts with its tests;
-// this mapping only flattens the row the table shows.
+// this mapping only flattens the row the table shows, its manual amounts
+// (ADR-0010) oldest first with their audit names.
 function toOutstandingInvoiceRow(
-  booking: OutstandingBookingRow
+  booking: OutstandingBookingRow,
+  adminNames: ReadonlyMap<string, string>
 ): OutstandingInvoiceRow {
   const companyName = requiredName(
     booking.companies?.company_display_name,
@@ -211,10 +246,21 @@ function toOutstandingInvoiceRow(
     booking.booking_id
   );
 
+  const manualAmounts = (booking.manual_amounts ?? []).map((amount) => ({
+    amountOre: amount.manual_amount_amount_ore,
+    createdAt: amount.manual_amount_created_at,
+    createdByName: amount.manual_amount_created_by
+      ? (adminNames.get(amount.manual_amount_created_by) ?? null)
+      : null,
+    manualAmountId: amount.manual_amount_id,
+    note: amount.manual_amount_note,
+  }));
+
   return {
     basisOre: outstandingInvoiceBasisOre({
       cancellationFeeOre: booking.booking_cancellation_fee_ore,
       expectedTotalOre: booking.booking_expected_total_ore,
+      manualAmountsOre: manualAmountsTotalOre(manualAmounts),
       status: booking.booking_status,
       waived: booking.booking_cancellation_fee_waived,
     }),
@@ -224,6 +270,7 @@ function toOutstandingInvoiceRow(
     bookingStartAt: booking.booking_start_at,
     bookingStatus: booking.booking_status,
     companyName,
+    manualAmounts,
     roomName,
   };
 }
@@ -261,17 +308,31 @@ export async function listOutstandingInvoices(
   const result = await supabase
     .from("bookings")
     .select(
-      "booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_end_at, booking_expected_total_ore, booking_id, booking_number, booking_start_at, booking_status, rooms(room_name), companies(company_display_name)"
+      "booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_end_at, booking_expected_total_ore, booking_id, booking_number, booking_start_at, booking_status, rooms(room_name), companies(company_display_name), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)"
     )
     .eq("booking_invoicing_status", "not_invoiced")
     .lt("booking_end_at", nowIso)
     .or(outstandingInvoicesFilter())
     .order("booking_end_at", { ascending: false })
-    .order("booking_start_at", { ascending: false });
+    .order("booking_start_at", { ascending: false })
+    .order("manual_amount_created_at", {
+      ascending: true,
+      referencedTable: "manual_amounts",
+    });
   const bookings = rowsOrThrow<OutstandingBookingRow>(
     result,
     "outstanding invoices"
   );
+  const adminNames = await adminDisplayNames(
+    supabase,
+    bookings.flatMap((booking) =>
+      (booking.manual_amounts ?? []).map(
+        (amount) => amount.manual_amount_created_by
+      )
+    )
+  );
 
-  return bookings.map((booking) => toOutstandingInvoiceRow(booking));
+  return bookings.map((booking) =>
+    toOutstandingInvoiceRow(booking, adminNames)
+  );
 }

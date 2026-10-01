@@ -7,6 +7,7 @@
 // (DESIGN.md "Bookinger (admin)"); until then the page is read-only.
 // Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
 import { BookingStatusBadge } from "@/components/bookings/booking-overview";
+import { ManualAmountSheet } from "@/components/bookings/manual-amount-sheet";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Card, CardFooter } from "@/components/ui/card";
@@ -25,7 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { OutstandingInvoiceRow } from "@/lib/domain/booking-invoicing";
+import {
+  manualAmountsTotalOre,
+  type OutstandingInvoiceRow,
+} from "@/lib/domain/booking-invoicing";
 import { formatDate, formatOre, formatTime } from "@/lib/format";
 import { slicePage } from "@/lib/pagination";
 import { messages } from "@/messages/da";
@@ -65,9 +69,13 @@ export function AdminBookingsTable({
             </TableHead>
             <TableHead>{copy.columns.company}</TableHead>
             <TableHead>{bookingsCopy.columns.room}</TableHead>
-            <TableHead>{bookingsCopy.columns.date}</TableHead>
+            <TableHead>{bookingsCopy.columns.dateTime}</TableHead>
+            <TableHead className="text-right">
+              {copy.columns.manualAmounts}
+            </TableHead>
             <TableHead className="text-right">{copy.columns.total}</TableHead>
             <TableHead>{bookingsCopy.columns.status}</TableHead>
+            <TableHead className="w-36" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -86,10 +94,28 @@ export function AdminBookingsTable({
                 </span>
               </TableCell>
               <TableCell className="text-right tabular-nums">
+                {row.manualAmounts.length === 0
+                  ? copy.manualAmounts.none
+                  : formatOre(manualAmountsTotalOre(row.manualAmounts))}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
                 {formatOre(row.basisOre)}
               </TableCell>
               <TableCell>
                 <BookingStatusBadge status={row.bookingStatus} />
+              </TableCell>
+              <TableCell>
+                {/* A manual amount documents a held meeting (#16), so a
+                    cancelled booking — cancelled before it began, its basis
+                    the fee alone — gets no add button. The database's
+                    post-meeting trigger is the final check. */}
+                {row.bookingStatus === "cancelled" ? null : (
+                  <ManualAmountSheet
+                    bookingId={row.bookingId}
+                    bookingNumber={row.bookingNumber}
+                    manualAmounts={row.manualAmounts}
+                  />
+                )}
               </TableCell>
             </TableRow>
           ))}

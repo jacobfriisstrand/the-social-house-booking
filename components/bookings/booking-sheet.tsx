@@ -151,11 +151,11 @@ function BookingSheetDetails({
             value={booking.roomName}
           />
           <DetailRow
-            label={messages.bookings.columns.date}
+            label={messages.bookings.sheet.date}
             value={formatDate(booking.bookingStartAt)}
           />
           <DetailRow
-            label={messages.bookings.columns.time}
+            label={messages.bookings.sheet.time}
             value={`${formatTime(booking.bookingStartAt)} – ${formatTime(booking.endAt)}`}
           />
           <DetailRow
