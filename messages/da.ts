@@ -930,6 +930,7 @@ export const messages = {
     adminGroup: "Admin",
     bookings: "Bookinger",
     bookRoom: "Book lokale",
+    brand: "TheSocialHouse",
     companies: "Virksomheder",
     footer: {
       network: "TheSocialHouseguest",
