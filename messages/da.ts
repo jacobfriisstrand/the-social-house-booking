@@ -239,7 +239,7 @@ export const messages = {
         addedBy: (name: string | null, when: string) =>
           name === null ? `Tilføjet ${when}` : `Tilføjet af ${name}, ${when}`,
         emptyDescription:
-          "Beløb for ekstra tid eller eksterne omkostninger tilføjes her, når lokalet ikke er afleveret som aftalt.",
+          "Beløb, som bookingen skal faktureres for, tilføjes her — fx for ekstra tid eller eksterne omkostninger.",
         emptyTitle: "Ingen tilføjede beløb",
         entriesTitle: "Tilføjede beløb",
         errors: {

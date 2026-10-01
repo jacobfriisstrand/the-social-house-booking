@@ -1,9 +1,9 @@
--- The post-meeting rule (#16): a manual amount documents what a held
--- meeting cost to set right, so inserts fail unless the booking is
--- confirmed and its end time has passed — never while the meeting is still
--- ahead, and never on a cancelled booking or an expired hold, where
--- nothing was served. The check constraints (positive amount, non-empty
--- note) are asserted alongside.
+-- The post-meeting rule (#16): a manual amount belongs to a held meeting,
+-- so inserts fail unless the booking is confirmed and its end time has
+-- passed — never while the meeting is still ahead, and never on a
+-- cancelled booking or an expired hold, where nothing was served. The
+-- check constraints (positive amount, non-empty note) are asserted
+-- alongside.
 
 begin;
 select plan(9);

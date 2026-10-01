@@ -1,17 +1,18 @@
--- Manual amounts (#16, ADR-0010, Bilag 1 "Buffer og aflevering"): extra
--- time and external costs The Social House documents when a room is not
--- returned to standard. Admin assesses each amount case by case and adds
--- it with a short explanation; no automatic calculation exists in v1.0
--- (ADR-0010). Multiple rows per booking are allowed, and the sum enters
--- the booking's invoicing basis (#9). Money is integer øre, excl. VAT
--- (ADR-0019, ADR-0020); the row's creator and timestamp are the audit
+-- Manual amounts (#16, ADR-0010, Bilag 1 "Buffer og aflevering"): an amount
+-- admin adds after a held meeting, with a short explanation — for example
+-- when a room was not returned to standard and The Social House documents
+-- extra time or external costs, but the amount can be for anything. Admin
+-- assesses each amount case by case; no automatic calculation exists in
+-- v1.0 (ADR-0010). Multiple rows per booking are allowed, and the sum
+-- enters the booking's invoicing basis (#9). Money is integer øre, excl.
+-- VAT (ADR-0019, ADR-0020); the row's creator and timestamp are the audit
 -- (who/when).
 
 create table public.manual_amounts (
   manual_amount_id uuid primary key default gen_random_uuid(),
   manual_amount_booking_id uuid not null references public.bookings (booking_id) on delete cascade,
-  -- A positive extra charge: the spec invoices extra time and external
-  -- costs, never credits.
+  -- A positive charge: the amount is invoiced with the booking, never a
+  -- credit.
   manual_amount_amount_ore integer not null check (manual_amount_amount_ore > 0),
   -- The short explanation the spec requires; an amount without one is
   -- not a documented amount.
@@ -28,12 +29,11 @@ create index manual_amounts_booking_idx
 alter table public.manual_amounts enable row level security;
 
 -- ---------------------------------------------------------------------------
--- Post-meeting rule (#16): a manual amount documents what a held meeting
--- cost to set right, so it can only be added to a confirmed booking whose
--- end time has passed — never while the meeting is still ahead, and never
--- on a booking that was called off or whose hold expired: nothing was
--- served, so there is nothing to document. Enforced in Postgres so every
--- write path obeys it.
+-- Post-meeting rule (#16): a manual amount belongs to a held meeting, so
+-- it can only be added to a confirmed booking whose end time has passed —
+-- never while the meeting is still ahead, and never on a booking that was
+-- called off or whose hold expired: nothing was served, so there is
+-- nothing to add. Enforced in Postgres so every write path obeys it.
 create or replace function public.enforce_manual_amount_after_meeting()
 returns trigger
 language plpgsql

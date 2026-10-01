@@ -1,12 +1,12 @@
 "use server";
 
 // Manual amounts (#16, ADR-0010): the admin adds a post-meeting amount with
-// a short explanation when a room was not returned to standard. The row is
-// written under the admin's session and RLS (admin-only insert policy), and
-// the creator and timestamp are the audit (who/when). The post-meeting rule
-// — no amount before the booking's end time has passed, none on a cancelled
-// booking — is enforced in Postgres (schemas/manual_amounts.sql) and mapped
-// to its message here.
+// a short explanation — the reason can be anything, for example a room not
+// returned to standard. The row is written under the admin's session and
+// RLS (admin-only insert policy), and the creator and timestamp are the
+// audit (who/when). The post-meeting rule — no amount before the booking's
+// end time has passed, none on a cancelled booking — is enforced in
+// Postgres (schemas/manual_amounts.sql) and mapped to its message here.
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
