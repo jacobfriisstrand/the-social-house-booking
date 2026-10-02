@@ -10,6 +10,7 @@
 // is enforced in Postgres (schemas/manual_amounts.sql) and mapped to its
 // message here.
 
+import type { PostgrestError } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
@@ -32,6 +33,19 @@ const INVOICED_REFUSAL = "the booking is already invoiced";
 
 export type ManualAmountState = FormState<AddManualAmountValues>;
 
+// The insert's refusal mapped to its Danish copy: the trigger's own
+// message decides, and anything but the two refusals is the generic
+// failure.
+const insertError = (error: PostgrestError): ManualAmountState => {
+  if (error.code !== POST_MEETING_VIOLATION) {
+    return { error: copy.errors.addFailed, status: "error" };
+  }
+  if (error.message === INVOICED_REFUSAL) {
+    return { error: copy.errors.invoiced, status: "error" };
+  }
+  return { error: copy.errors.tooEarly, status: "error" };
+};
+
 export async function addManualAmount(
   _previousState: ManualAmountState,
   values: AddManualAmountValues
@@ -52,16 +66,7 @@ export async function addManualAmount(
     manual_amount_note: parsed.data.note,
   });
   if (error) {
-    if (error.code !== POST_MEETING_VIOLATION) {
-      return { error: copy.errors.addFailed, status: "error" };
-    }
-    return {
-      error:
-        error.message === INVOICED_REFUSAL
-          ? copy.errors.invoiced
-          : copy.errors.tooEarly,
-      status: "error",
-    };
+    return insertError(error);
   }
   revalidatePath("/admin/bookings");
   return { status: "success" };
