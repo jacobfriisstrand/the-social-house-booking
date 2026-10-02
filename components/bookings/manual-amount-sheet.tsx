@@ -23,7 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { ManualAmountEntry } from "@/lib/domain/booking-invoicing";
+import type { ManualAmountEntry } from "@/lib/domain/booking-overview";
 import { formatDateTime, formatOre } from "@/lib/format";
 import { addManualAmount } from "@/lib/manual-amounts/actions";
 import {

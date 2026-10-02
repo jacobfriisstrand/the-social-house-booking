@@ -296,6 +296,7 @@ export const messages = {
     quantity: (quantity: number) => `${quantity} stk.`,
     roomRental: "Lokaleleje",
     sheet: {
+      addedAt: (when: string) => `Tilføjet ${when}`,
       addOns: "Tilkøb",
       cancel: "Aflys booking",
       cancelledAt: "Afbooket",
@@ -307,6 +308,7 @@ export const messages = {
         "Bookingen aflyses, og lokalet frigives med det samme. Der kommer intet afbestillingsgebyr.",
       date: "Dato",
       keep: "Fortryd",
+      manualAmountsTitle: "Manuelle beløb",
       participants: (count: number) => `${count} deltagere`,
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,

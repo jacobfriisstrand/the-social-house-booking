@@ -140,11 +140,12 @@ function BookingAddOnsCell({ booking }: { booking: BookingOverviewRow }) {
 }
 
 // The two badges stack vertically (2026-09-29): the row keeps its height,
-// and neither badge pushes the other wide.
+// and neither badge pushes the other wide. The column is the table's last,
+// which always sits right-aligned (DESIGN.md "Components", 2026-10-02).
 function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   return (
     <TableCell>
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-col items-end gap-1">
         <BookingStatusBadge status={booking.bookingStatus} />
         <InvoicingStatusBadge status={booking.invoicingStatus} />
       </div>
@@ -212,7 +213,7 @@ function BookingTable({
             <TableHead className="w-28 text-right">
               {copy.columns.cancellationFee}
             </TableHead>
-            <TableHead>{copy.columns.status}</TableHead>
+            <TableHead className="text-right">{copy.columns.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

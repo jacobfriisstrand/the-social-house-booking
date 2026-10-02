@@ -25,6 +25,18 @@ export interface BookingAddonOverview {
   totalOre: number;
 }
 
+// One manual amount (ADR-0010): an extra charge admin added after the
+// meeting, with its note and its audit (who/when). `who` is the admin's
+// display name, or null when unknown — a company session cannot read the
+// admins registry (policies/admins.sql), so the member views never see it.
+export interface ManualAmountEntry {
+  amountOre: number;
+  createdAt: string;
+  createdByName: string | null;
+  manualAmountId: string;
+  note: string;
+}
+
 export interface BookingOverviewRow extends BookingOverviewEntry {
   addOns: BookingAddonOverview[];
   bookerName: string;
@@ -37,6 +49,10 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   // the fee server-side at the exact moment; this is the number the
   // destructive confirm states.
   liveCancellationFeeOre: number | null;
+  // The amounts admin added after the meeting (ADR-0010), oldest first —
+  // shown on the booking sheet apart from the frozen price snapshot
+  // (ADR-0005), which they never alter.
+  manualAmounts: ManualAmountEntry[];
   price: PriceOverviewModel;
   roomName: string;
 }

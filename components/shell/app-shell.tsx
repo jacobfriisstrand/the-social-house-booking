@@ -183,7 +183,7 @@ function ShellSidebar({
           />
           <span
             aria-hidden="true"
-            className="font-semibold text-xl group-data-[collapsible=icon]:hidden"
+            className="font-semibold text-md text-muted-foreground group-data-[collapsible=icon]:hidden"
           >
             {messages.shell.brand}
           </span>

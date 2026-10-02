@@ -7,7 +7,10 @@
 // has nothing to invoice. All amounts integer øre, excl. VAT
 // (ADR-0019, ADR-0020).
 
-import type { BookingOverviewStatus } from "./booking-overview";
+import type {
+  BookingOverviewStatus,
+  ManualAmountEntry,
+} from "./booking-overview";
 import { payableCancellationFeeOre } from "./cancellation";
 
 export interface OutstandingInvoiceRow {
@@ -22,17 +25,6 @@ export interface OutstandingInvoiceRow {
   // oldest first, the creator's display name included when known.
   manualAmounts: ManualAmountEntry[];
   roomName: string;
-}
-
-// One manual amount (ADR-0010): an extra charge admin added after the
-// meeting, with its note and its audit (who/when). `who` is the admin's
-// display name, or null when the admin row is gone.
-export interface ManualAmountEntry {
-  amountOre: number;
-  createdAt: string;
-  createdByName: string | null;
-  manualAmountId: string;
-  note: string;
 }
 
 // One booking's manual amounts (ADR-0010) as one sum for its own column

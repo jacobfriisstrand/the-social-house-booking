@@ -104,11 +104,13 @@ export function AdminBookingsTable({
               <TableCell>
                 <BookingStatusBadge status={row.bookingStatus} />
               </TableCell>
-              <TableCell>
+              <TableCell className="text-right">
                 {/* A manual amount documents a held meeting (#16), so a
                     cancelled booking — cancelled before it began, its basis
                     the fee alone — gets no add button. The database's
-                    post-meeting trigger is the final check. */}
+                    post-meeting trigger is the final check. The column is
+                    the table's last, which always sits right-aligned
+                    (DESIGN.md "Components", 2026-10-02). */}
                 {row.bookingStatus === "cancelled" ? null : (
                   <ManualAmountSheet
                     bookingId={row.bookingId}
