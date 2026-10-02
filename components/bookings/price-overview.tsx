@@ -68,13 +68,12 @@ function AddOnsRow({ model }: { model: PriceOverviewModel }) {
                     className="flex items-baseline justify-between gap-4"
                     key={line.addonId}
                   >
-                    <span className="flex flex-col">
-                      <span>{line.name}</span>
-                      {line.quantity > 1 ? (
-                        <span className="text-muted-foreground text-xs">
-                          {messages.bookings.quantity(line.quantity)}
-                        </span>
-                      ) : null}
+                    {/* A per-participant add-on's price is unit × headcount,
+                        so the count prefixes the name; a fixed one (1) is
+                        just the name. */}
+                    <span>
+                      {line.quantity > 1 ? `${line.quantity}x ` : ""}
+                      {line.name}
                     </span>
                     <span className="tabular-nums">
                       {formatOre(line.totalOre)}

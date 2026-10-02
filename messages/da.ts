@@ -296,7 +296,6 @@ export const messages = {
     noAddOns: "Ingen tilkøb",
     noCancellationFee: "-",
     noDiscount: "Ingen",
-    quantity: (quantity: number) => `${quantity} stk.`,
     roomRental: "Lokaleleje",
     sheet: {
       addOns: "Tilkøb",
