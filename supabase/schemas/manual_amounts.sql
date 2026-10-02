@@ -29,16 +29,27 @@ create index manual_amounts_booking_idx
 alter table public.manual_amounts enable row level security;
 
 -- ---------------------------------------------------------------------------
--- Post-meeting rule (#16): a manual amount belongs to a held meeting, so
--- it can only be added to a confirmed booking whose end time has passed —
--- never while the meeting is still ahead, and never on a booking that was
--- called off or whose hold expired: nothing was served, so there is
--- nothing to add. Enforced in Postgres so every write path obeys it.
+-- Post-meeting rule (#16): a manual amount belongs to a held meeting that
+-- still waits for its invoice, so it can only be added to a confirmed
+-- booking whose end time has passed — never while the meeting is still
+-- ahead, never on a booking that was called off or whose hold expired
+-- (nothing was served, so there is nothing to add), and never behind a
+-- recorded invoice: the basis an invoice was made from must not change.
+-- Enforced in Postgres so every write path obeys it.
 create or replace function public.enforce_manual_amount_after_meeting()
 returns trigger
 language plpgsql
 as $$
 begin
+  if exists (
+    select 1
+    from public.bookings b
+    where b.booking_id = new.manual_amount_booking_id
+      and b.booking_invoicing_status = 'invoiced'
+  ) then
+    raise exception 'the booking is already invoiced'
+      using errcode = 'P0001';
+  end if;
   if exists (
     select 1
     from public.bookings b

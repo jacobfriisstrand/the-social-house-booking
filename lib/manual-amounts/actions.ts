@@ -22,10 +22,13 @@ import { messages } from "@/messages/da";
 
 const copy = messages.bookings.admin.manualAmounts;
 
-// Postgres raises P0001 from the post-meeting trigger; everything else —
-// a booking that vanished in between, a dropped connection — is the
-// generic failure.
+// The refusals Postgres raises from enforce_manual_amount_after_meeting
+// (schemas/manual_amounts.sql): P0001, and the invoiced one is
+// distinguished by its exact message — the sheet is unreachable for an
+// invoiced booking through the worklist, so these surface only on a race
+// (the booking invoiced while the sheet stood open).
 const POST_MEETING_VIOLATION = "P0001";
+const INVOICED_REFUSAL = "the booking is already invoiced";
 
 export type ManualAmountState = FormState<AddManualAmountValues>;
 
@@ -49,11 +52,14 @@ export async function addManualAmount(
     manual_amount_note: parsed.data.note,
   });
   if (error) {
+    if (error.code !== POST_MEETING_VIOLATION) {
+      return { error: copy.errors.addFailed, status: "error" };
+    }
     return {
       error:
-        error.code === POST_MEETING_VIOLATION
-          ? copy.errors.tooEarly
-          : copy.errors.addFailed,
+        error.message === INVOICED_REFUSAL
+          ? copy.errors.invoiced
+          : copy.errors.tooEarly,
       status: "error",
     };
   }

@@ -256,6 +256,8 @@ export const messages = {
         errors: {
           addFailed: "Beløbet kunne ikke tilføjes. Prøv igen.",
           amountInvalid: "Beløbet skal være et helt tal over 0.",
+          invoiced:
+            "Bookingen er allerede faktureret. Beløbet kan ikke tilføjes.",
           noteRequired: "Skriv en kort forklaring.",
           noteTooLong: "Forklaringen er for lang.",
           removeFailed: "Beløbet kunne ikke fjernes. Prøv igen.",
