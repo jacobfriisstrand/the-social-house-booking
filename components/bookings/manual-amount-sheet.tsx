@@ -1,13 +1,14 @@
 "use client";
 
 // The manual-amount side panel (#16, ADR-0010): the amounts already added
-// to an ended booking with their audit (who/when), and the form that adds
-// one — the same right-hand sheet as every admin edit (DESIGN.md "Other
-// admin pages"). Adding keeps the sheet open, since the entries list is
-// the point, and resets the form for the next amount.
+// to an ended booking with their audit (who/when), each removable, and the
+// form that adds one — the same right-hand sheet as every admin edit
+// (DESIGN.md "Other admin pages"). Adding keeps the sheet open, since the
+// entries list is the point, and resets the form for the next amount.
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -25,7 +26,10 @@ import {
 } from "@/components/ui/sheet";
 import type { ManualAmountEntry } from "@/lib/domain/booking-overview";
 import { formatDateTime, formatOre } from "@/lib/format";
-import { addManualAmount } from "@/lib/manual-amounts/actions";
+import {
+  addManualAmount,
+  removeManualAmount,
+} from "@/lib/manual-amounts/actions";
 import {
   type AddManualAmountValues,
   addManualAmountSchema,
@@ -55,19 +59,26 @@ function ManualAmountList({
       <ul className="flex flex-col">
         {manualAmounts.map((entry) => (
           <li
-            className="flex flex-col gap-1 border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
+            className="flex items-start justify-between gap-3 border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
             key={entry.manualAmountId}
           >
-            <span className="font-medium tabular-nums">
-              {formatOre(entry.amountOre)}
-            </span>
-            <span className="text-sm">{entry.note}</span>
-            <span className="text-muted-foreground text-xs">
-              {copy.addedBy(
-                entry.createdByName,
-                formatDateTime(entry.createdAt)
-              )}
-            </span>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium tabular-nums">
+                {formatOre(entry.amountOre)}
+              </span>
+              <span className="text-sm">{entry.note}</span>
+              <span className="text-muted-foreground text-xs">
+                {copy.addedBy(
+                  entry.createdByName,
+                  formatDateTime(entry.createdAt)
+                )}
+              </span>
+            </div>
+            <ConfirmDeleteButton
+              copy={copy}
+              id={entry.manualAmountId}
+              onDelete={removeManualAmount}
+            />
           </li>
         ))}
       </ul>

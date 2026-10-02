@@ -4,7 +4,7 @@
 -- meeting — and there are no update or delete policies.
 
 begin;
-select plan(8);
+select plan(10);
 
 -- Fixtures: two companies, one room, one ended booking each. The ended
 -- bookings satisfy the post-meeting trigger (integrity/290), so the RLS
@@ -27,7 +27,6 @@ insert into public.bookings (booking_id, booking_number, booking_company_id, boo
 
 insert into public.manual_amounts (manual_amount_id, manual_amount_booking_id, manual_amount_amount_ore, manual_amount_note, manual_amount_created_by) values
   ('88888888-8888-8888-8888-888888888001', '66666666-6666-6666-6666-666666666001', 45000, 'Ekstra rengøring', '11111111-1111-1111-1111-111111111001');
-
 -- Company session (Rituals): reads its own amount, writes nothing.
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
@@ -54,12 +53,19 @@ select is(
   1::bigint,
   'admin sees all manual amounts (fixture bookings)');
 select lives_ok(
-  'insert into public.manual_amounts (manual_amount_booking_id, manual_amount_amount_ore, manual_amount_note, manual_amount_created_by) values (''66666666-6666-6666-6666-666666666002'', 10000, ''Ekstra tid'', auth.uid())',
+  'insert into public.manual_amounts (manual_amount_id, manual_amount_booking_id, manual_amount_amount_ore, manual_amount_note, manual_amount_created_by) values (''88888888-8888-8888-8888-888888888002'', ''66666666-6666-6666-6666-666666666002'', 10000, ''Ekstra tid'', auth.uid())',
   'admin adds a manual amount to a booking');
 select is(
-  (select manual_amount_created_by from public.manual_amounts where manual_amount_booking_id = '66666666-6666-6666-6666-666666666002'),
+  (select manual_amount_created_by from public.manual_amounts where manual_amount_id = '88888888-8888-8888-8888-888888888002'),
   '11111111-1111-1111-1111-111111111001'::uuid,
   'admin insert records the audit creator');
+select lives_ok(
+  'delete from public.manual_amounts where manual_amount_id = ''88888888-8888-8888-8888-888888888002''',
+  'admin removes a manual amount');
+select is(
+  (select count(*) from public.manual_amounts),
+  1::bigint,
+  'admin delete removes only that amount');
 
 select * from finish();
 rollback;

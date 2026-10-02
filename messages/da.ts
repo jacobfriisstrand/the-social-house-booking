@@ -241,6 +241,12 @@ export const messages = {
         // One entry's audit line (who/when): the admin who added it and when.
         addedBy: (name: string | null, when: string) =>
           name === null ? `Tilføjet ${when}` : `Tilføjet af ${name}, ${when}`,
+        delete: "Fjern",
+        deleteConfirm: "Ja, fjern",
+        deleted: "Beløbet er fjernet",
+        deleteSentence: "Beløbet fjernes fra bookingens fakturagrundlag.",
+        deleteTitle: "Fjern beløbet?",
+        deleting: "Fjerner …",
         emptyDescription:
           "Beløb, som bookingen skal faktureres for, tilføjes her — fx for ekstra tid eller eksterne omkostninger.",
         emptyTitle: "Ingen tilføjede beløb",
@@ -250,6 +256,7 @@ export const messages = {
           amountInvalid: "Beløbet skal være et helt tal over 0.",
           noteRequired: "Skriv en kort forklaring.",
           noteTooLong: "Forklaringen er for lang.",
+          removeFailed: "Beløbet kunne ikke fjernes. Prøv igen.",
           tooEarly: "Beløbet kan først tilføjes, efter bookingen er afholdt.",
         },
         fields: {
@@ -257,6 +264,7 @@ export const messages = {
           amountHint: "Helt kroner, fx 250.",
           note: "Forklaring",
         },
+        keep: "Fortryd",
         none: "-",
         saved: "Beløbet er tilføjet",
         submit: "Tilføj beløb",

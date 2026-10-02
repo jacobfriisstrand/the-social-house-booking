@@ -43,7 +43,7 @@ function PriceRow({ label, value }: { label: string; value: React.ReactNode }) {
 function AddOnsRow({ model }: { model: PriceOverviewModel }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="flex items-center gap-1 text-sm">
+      <dt className="flex items-center text-sm">
         {copy.addOns}
         {model.addOnLines.length > 0 ? (
           <HoverCard>

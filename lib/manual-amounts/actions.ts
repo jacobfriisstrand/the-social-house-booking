@@ -2,11 +2,13 @@
 
 // Manual amounts (#16, ADR-0010): the admin adds a post-meeting amount with
 // a short explanation — the reason can be anything, for example a room not
-// returned to standard. The row is written under the admin's session and
-// RLS (admin-only insert policy), and the creator and timestamp are the
-// audit (who/when). The post-meeting rule — no amount before the booking's
-// end time has passed, none on a cancelled booking — is enforced in
-// Postgres (schemas/manual_amounts.sql) and mapped to its message here.
+// returned to standard — and removes one again while the booking still
+// waits for its invoice. Rows are written and deleted under the admin's
+// session and RLS (admin-only insert and delete policies), and the creator
+// and timestamp are the audit (who/when). The post-meeting rule — no amount
+// before the booking's end time has passed, none on a cancelled booking —
+// is enforced in Postgres (schemas/manual_amounts.sql) and mapped to its
+// message here.
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -54,6 +56,27 @@ export async function addManualAmount(
           : copy.errors.addFailed,
       status: "error",
     };
+  }
+  revalidatePath("/admin/bookings");
+  return { status: "success" };
+}
+
+// The same result shape the shared ConfirmDeleteButton consumes.
+export type ManualAmountActionResult =
+  | { status: "success" }
+  | { status: "error"; error: string };
+
+export async function removeManualAmount(
+  manualAmountId: string
+): Promise<ManualAmountActionResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("manual_amounts")
+    .delete()
+    .eq("manual_amount_id", manualAmountId);
+  if (error) {
+    return { error: copy.errors.removeFailed, status: "error" };
   }
   revalidatePath("/admin/bookings");
   return { status: "success" };
