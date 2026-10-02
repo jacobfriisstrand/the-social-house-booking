@@ -7,6 +7,13 @@
 // live room or company prices (ADR-0005). The discount line appears only
 // when the company has a discount, and covers the room rental only
 // (ADR-0007). Struck prices belong on room cards, not in this panel.
+import { InfoIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { formatOre } from "@/lib/format";
 import { messages } from "@/messages/da";
@@ -22,9 +29,9 @@ function PriceRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// One manual amount (ADR-0010) as an extra price row: the amount, and the
-// note saying what it was for as 12px muted under it. The company sees no
-// timestamp — the note is all it needs.
+// One manual amount (ADR-0010) as an extra price row: "Manuelt beløb"
+// with a small info icon whose tooltip carries the note — the company
+// needs only what the amount was for, not when it was added.
 function ManualAmountRow({
   amount,
 }: {
@@ -32,13 +39,23 @@ function ManualAmountRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-sm">{copy.manualAmount}</dt>
-      <dd className="text-right text-sm tabular-nums">
-        {formatOre(amount.amountOre)}
-        <span className="block text-muted-foreground text-xs">
-          {amount.note}
-        </span>
-      </dd>
+      <dt className="flex items-center text-sm">
+        {copy.manualAmount}
+        <Tooltip>
+          <TooltipTrigger render={<span className="inline-flex" />}>
+            <Button
+              aria-label={copy.manualAmountInfo}
+              size="icon-xs"
+              type="button"
+              variant="ghost"
+            >
+              <InfoIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{amount.note}</TooltipContent>
+        </Tooltip>
+      </dt>
+      <dd className="text-sm tabular-nums">{formatOre(amount.amountOre)}</dd>
     </div>
   );
 }

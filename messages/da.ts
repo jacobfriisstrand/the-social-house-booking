@@ -199,6 +199,7 @@ export const messages = {
       addOns: "Tilkøb",
       exclVat: "ekskl. moms",
       manualAmount: "Manuelt beløb",
+      manualAmountInfo: "Forklaring",
       memberDiscount: (percent: number) => `Medlemsrabat (${percent} %)`,
       room: "Lokale",
       total: "Total",
