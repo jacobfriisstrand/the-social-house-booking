@@ -60,7 +60,11 @@ export function AdminBookingsTable({
 
   return (
     <Card className="min-w-0 gap-0 py-0">
-      <Table className="min-w-[60rem]">
+      {/* table-fixed: the columns between the first and the last share the
+          remaining width evenly, and the min-width keeps the table wide
+          enough for its nowrap headers — the card scrolls it sideways when
+          the screen narrows (DESIGN.md "Components"). */}
+      <Table className="min-w-[72rem] table-fixed">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
@@ -84,7 +88,9 @@ export function AdminBookingsTable({
               <TableCell className="sticky left-0 z-10 bg-card font-mono">
                 {row.bookingNumber}
               </TableCell>
-              <TableCell className="font-medium">{row.companyName}</TableCell>
+              <TableCell className="truncate font-medium">
+                {row.companyName}
+              </TableCell>
               <TableCell>{row.roomName}</TableCell>
               <TableCell className="tabular-nums">
                 <span className="block">{formatDate(row.bookingStartAt)}</span>

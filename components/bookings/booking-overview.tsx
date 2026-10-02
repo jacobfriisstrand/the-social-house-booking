@@ -195,7 +195,11 @@ function BookingTable({
 
   return (
     <Card className="min-w-0 gap-0 py-0">
-      <Table className="min-w-[78rem]">
+      {/* table-fixed: the columns between the first and the last share the
+          remaining width evenly, and the min-width keeps the table wide
+          enough for its nowrap headers — the card scrolls it sideways when
+          the screen narrows (DESIGN.md "Components"). */}
+      <Table className="min-w-[88rem] table-fixed">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
@@ -210,7 +214,7 @@ function BookingTable({
               {copy.columns.discount}
             </TableHead>
             <TableHead className="text-right">{copy.columns.addOns}</TableHead>
-            <TableHead className="w-28 text-right">
+            <TableHead className="text-right">
               {copy.columns.cancellationFee}
             </TableHead>
             <TableHead className="text-right">{copy.columns.status}</TableHead>
@@ -227,9 +231,11 @@ function BookingTable({
               <TableCell className="sticky left-0 z-10 bg-card font-mono">
                 {booking.bookingNumber}
               </TableCell>
-              <TableCell className="font-medium">{booking.roomName}</TableCell>
+              <TableCell className="truncate font-medium">
+                {booking.roomName}
+              </TableCell>
               <BookingDateCells booking={booking} />
-              <TableCell>{booking.bookerName}</TableCell>
+              <TableCell className="truncate">{booking.bookerName}</TableCell>
               <BookingPriceCell booking={booking} />
               <BookingDiscountCell booking={booking} />
               <BookingAddOnsCell booking={booking} />

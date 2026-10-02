@@ -46,7 +46,7 @@ interface TableRowData {
 
 function PricingCell({ addon }: { addon: AddonDetail }) {
   return (
-    <TableCell className="w-56">
+    <TableCell>
       <div className="flex items-center gap-2">
         <span className="tabular-nums">{formatKroner(addon.priceOre)}</span>
         <Badge variant="outline">
@@ -99,7 +99,7 @@ function SortableAddonRow({ addon, index }: SortableAddonRowProps) {
       </TableCell>
       <NameCell addon={addon} />
       <PricingCell addon={addon} />
-      <TableCell className="w-32">
+      <TableCell>
         {addon.isActive ? (
           <Badge variant="success">{copy.activeLabel}</Badge>
         ) : (
@@ -181,13 +181,13 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
 
   return (
     <Card className="gap-0 py-0">
-      <Table>
+      <Table className="min-w-[48rem] table-fixed">
         <TableHeader>
           <TableRow>
             <TableHead className="w-12" />
             <TableHead>{copy.nameColumn}</TableHead>
-            <TableHead className="w-56">{copy.pricingColumn}</TableHead>
-            <TableHead className="w-32">{copy.activeColumn}</TableHead>
+            <TableHead>{copy.pricingColumn}</TableHead>
+            <TableHead>{copy.activeColumn}</TableHead>
             <TableHead className="w-40" />
           </TableRow>
         </TableHeader>

@@ -142,7 +142,10 @@ function ManualAmounts({ amounts }: { amounts: ManualAmountEntry[] }) {
       </p>
       <ul className="flex flex-col gap-2">
         {amounts.map((entry) => (
-          <li className="flex flex-col gap-0.5" key={entry.manualAmountId}>
+          <li
+            className="flex w-fit flex-col gap-0.5 rounded border p-2"
+            key={entry.manualAmountId}
+          >
             <span className="font-medium tabular-nums">
               {formatOre(entry.amountOre)}
             </span>

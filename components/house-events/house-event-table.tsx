@@ -42,16 +42,16 @@ function HouseEventRow({
 }) {
   return (
     <TableRow>
-      <TableCell className="w-32 tabular-nums">
+      <TableCell className="tabular-nums">
         {formatDate(event.startAt)}
       </TableCell>
-      <TableCell className="w-36 tabular-nums">
+      <TableCell className="tabular-nums">
         {formatTime(event.startAt)} - {formatTime(event.endAt)}
       </TableCell>
-      <TableCell>
+      <TableCell className="truncate">
         {event.rooms.map((room) => room.roomName).join(", ")}
       </TableCell>
-      <TableCell className="font-medium">
+      <TableCell className="truncate font-medium">
         {event.title ?? messages.home.houseEventBadge}
       </TableCell>
       <TableCell className="w-48">
@@ -82,11 +82,14 @@ export function HouseEventTable({
   }
   return (
     <Card className="py-0">
-      <Table>
+      {/* table-fixed: the columns between the first and the last share the
+          remaining width evenly (DESIGN.md "Components"); the room list and
+          the title truncate instead of pushing into the next column. */}
+      <Table className="min-w-[48rem] table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-32">{copy.columns.date}</TableHead>
-            <TableHead className="w-36">{copy.columns.time}</TableHead>
+            <TableHead>{copy.columns.date}</TableHead>
+            <TableHead>{copy.columns.time}</TableHead>
             <TableHead>{copy.columns.rooms}</TableHead>
             <TableHead>{copy.columns.title}</TableHead>
             <TableHead className="w-48" />
