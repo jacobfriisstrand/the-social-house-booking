@@ -1,10 +1,11 @@
 // The booking price summary (#6, DESIGN.md "Booking dialog"): a muted
 // panel with the room's normal price, the add-ons, the member discount as
-// a subtractive line and the total excl. VAT — Lokale − rabat + tilkøb =
-// samlet. Renders a frozen PriceOverviewModel — pre-confirmation from the
-// hold's snapshot columns, post-confirmation from the confirmed row; never
-// from live room or company prices (ADR-0005). The discount line appears
-// only when the company has a discount, and covers the room rental only
+// a subtractive line, the manual amounts (ADR-0010) as extra price rows
+// and the total excl. VAT — Lokale − rabat + tilkøb + manuelt = samlet.
+// Renders a frozen PriceOverviewModel — pre-confirmation from the hold's
+// snapshot columns, post-confirmation from the confirmed row; never from
+// live room or company prices (ADR-0005). The discount line appears only
+// when the company has a discount, and covers the room rental only
 // (ADR-0007). Struck prices belong on room cards, not in this panel.
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { formatOre } from "@/lib/format";
@@ -17,6 +18,27 @@ function PriceRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-sm">{label}</dt>
       <dd className="text-sm tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+// One manual amount (ADR-0010) as an extra price row: the amount, and the
+// note saying what it was for as 12px muted under it. The company sees no
+// timestamp — the note is all it needs.
+function ManualAmountRow({
+  amount,
+}: {
+  amount: PriceOverviewModel["manualAmounts"][number];
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-sm">{copy.manualAmount}</dt>
+      <dd className="text-right text-sm tabular-nums">
+        {formatOre(amount.amountOre)}
+        <span className="block text-muted-foreground text-xs">
+          {amount.note}
+        </span>
+      </dd>
     </div>
   );
 }
@@ -38,6 +60,9 @@ export function PriceOverview({ model }: { model: PriceOverviewModel }) {
           </dd>
         </div>
       ) : null}
+      {model.manualAmounts.map((amount) => (
+        <ManualAmountRow amount={amount} key={amount.manualAmountId} />
+      ))}
       <div className="mt-2 flex items-baseline justify-between gap-4 border-border border-t pt-3">
         <dt className="font-medium text-xl">{copy.total}</dt>
         <dd className="flex items-baseline gap-2">

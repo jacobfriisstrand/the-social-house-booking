@@ -13,6 +13,7 @@ describe("priceOverview", () => {
     expect(overview).toEqual({
       addOnsOre: 0,
       discountPercent: 50,
+      manualAmounts: [],
       roomMemberTotalOre: 120_000,
       roomNormalTotalOre: 240_000,
       savingsOre: 120_000,
@@ -69,6 +70,40 @@ describe("priceOverview", () => {
     const overview = priceOverview({
       addOnsOre: 0,
       discountPercent: 50,
+      roomTotalOre: 240_000,
+      totalOre: 120_000,
+    });
+
+    expect(overview.totalOre).toBe(120_000);
+  });
+
+  it("shows the manual amounts as extra price rows on top of the total (#16)", () => {
+    const overview = priceOverview({
+      addOnsOre: 0,
+      discountPercent: 50,
+      manualAmounts: [
+        { amountOre: 45_000, manualAmountId: "m1", note: "Ekstra rengøring" },
+        {
+          amountOre: 25_000,
+          manualAmountId: "m2",
+          note: "Eksterne omkostninger",
+        },
+      ],
+      roomTotalOre: 240_000,
+      totalOre: 120_000,
+    });
+
+    expect(overview.manualAmounts).toHaveLength(2);
+    // ADR-0010: the amounts are extra charges added after the meeting —
+    // they sit on top of the frozen total and are never discounted.
+    expect(overview.totalOre).toBe(190_000);
+  });
+
+  it("reads no manual amounts as an unchanged total", () => {
+    const overview = priceOverview({
+      addOnsOre: 0,
+      discountPercent: 50,
+      manualAmounts: [],
       roomTotalOre: 240_000,
       totalOre: 120_000,
     });

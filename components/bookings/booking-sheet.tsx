@@ -28,16 +28,8 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { cancelOwnBooking } from "@/lib/bookings/cancel-actions";
-import type {
-  BookingOverviewRow,
-  ManualAmountEntry,
-} from "@/lib/domain/booking-overview";
-import {
-  formatDate,
-  formatDateTime,
-  formatOre,
-  formatTime,
-} from "@/lib/format";
+import type { BookingOverviewRow } from "@/lib/domain/booking-overview";
+import { formatDate, formatOre, formatTime } from "@/lib/format";
 import { messages } from "@/messages/da";
 
 const copy = messages.bookings.sheet;
@@ -118,6 +110,9 @@ function CancelConfirmDialog({
   );
 }
 
+// The amounts admin added after the meeting appear as price rows in the
+// frozen price overview above (ADR-0010); the sheet renders nothing extra
+// here.
 function CancellationRules() {
   return (
     <div className="rounded-lg border bg-muted/50 p-3 text-muted-foreground text-sm">
@@ -125,35 +120,6 @@ function CancellationRules() {
       <ul className="list-disc space-y-1 pl-4">
         {messages.cancellation.rules.map((rule) => (
           <li key={rule}>{rule}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// The amounts admin added after the meeting (ADR-0010), shown apart from
-// the frozen price overview above — later changes never alter the
-// snapshot (ADR-0005). Only rendered when there are amounts.
-function ManualAmounts({ amounts }: { amounts: ManualAmountEntry[] }) {
-  return (
-    <div className="rounded-lg border bg-muted/50 p-3 text-sm">
-      <p className="mb-1 font-medium text-foreground">
-        {copy.manualAmountsTitle}
-      </p>
-      <ul className="flex flex-col gap-2">
-        {amounts.map((entry) => (
-          <li
-            className="flex w-fit flex-col gap-0.5 rounded border p-2"
-            key={entry.manualAmountId}
-          >
-            <span className="font-medium tabular-nums">
-              {formatOre(entry.amountOre)}
-            </span>
-            <span>{entry.note}</span>
-            <span className="text-muted-foreground text-xs">
-              {copy.addedAt(formatDateTime(entry.createdAt))}
-            </span>
-          </li>
         ))}
       </ul>
     </div>
@@ -209,9 +175,6 @@ function BookingSheetDetails({
           />
         </dl>
         <PriceOverview model={booking.price} />
-        {booking.manualAmounts.length > 0 ? (
-          <ManualAmounts amounts={booking.manualAmounts} />
-        ) : null}
         {booking.bookingStatus === "confirmed" ? <CancellationRules /> : null}
         {canCancel ? (
           <Button onClick={onCancel} type="button" variant="destructive">

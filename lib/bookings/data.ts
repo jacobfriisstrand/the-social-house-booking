@@ -100,18 +100,6 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     totalOre: line.booking_addon_total_ore,
   }));
 
-  // The amounts admin added after the meeting (ADR-0010), oldest first.
-  // createdByName stays null: a company session cannot read the admins
-  // registry (policies/admins.sql), so the member sheet shows only the
-  // amount, its note and when it was added.
-  const manualAmounts = (booking.manual_amounts ?? []).map((amount) => ({
-    amountOre: amount.manual_amount_amount_ore,
-    createdAt: amount.manual_amount_created_at,
-    createdByName: null,
-    manualAmountId: amount.manual_amount_id,
-    note: amount.manual_amount_note,
-  }));
-
   return {
     addOns,
     bookerName: booking.booking_booker_name,
@@ -127,7 +115,6 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     endAt: booking.booking_end_at,
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
-    manualAmounts,
     price: bookingPriceOverview(booking),
     roomName,
   };

@@ -208,7 +208,9 @@ export async function confirmPendingBooking(
 
 // The columns a price overview is read from: the snapshot only. Later
 // reads of a confirmed booking never recompute from live room or company
-// prices (#6, ADR-0005).
+// prices (#6, ADR-0005). The manual amounts (ADR-0010) are the
+// post-meeting additions that ride along when the row carries them —
+// only the member booking sheet's read does.
 export interface BookingPriceRow {
   booking_addon_total_ore: number;
   booking_discount_percent: number;
@@ -216,6 +218,11 @@ export interface BookingPriceRow {
   booking_expected_total_ore: number;
   booking_room_price_ore: number;
   booking_start_at: string;
+  manual_amounts?: Array<{
+    manual_amount_amount_ore: number;
+    manual_amount_id: string;
+    manual_amount_note: string;
+  }> | null;
 }
 
 const SNAPSHOT_COLUMNS =
@@ -223,13 +230,20 @@ const SNAPSHOT_COLUMNS =
 
 // The frozen overview of a booking, from its snapshot columns. The total
 // is the stored booking_expected_total_ore; the room total and discount
-// are the frozen inputs the snapshot was built from.
+// are the frozen inputs the snapshot was built from. The manual amounts
+// (ADR-0010), oldest first, are the extra price rows on top of it — a
+// booking without them reads exactly as before.
 export const bookingPriceOverview = (
   row: BookingPriceRow
 ): PriceOverviewModel =>
   priceOverview({
     addOnsOre: row.booking_addon_total_ore,
     discountPercent: row.booking_discount_percent,
+    manualAmounts: (row.manual_amounts ?? []).map((amount) => ({
+      amountOre: amount.manual_amount_amount_ore,
+      manualAmountId: amount.manual_amount_id,
+      note: amount.manual_amount_note,
+    })),
     roomTotalOre: row.booking_room_price_ore,
     totalOre: row.booking_expected_total_ore,
   });
