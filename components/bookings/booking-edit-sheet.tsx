@@ -1,10 +1,11 @@
 "use client";
 
-// The manual-amount side panel (#16, ADR-0010): the amounts already added
-// to an ended booking with their audit (who/when), each removable, and the
-// form that adds one — the same right-hand sheet as every admin edit
-// (DESIGN.md "Other admin pages"). Adding keeps the sheet open, since the
-// entries list is the point, and resets the form for the next amount.
+// The booking's edit sheet on the admin worklist (DESIGN.md "Bookinger
+// (admin)"): a right-hand panel with the booking's settings, one card per
+// setting — the manual amounts (ADR-0010) first, each removable, and the
+// form that adds one. Adding keeps the sheet open, since the entries list
+// is the point, and resets the form for the next amount; later settings
+// join as more cards.
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -36,7 +37,8 @@ import {
 } from "@/lib/validation/manual-amounts";
 import { messages } from "@/messages/da";
 
-const copy = messages.bookings.admin.manualAmounts;
+const { admin } = messages.bookings;
+const copy = admin.manualAmounts;
 
 // A number input reports NaN while empty; the control shows "".
 const emptyAmount = Number.NaN;
@@ -132,7 +134,36 @@ function ManualAmountForm({ bookingId }: { bookingId: string }) {
   );
 }
 
-export function ManualAmountSheet({
+// The manual amounts as the sheet's first setting: the entries with their
+// audit, then the form.
+function ManualAmountsSection({
+  bookingId,
+  manualAmounts,
+}: {
+  bookingId: string;
+  manualAmounts: ManualAmountEntry[];
+}) {
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.entriesTitle}</CardTitle>
+        </CardHeader>
+        <ManualAmountList manualAmounts={manualAmounts} />
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.addButton}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ManualAmountForm bookingId={bookingId} />
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+export function BookingEditSheet({
   bookingId,
   bookingNumber,
   manualAmounts,
@@ -146,28 +177,18 @@ export function ManualAmountSheet({
       <SheetTrigger
         render={<Button size="sm" type="button" variant="outline" />}
       >
-        {copy.addButton}
+        {admin.editLabel}
       </SheetTrigger>
       <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>{copy.title}</SheetTitle>
+          <SheetTitle>{admin.editTitle}</SheetTitle>
           <SheetDescription>{bookingNumber}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>{copy.entriesTitle}</CardTitle>
-            </CardHeader>
-            <ManualAmountList manualAmounts={manualAmounts} />
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{copy.addButton}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ManualAmountForm bookingId={bookingId} />
-            </CardContent>
-          </Card>
+          <ManualAmountsSection
+            bookingId={bookingId}
+            manualAmounts={manualAmounts}
+          />
         </div>
       </SheetContent>
     </Sheet>

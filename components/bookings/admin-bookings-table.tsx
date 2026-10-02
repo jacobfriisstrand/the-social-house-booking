@@ -1,5 +1,6 @@
 "use client";
 
+import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
 // Bookinger (admin) — the invoicing worklist's minimal version
 // (2026-09-29): ended bookings without an invoice, newest ended first,
 // sliced by the URL pagination. Filters, the totals row and the bulk
@@ -7,7 +8,6 @@
 // (DESIGN.md "Bookinger (admin)"); until then the page is read-only.
 // Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
 import { BookingStatusBadge } from "@/components/bookings/booking-overview";
-import { ManualAmountSheet } from "@/components/bookings/manual-amount-sheet";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Card, CardFooter } from "@/components/ui/card";
@@ -113,12 +113,13 @@ export function AdminBookingsTable({
               <TableCell className="text-right">
                 {/* A manual amount documents a held meeting (#16), so a
                     cancelled booking — cancelled before it began, its basis
-                    the fee alone — gets no add button. The database's
+                    the fee alone — gets no edit button: the sheet's first
+                    setting has nothing to offer it. The database's
                     post-meeting trigger is the final check. The column is
                     the table's last, which always sits right-aligned
                     (DESIGN.md "Components", 2026-10-02). */}
                 {row.bookingStatus === "cancelled" ? null : (
-                  <ManualAmountSheet
+                  <BookingEditSheet
                     bookingId={row.bookingId}
                     bookingNumber={row.bookingNumber}
                     manualAmounts={row.manualAmounts}

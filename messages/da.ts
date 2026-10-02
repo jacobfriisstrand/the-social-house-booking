@@ -234,6 +234,8 @@ export const messages = {
         manualAmounts: "Manuelt beløb",
         total: "Total ekskl. moms",
       },
+      editLabel: "Rediger",
+      editTitle: "Rediger booking",
       emptyDescription: "Afsluttede bookinger uden faktura vises her.",
       emptyTitle: "Ingen bookinger til fakturering",
       manualAmounts: {
@@ -269,7 +271,6 @@ export const messages = {
         saved: "Beløbet er tilføjet",
         submit: "Tilføj beløb",
         submitting: "Tilføjer …",
-        title: "Manuelt beløb",
       },
       tableCaption: "Bookinger til fakturering",
     },
