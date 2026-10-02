@@ -115,7 +115,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     endAt: booking.booking_end_at,
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
-    price: bookingPriceOverview(booking),
+    price: bookingPriceOverview(booking, addOns),
     roomName,
   };
 }

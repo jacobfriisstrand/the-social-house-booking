@@ -11,6 +11,7 @@ describe("priceOverview", () => {
     });
 
     expect(overview).toEqual({
+      addOnLines: [],
       addOnsOre: 0,
       discountPercent: 50,
       manualAmounts: [],
@@ -109,5 +110,28 @@ describe("priceOverview", () => {
     });
 
     expect(overview.totalOre).toBe(120_000);
+  });
+
+  it("carries the add-on lines through for the hover card", () => {
+    const overview = priceOverview({
+      addOnLines: [
+        {
+          addonId: "55555555-5555-5555-5555-555555555001",
+          name: "Lunch",
+          quantity: 8,
+          totalOre: 45_000,
+        },
+      ],
+      addOnsOre: 45_000,
+      discountPercent: 50,
+      roomTotalOre: 240_000,
+      totalOre: 165_000,
+    });
+
+    // The lines are informational (the hover card shows each one with its
+    // price); the total still comes from the input, which already
+    // includes the add-on sum.
+    expect(overview.addOnLines).toHaveLength(1);
+    expect(overview.totalOre).toBe(165_000);
   });
 });

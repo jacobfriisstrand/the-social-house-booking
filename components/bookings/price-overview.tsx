@@ -2,13 +2,21 @@
 // panel with the room's normal price, the add-ons, the member discount as
 // a subtractive line, the manual amounts (ADR-0010) as extra price rows
 // and the total excl. VAT — Lokale − rabat + tilkøb + manuelt = samlet.
-// Renders a frozen PriceOverviewModel — pre-confirmation from the hold's
-// snapshot columns, post-confirmation from the confirmed row; never from
-// live room or company prices (ADR-0005). The discount line appears only
-// when the company has a discount, and covers the room rental only
-// (ADR-0007). Struck prices belong on room cards, not in this panel.
+// The add-ons row carries a small info icon whose hover card lists each
+// add-on line with its price; the manual amount's note lives in a
+// tooltip. Renders a frozen PriceOverviewModel — pre-confirmation from
+// the hold's snapshot columns, post-confirmation from the confirmed row;
+// never from live room or company prices (ADR-0005). The discount line
+// appears only when the company has a discount, and covers the room
+// rental only (ADR-0007). Struck prices belong on room cards, not in
+// this panel.
 import { InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +33,60 @@ function PriceRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-sm">{label}</dt>
       <dd className="text-sm tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+// The add-ons row with its info icon: the hover card lists each add-on
+// and its price (ADR-0011), the quantity as 12px muted under the name for
+// a per-participant add-on. Only rendered when the caller has lines.
+function AddOnsRow({ model }: { model: PriceOverviewModel }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="flex items-center gap-1 text-sm">
+        {copy.addOns}
+        {model.addOnLines.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger
+              closeDelay={100}
+              delay={100}
+              render={<span className="inline-flex" />}
+            >
+              <Button
+                aria-label={copy.addOnsInfo}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <InfoIcon />
+              </Button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-56">
+              <ul className="flex flex-col gap-1.5">
+                {model.addOnLines.map((line) => (
+                  <li
+                    className="flex items-baseline justify-between gap-4"
+                    key={line.addonId}
+                  >
+                    <span className="flex flex-col">
+                      <span>{line.name}</span>
+                      {line.quantity > 1 ? (
+                        <span className="text-muted-foreground text-xs">
+                          {messages.bookings.quantity(line.quantity)}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="tabular-nums">
+                      {formatOre(line.totalOre)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </HoverCardContent>
+          </HoverCard>
+        ) : null}
+      </dt>
+      <dd className="text-sm tabular-nums">{formatOre(model.addOnsOre)}</dd>
     </div>
   );
 }
@@ -62,11 +124,9 @@ function ManualAmountRow({
 
 export function PriceOverview({ model }: { model: PriceOverviewModel }) {
   return (
-    <dl className="flex flex-col gap-2 rounded-lg bg-muted p-4">
+    <dl className="flex flex-col gap-2 rounded-lg bg-muted">
       <PriceRow label={copy.room} value={formatOre(model.roomNormalTotalOre)} />
-      {model.addOnsOre > 0 ? (
-        <PriceRow label={copy.addOns} value={formatOre(model.addOnsOre)} />
-      ) : null}
+      {model.addOnsOre > 0 ? <AddOnsRow model={model} /> : null}
       {model.showSavings ? (
         <div className="flex items-baseline justify-between gap-4 text-success">
           <dt className="text-sm">
@@ -82,7 +142,7 @@ export function PriceOverview({ model }: { model: PriceOverviewModel }) {
       ))}
       <div className="mt-2 flex items-baseline justify-between gap-4 border-border border-t pt-3">
         <dt className="font-medium text-xl">{copy.total}</dt>
-        <dd className="flex items-baseline gap-2">
+        <dd className="flex flex-col items-end">
           <span className="font-medium text-xl tabular-nums">
             {formatOre(model.totalOre)}
           </span>

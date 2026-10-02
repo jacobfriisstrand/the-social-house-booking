@@ -203,7 +203,7 @@ function BookingTable({
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-36 bg-muted/50">
+            <TableHead className="sticky left-0 z-10 w-36">
               {copy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.room}</TableHead>
@@ -324,12 +324,8 @@ export function BookingOverview({
 
   return (
     <>
-      <Tabs
-        className="w-full"
-        defaultValue="all"
-        onValueChange={handleTabChange}
-      >
-        <TabsList className="w-full">
+      <Tabs defaultValue="all" onValueChange={handleTabChange}>
+        <TabsList>
           <TabsTrigger value="all">
             {copy.tabs.all}
             <CountBadge count={bookings.all.length} />

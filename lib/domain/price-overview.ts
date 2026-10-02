@@ -14,7 +14,20 @@ export interface ManualAmountPriceRow {
   note: string;
 }
 
+// One add-on line in the overview's hover card (ADR-0011): the name and
+// its line total — unit × quantity, the headcount for a per-participant
+// add-on and 1 for a fixed one. The id keys the row.
+export interface AddOnPriceRow {
+  addonId: string;
+  name: string | null;
+  quantity: number;
+  totalOre: number;
+}
+
 export interface PriceOverviewModel {
+  // The add-on lines for the hover card, in the booking's order — empty
+  // when the caller has no lines to show.
+  addOnLines: AddOnPriceRow[];
   addOnsOre: number;
   discountPercent: number;
   // The amounts admin added after the meeting (ADR-0010), oldest first —
@@ -30,6 +43,7 @@ export interface PriceOverviewModel {
 }
 
 export interface PriceOverviewInput {
+  addOnLines?: AddOnPriceRow[];
   addOnsOre: number;
   discountPercent: number;
   manualAmounts?: ManualAmountPriceRow[];
@@ -50,6 +64,7 @@ export function priceOverview(input: PriceOverviewInput): PriceOverviewModel {
   );
   const manualAmounts = input.manualAmounts ?? [];
   return {
+    addOnLines: input.addOnLines ?? [],
     addOnsOre: input.addOnsOre,
     discountPercent: input.discountPercent,
     manualAmounts,

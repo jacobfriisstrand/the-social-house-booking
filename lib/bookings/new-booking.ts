@@ -231,12 +231,15 @@ const SNAPSHOT_COLUMNS =
 // The frozen overview of a booking, from its snapshot columns. The total
 // is the stored booking_expected_total_ore; the room total and discount
 // are the frozen inputs the snapshot was built from. The manual amounts
-// (ADR-0010), oldest first, are the extra price rows on top of it — a
-// booking without them reads exactly as before.
+// (ADR-0010), oldest first, are the extra price rows on top of it, and
+// the caller's add-on lines (ADR-0011) feed the hover card — a booking
+// without either reads exactly as before.
 export const bookingPriceOverview = (
-  row: BookingPriceRow
+  row: BookingPriceRow,
+  addOnLines?: PriceOverviewModel["addOnLines"]
 ): PriceOverviewModel =>
   priceOverview({
+    addOnLines,
     addOnsOre: row.booking_addon_total_ore,
     discountPercent: row.booking_discount_percent,
     manualAmounts: (row.manual_amounts ?? []).map((amount) => ({

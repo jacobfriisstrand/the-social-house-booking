@@ -28,6 +28,7 @@ const adminDetail: Extract<BookingDetail, { kind: "admin" }> = {
   participantCount: 8,
   practicalNotes: null,
   price: {
+    addOnLines: [],
     addOnsOre: 0,
     discountPercent: 0,
     manualAmounts: [],

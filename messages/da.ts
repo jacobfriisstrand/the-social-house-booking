@@ -197,6 +197,7 @@ export const messages = {
     },
     price: {
       addOns: "Tilkøb",
+      addOnsInfo: "Vis tilkøb",
       exclVat: "ekskl. moms",
       manualAmount: "Manuelt beløb",
       manualAmountInfo: "Forklaring",
