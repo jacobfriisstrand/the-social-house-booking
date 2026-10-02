@@ -39,13 +39,13 @@ function NoticeRow({ row }: { row: NoticeTableRow }) {
   const { lastDay, title } = row.values;
   return (
     <TableRow>
-      <TableCell className="font-medium">{title}</TableCell>
-      <TableCell className="w-32">
+      <TableCell className="truncate font-medium">{title}</TableCell>
+      <TableCell>
         <Badge variant={STATUS_BADGE[row.status]}>
           {copy.status[row.status]}
         </Badge>
       </TableCell>
-      <TableCell className="w-40 tabular-nums">
+      <TableCell className="tabular-nums">
         {lastDay ? formatDateString(lastDay) : copy.noLastDay}
       </TableCell>
       <TableCell className="w-72">
@@ -78,12 +78,12 @@ export function NoticeTable({ rows }: { rows: NoticeTableRow[] }) {
   }
   return (
     <Card className="py-0">
-      <Table>
+      <Table className="min-w-[52rem] table-fixed">
         <TableHeader>
           <TableRow>
             <TableHead>{copy.columns.title}</TableHead>
-            <TableHead className="w-32">{copy.columns.status}</TableHead>
-            <TableHead className="w-40">{copy.columns.lastDay}</TableHead>
+            <TableHead>{copy.columns.status}</TableHead>
+            <TableHead>{copy.columns.lastDay}</TableHead>
             <TableHead className="w-72" />
           </TableRow>
         </TableHeader>

@@ -517,6 +517,41 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_amounts: {
+        Row: {
+          manual_amount_amount_ore: number
+          manual_amount_booking_id: string
+          manual_amount_created_at: string
+          manual_amount_created_by: string | null
+          manual_amount_id: string
+          manual_amount_note: string
+        }
+        Insert: {
+          manual_amount_amount_ore: number
+          manual_amount_booking_id: string
+          manual_amount_created_at?: string
+          manual_amount_created_by?: string | null
+          manual_amount_id?: string
+          manual_amount_note: string
+        }
+        Update: {
+          manual_amount_amount_ore?: number
+          manual_amount_booking_id?: string
+          manual_amount_created_at?: string
+          manual_amount_created_by?: string | null
+          manual_amount_id?: string
+          manual_amount_note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_amounts_manual_amount_booking_id_fkey"
+            columns: ["manual_amount_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       notices: {
         Row: {
           notice_body: string

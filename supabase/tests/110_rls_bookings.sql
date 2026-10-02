@@ -89,7 +89,7 @@ select is(
   3::bigint,
   'admin sees all fixture send-log rows incl. system mail');
 select lives_ok(
-  'insert into public.bookings (booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values (''B-TEST-0004'', ''22222222-2222-2222-2222-222222222002'', ''44444444-4444-4444-4444-444444444001'', now(), now() + interval ''1 hour'', 2::bigint, ''X'', ''x@x.dk'', ''+45'', 1)',
+  'insert into public.bookings (booking_number, booking_company_id, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore) values (''B-TEST-0004'', ''22222222-2222-2222-2222-222222222002'', ''44444444-4444-4444-4444-444444444001'', timestamptz ''2050-01-01 09:00+02'', timestamptz ''2050-01-01 10:00+02'', 2::bigint, ''X'', ''x@x.dk'', ''+45'', 1)',
   'admin creates a booking');
 
 select * from finish();

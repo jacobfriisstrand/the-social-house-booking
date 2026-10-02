@@ -162,31 +162,31 @@ function ShellSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* The full logo when expanded, only the house mark on the icon
-            rail (2026-09-29); the row is as tall as the page header row, so
-            the logo sits on the same centre line as the page title beside
-            it. The sidebar toggle lives outside the sidebar, on the page
-            title row — it must stay reachable with the sidebar collapsed
-            or expanded. */}
-        <div className="flex h-9 items-center group-data-[collapsible=icon]:justify-center">
+        {/* The house mark always, and the brand as text beside it only
+            when expanded — the mark alone on the icon rail (changed
+            2026-10-01); on the phone sheet the sidebar carries no
+            data-collapsible, so the text shows there too. The row is as
+            tall as the page header row, so the logo sits on the same
+            centre line as the page title beside it. The sidebar toggle
+            lives outside the sidebar, on the page title row — it must
+            stay reachable with the sidebar collapsed or expanded. The
+            text is aria-hidden: the image's alt names the brand, so
+            screen readers hear it once in both modes. */}
+        <div className="flex h-9 items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
-            className="group-data-[collapsible=icon]:hidden"
-            height={30}
-            priority
-            src="/logo.svg"
-            unoptimized
-            width={130}
-          />
-          <Image
-            alt="The Social House"
-            className="hidden group-data-[collapsible=icon]:block"
             height={28}
             priority
             src="/logo-mark.svg"
             unoptimized
             width={28}
           />
+          <span
+            aria-hidden="true"
+            className="font-semibold text-md text-muted-foreground group-data-[collapsible=icon]:hidden"
+          >
+            {messages.shell.brand}
+          </span>
         </div>
       </SidebarHeader>
       <SidebarGroup>

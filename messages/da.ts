@@ -197,7 +197,10 @@ export const messages = {
     },
     price: {
       addOns: "Tilkøb",
+      addOnsInfo: "Vis tilkøb",
       exclVat: "ekskl. moms",
+      manualAmount: "Manuelt beløb",
+      manualAmountInfo: "Forklaring",
       memberDiscount: (percent: number) => `Medlemsrabat (${percent} %)`,
       room: "Lokale",
       total: "Total",
@@ -228,10 +231,49 @@ export const messages = {
     admin: {
       columns: {
         company: "Virksomhed",
+        manualAmounts: "Manuelt beløb",
         total: "Total ekskl. moms",
       },
+      editLabel: "Rediger",
+      editTitle: "Rediger booking",
       emptyDescription: "Afsluttede bookinger uden faktura vises her.",
       emptyTitle: "Ingen bookinger til fakturering",
+      manualAmounts: {
+        addButton: "Tilføj beløb",
+        // One entry's audit line (who/when): the admin who added it and when.
+        addedBy: (name: string | null, when: string) =>
+          name === null ? `Tilføjet ${when}` : `Tilføjet af ${name}, ${when}`,
+        delete: "Fjern",
+        deleteConfirm: "Ja, fjern",
+        deleted: "Beløbet er fjernet",
+        deleteSentence: "Beløbet fjernes fra bookingens fakturagrundlag.",
+        deleteTitle: "Fjern beløbet?",
+        deleting: "Fjerner …",
+        emptyDescription:
+          "Beløb, som bookingen skal faktureres for, tilføjes her — fx for ekstra tid eller eksterne omkostninger.",
+        emptyTitle: "Ingen tilføjede beløb",
+        entriesTitle: "Tilføjede beløb",
+        errors: {
+          addFailed: "Beløbet kunne ikke tilføjes. Prøv igen.",
+          amountInvalid: "Beløbet skal være et helt tal over 0.",
+          invoiced:
+            "Bookingen er allerede faktureret. Beløbet kan ikke tilføjes.",
+          noteRequired: "Skriv en kort forklaring.",
+          noteTooLong: "Forklaringen er for lang.",
+          removeFailed: "Beløbet kunne ikke fjernes. Prøv igen.",
+          tooEarly: "Beløbet kan først tilføjes, efter bookingen er afholdt.",
+        },
+        fields: {
+          amount: "Beløb (kr., ekskl. moms)",
+          amountHint: "Helt kroner, fx 250.",
+          note: "Forklaring",
+        },
+        keep: "Fortryd",
+        none: "-",
+        saved: "Beløbet er tilføjet",
+        submit: "Tilføj beløb",
+        submitting: "Tilføjer …",
+      },
       tableCaption: "Bookinger til fakturering",
     },
     allPricesExclVat: "Alle priser ekskl. moms",
@@ -240,12 +282,11 @@ export const messages = {
       booker: "Booker",
       bookingNumber: "Bookingnummer",
       cancellationFee: "Afbestillingsgebyr",
-      date: "Dato",
+      dateTime: "Dato og tid",
       discount: "Rabat",
       price: "Pris",
       room: "Lokale",
       status: "Status",
-      time: "Tid",
     },
     empty: {
       allDescription: "Du har ingen bookinger endnu.",
@@ -266,7 +307,6 @@ export const messages = {
     noAddOns: "Ingen tilkøb",
     noCancellationFee: "-",
     noDiscount: "Ingen",
-    quantity: (quantity: number) => `${quantity} stk.`,
     roomRental: "Lokaleleje",
     sheet: {
       addOns: "Tilkøb",
@@ -278,12 +318,14 @@ export const messages = {
         `Bookingen aflyses, og lokalet frigives med det samme. Afbestillingsgebyret bliver ${fee} ekskl. moms.`,
       confirmSentenceFree:
         "Bookingen aflyses, og lokalet frigives med det samme. Der kommer intet afbestillingsgebyr.",
+      date: "Dato",
       keep: "Fortryd",
       participants: (count: number) => `${count} deltagere`,
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
       successWithoutFee: "Bookingen er aflyst, og lokalet er frigivet.",
       termsTitle: "Afbestillingsregler",
+      time: "Tid",
       title: "Bookingsdetaljer",
     },
     status: {
@@ -901,6 +943,7 @@ export const messages = {
     adminGroup: "Admin",
     bookings: "Bookinger",
     bookRoom: "Book lokale",
+    brand: "TheSocialHouse",
     companies: "Virksomheder",
     footer: {
       network: "TheSocialHouseguest",

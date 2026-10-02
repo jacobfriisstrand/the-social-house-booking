@@ -97,11 +97,11 @@ export function CancelConfirmForm({
             />
             <DetailRow label={columnCopy.room} value={preview.roomName} />
             <DetailRow
-              label={columnCopy.date}
+              label={messages.bookings.sheet.date}
               value={formatDate(preview.startAt)}
             />
             <DetailRow
-              label={columnCopy.time}
+              label={messages.bookings.sheet.time}
               value={`${formatTime(preview.startAt)} – ${formatTime(preview.endAt)}`}
             />
           </dl>

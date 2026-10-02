@@ -29,18 +29,15 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
 
   return (
     <Card className="min-w-0 gap-0 overflow-x-auto py-0">
-      {/* table-fixed: column widths come from the header row only, so
-          row content can never resize a column and the layout does not
-          jump as data changes. */}
-      <Table className="table-fixed">
+      {/* table-fixed: the columns between the first and the last share the
+          remaining width evenly (DESIGN.md "Components"). */}
+      <Table className="min-w-[48rem] table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[26%]">
-              {copy.columns.displayName}
-            </TableHead>
-            <TableHead className="w-[26%]">{copy.columns.email}</TableHead>
-            <TableHead className="w-32">{copy.columns.status}</TableHead>
-            <TableHead className="w-24 text-right">
+            <TableHead>{copy.columns.displayName}</TableHead>
+            <TableHead>{copy.columns.email}</TableHead>
+            <TableHead>{copy.columns.status}</TableHead>
+            <TableHead className="text-right">
               {copy.columns.discount}
             </TableHead>
             <TableHead className="w-56 max-w-56 text-right">

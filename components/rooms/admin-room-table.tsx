@@ -168,18 +168,14 @@ export function AdminRoomTable({
 
   return (
     <Card className="gap-0 py-0">
-      <Table>
+      <Table className="min-w-[52rem] table-fixed">
         <TableHeader>
           <TableRow>
             <TableHead className="w-20" />
             <TableHead>{messages.rooms.nameColumn}</TableHead>
-            <TableHead className="w-24">
-              {messages.rooms.capacityColumn}
-            </TableHead>
-            <TableHead className="w-32">{messages.rooms.priceColumn}</TableHead>
-            <TableHead className="w-32">
-              {messages.rooms.activeColumn}
-            </TableHead>
+            <TableHead>{messages.rooms.capacityColumn}</TableHead>
+            <TableHead>{messages.rooms.priceColumn}</TableHead>
+            <TableHead>{messages.rooms.activeColumn}</TableHead>
             <TableHead className="w-40" />
           </TableRow>
         </TableHeader>
@@ -188,10 +184,10 @@ export function AdminRoomTable({
             <TableRow key={room.roomId}>
               <RoomImageCell room={room} />
               <RoomNameCell room={room} />
-              <TableCell className="w-24 tabular-nums">
+              <TableCell className="tabular-nums">
                 {room.capacity} {messages.rooms.persons}
               </TableCell>
-              <TableCell className="w-32 tabular-nums">
+              <TableCell className="tabular-nums">
                 {formatKroner(room.hourlyPriceOre)}
                 {messages.rooms.perHourSuffix}
               </TableCell>

@@ -25,6 +25,19 @@ export interface BookingAddonOverview {
   totalOre: number;
 }
 
+// One manual amount (ADR-0010): an extra charge admin added after the
+// meeting, with its note and its audit (who/when). `who` is the admin's
+// display name, or null when the admin row is gone — only the admin
+// worklist shows it; the member's price rows carry just the amount and
+// the note.
+export interface ManualAmountEntry {
+  amountOre: number;
+  createdAt: string;
+  createdByName: string | null;
+  manualAmountId: string;
+  note: string;
+}
+
 export interface BookingOverviewRow extends BookingOverviewEntry {
   addOns: BookingAddonOverview[];
   bookerName: string;

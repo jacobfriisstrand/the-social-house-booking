@@ -110,6 +110,9 @@ function CancelConfirmDialog({
   );
 }
 
+// The amounts admin added after the meeting appear as price rows in the
+// frozen price overview above (ADR-0010); the sheet renders nothing extra
+// here.
 function CancellationRules() {
   return (
     <div className="rounded-lg border bg-muted/50 p-3 text-muted-foreground text-sm">
@@ -151,11 +154,11 @@ function BookingSheetDetails({
             value={booking.roomName}
           />
           <DetailRow
-            label={messages.bookings.columns.date}
+            label={messages.bookings.sheet.date}
             value={formatDate(booking.bookingStartAt)}
           />
           <DetailRow
-            label={messages.bookings.columns.time}
+            label={messages.bookings.sheet.time}
             value={`${formatTime(booking.bookingStartAt)} – ${formatTime(booking.endAt)}`}
           />
           <DetailRow

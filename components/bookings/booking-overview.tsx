@@ -89,19 +89,20 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
+// One column, two lines (changed with #16 from the separate date and time
+// columns): the date, and the time range muted under it — the admin
+// bookings table's rendering.
 function BookingDateCells({ booking }: { booking: BookingOverviewRow }) {
   const start = dateAndTime(booking.bookingStartAt);
   const end = dateAndTime(booking.endAt);
 
   return (
-    <>
-      <TableCell>
-        <span className="block tabular-nums">{start.date}</span>
-      </TableCell>
-      <TableCell className="tabular-nums">
+    <TableCell className="tabular-nums">
+      <span className="block">{start.date}</span>
+      <span className="block text-muted-foreground text-xs">
         {start.time} - {end.time}
-      </TableCell>
-    </>
+      </span>
+    </TableCell>
   );
 }
 
@@ -139,11 +140,12 @@ function BookingAddOnsCell({ booking }: { booking: BookingOverviewRow }) {
 }
 
 // The two badges stack vertically (2026-09-29): the row keeps its height,
-// and neither badge pushes the other wide.
+// and neither badge pushes the other wide. The column is the table's last,
+// which always sits right-aligned (DESIGN.md "Components", 2026-10-02).
 function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   return (
     <TableCell>
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-col items-end gap-1">
         <BookingStatusBadge status={booking.bookingStatus} />
         <InvoicingStatusBadge status={booking.invoicingStatus} />
       </div>
@@ -193,26 +195,29 @@ function BookingTable({
 
   return (
     <Card className="min-w-0 gap-0 py-0">
-      <Table className="min-w-[78rem]">
+      {/* table-fixed: the columns between the first and the last share the
+          remaining width evenly, and the min-width keeps the table wide
+          enough for its nowrap headers — the card scrolls it sideways when
+          the screen narrows (DESIGN.md "Components"). */}
+      <Table className="min-w-[88rem] table-fixed">
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-36 bg-muted/50">
+            <TableHead className="sticky left-0 z-10 w-36">
               {copy.columns.bookingNumber}
             </TableHead>
             <TableHead>{copy.columns.room}</TableHead>
-            <TableHead>{copy.columns.date}</TableHead>
-            <TableHead>{copy.columns.time}</TableHead>
+            <TableHead>{copy.columns.dateTime}</TableHead>
             <TableHead>{copy.columns.booker}</TableHead>
             <TableHead className="text-right">{copy.columns.price}</TableHead>
             <TableHead className="text-right">
               {copy.columns.discount}
             </TableHead>
             <TableHead className="text-right">{copy.columns.addOns}</TableHead>
-            <TableHead className="w-28 text-right">
+            <TableHead className="text-right">
               {copy.columns.cancellationFee}
             </TableHead>
-            <TableHead>{copy.columns.status}</TableHead>
+            <TableHead className="text-right">{copy.columns.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -226,9 +231,11 @@ function BookingTable({
               <TableCell className="sticky left-0 z-10 bg-card font-mono">
                 {booking.bookingNumber}
               </TableCell>
-              <TableCell className="font-medium">{booking.roomName}</TableCell>
+              <TableCell className="truncate font-medium">
+                {booking.roomName}
+              </TableCell>
               <BookingDateCells booking={booking} />
-              <TableCell>{booking.bookerName}</TableCell>
+              <TableCell className="truncate">{booking.bookerName}</TableCell>
               <BookingPriceCell booking={booking} />
               <BookingDiscountCell booking={booking} />
               <BookingAddOnsCell booking={booking} />
@@ -317,12 +324,8 @@ export function BookingOverview({
 
   return (
     <>
-      <Tabs
-        className="w-full"
-        defaultValue="all"
-        onValueChange={handleTabChange}
-      >
-        <TabsList className="w-full">
+      <Tabs defaultValue="all" onValueChange={handleTabChange}>
+        <TabsList>
           <TabsTrigger value="all">
             {copy.tabs.all}
             <CountBadge count={bookings.all.length} />
