@@ -69,3 +69,16 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 3. Generate the hook secret once, `v1,whsec_$(openssl rand -base64 32)`, and store it twice: as the GitHub Environment secret `SEND_EMAIL_HOOK_SECRET` (config push registers the hook with it) and as an Edge Function secret: `supabase secrets set SEND_EMAIL_HOOK_SECRET=… RESEND_API_KEY=… RESEND_FROM=… APP_ENV=… EMAIL_REDIRECT_TO=…` (`APP_ENV=production` only on the production project; `EMAIL_REDIRECT_TO` only on development). Both hooks are registered by `config push`; nothing is done in the dashboard.
 4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
 5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.
+
+## Go-live checklist (before real bookings)
+
+Found while testing #11 and #88 on 2026-10-07; do these in order when production opens to members.
+
+1. **Turn off Netlify visitor protection on production** (Site configuration → Access & security → Visitor access). While it is on, every request without a Netlify login gets `401` and a "Login Redirect" page — including the three machine callers of the site, which therefore cannot work yet:
+   - the hourly job: `netlify/functions/send-reminders.mts` POSTs `${NEXT_PUBLIC_SITE_URL}/api/jobs/send-reminders` over the public URL, so every scheduled run fails with `responded 401` and no reminder (Mail 5) is sent and no stale hold is released;
+   - the Resend webhook (`/api/webhooks/resend`): `outbound_email_status` stays `queued`;
+   - the Sentry webhook (`/api/webhooks/sentry`): no GitHub issues from Sentry.
+   The develop deploy is protected the same way; there the job is triggered by hand anyway, but its Resend webhook is blocked too.
+2. **Switch Resend to the thesocialhouse.dk account.** Production still sends through the development account (domain `tsh-dev.jacobfri.is`). Replace `RESEND_API_KEY` and `RESEND_FROM` in the Netlify production context and in the production Edge Function secrets (`supabase secrets set --project-ref <prod ref> …`), register the production webhook on the new account (new `RESEND_WEBHOOK_SECRET`), and run the template sync against it (the release workflow does, with the production key).
+3. **Remove `BOOKING_CANCEL_SECRET`** from every Netlify context. Nothing reads it since #88 (ADR-0024).
+4. **Check the job and the webhooks after the next full hour**: the `send-reminders` function log shows a `200` with `{"holdsExpired":…,"reminders":{…}}`, a test mail moves from `queued` to `delivered` in `outbound_emails`, and a test Sentry error opens a GitHub issue.
