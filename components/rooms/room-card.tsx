@@ -7,6 +7,7 @@ import { MapPinIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 import { PriceRow } from "./price-row";
 import { RoomPhotoCarousel } from "./room-photo-carousel";
@@ -26,11 +27,21 @@ interface RoomCardProps {
   room: RoomCardRoom;
 }
 
+// 4:3, not 16:9: at four or three cards to a row the wide photo left the
+// card too low (#15). The empty placeholder keeps the same height.
+const PHOTO_ASPECT = "aspect-[4/3]";
+
 function RoomPhotos({ room }: { room: RoomCardRoom }) {
   if (room.images.length === 0) {
-    return <div className="aspect-video w-full rounded-t-xl bg-muted" />;
+    return <div className={cn(PHOTO_ASPECT, "w-full rounded-t-xl bg-muted")} />;
   }
-  return <RoomPhotoCarousel images={room.images} name={room.name} />;
+  return (
+    <RoomPhotoCarousel
+      imageClassName={PHOTO_ASPECT}
+      images={room.images}
+      name={room.name}
+    />
+  );
 }
 
 export function RoomCard({ discountPercent, href, room }: RoomCardProps) {

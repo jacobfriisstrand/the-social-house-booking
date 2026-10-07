@@ -58,11 +58,14 @@ export function RoomCarousel({
         </CardHeader>
         <CardContent>
           {/* The 1px padding keeps the room cards' outline inside the
-              carousel's clipping viewport. */}
-          <CarouselContent className="py-px pr-px">
+              carousel's clipping viewport, on every side: without the left
+              one the first card lost its left edge (#15). */}
+          <CarouselContent className="p-px">
             {rooms.map((room) => (
+              // Three in view from lg, as on Lokaler: at four they read
+              // too small (#15).
               <CarouselItem
-                className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                className="md:basis-1/2 lg:basis-1/3"
                 key={room.roomId}
               >
                 <RoomCard
