@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CalendarIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -17,15 +16,8 @@ import { useRouter } from "next/navigation";
 // admin-calendar-grid.tsx.
 import type * as React from "react";
 import { useCallback, useState } from "react";
-import { da } from "react-day-picker/locale";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -43,7 +35,6 @@ import {
   movedPeriod,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
-import { dateToIso, isoToDate } from "@/lib/calendar-date";
 import type { AdminOverviewRow } from "@/lib/domain/admin-bookings";
 import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
@@ -163,7 +154,6 @@ function PeriodControl({
   today: string;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
 
   const move = useCallback(
     (steps: number) => {
@@ -176,61 +166,33 @@ function PeriodControl({
     router.push(adminViewHref(params, windowAround(today)));
   }, [params, router, today]);
 
-  const pick = useCallback(
-    (picked: Date | undefined) => {
-      if (!picked) {
-        return;
-      }
-      setOpen(false);
-      router.push(adminViewHref(params, windowAround(dateToIso(picked))));
-    },
-    [params, router]
-  );
-
   const moveBack = useCallback(() => move(-1), [move]);
   const moveForward = useCallback(() => move(1), [move]);
 
   return (
     <div className="flex items-center gap-2">
-      <Button
-        aria-label={copy.filters.previous}
-        onClick={moveBack}
-        size="icon"
-        type="button"
-        variant="outline"
-      >
-        <ChevronLeftIcon aria-hidden="true" />
-      </Button>
-      <Button onClick={goToday} size="sm" type="button" variant="outline">
-        {copy.filters.today}
-      </Button>
-      <Popover onOpenChange={setOpen} open={open}>
-        <PopoverTrigger
-          render={
-            <Button size="sm" type="button" variant="outline">
-              <CalendarIcon aria-hidden="true" />
-              {monthName(params.fromDate)}
-            </Button>
-          }
-        />
-        <PopoverContent align="start" className="w-auto p-0">
-          <Calendar
-            defaultMonth={isoToDate(params.focusDate)}
-            locale={da}
-            mode="single"
-            onSelect={pick}
-          />
-        </PopoverContent>
-      </Popover>
-      <Button
-        aria-label={copy.filters.next}
-        onClick={moveForward}
-        size="icon"
-        type="button"
-        variant="outline"
-      >
-        <ChevronRightIcon aria-hidden="true" />
-      </Button>
+      {/* The group stays empty on purpose: forrige / I dag / næste are
+          momentary actions, never a selection that latches. */}
+      <ToggleGroup spacing={0} value={[]} variant="outline">
+        <ToggleGroupItem
+          aria-label={copy.filters.previous}
+          onClick={moveBack}
+          value="previous"
+        >
+          <ChevronLeftIcon aria-hidden="true" />
+        </ToggleGroupItem>
+        <ToggleGroupItem onClick={goToday} value="today">
+          {copy.filters.today}
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          aria-label={copy.filters.next}
+          onClick={moveForward}
+          value="next"
+        >
+          <ChevronRightIcon aria-hidden="true" />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      <span className="font-medium text-sm">{monthName(params.fromDate)}</span>
     </div>
   );
 }

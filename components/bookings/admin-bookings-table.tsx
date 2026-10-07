@@ -233,7 +233,10 @@ function BookingRow({
           checkbox
         ) : (
           <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>
+            <TooltipTrigger
+              aria-label={copy.selection.reasons[reason]}
+              render={<span className="inline-flex" role="img" />}
+            >
               <XIcon aria-hidden className="size-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>{copy.selection.reasons[reason]}</TooltipContent>
@@ -475,7 +478,7 @@ export function AdminBookingsTable({
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            disabled={refusing}
+            disabled={selectionCount === 0 || refusing}
             onClick={refuse}
             size="sm"
             type="button"

@@ -8,7 +8,12 @@ import type {
   AdminSortKey,
 } from "@/lib/domain/admin-bookings";
 import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
-import { clampDate, monthOf, monthWindow } from "@/lib/domain/periods";
+import {
+  clampDate,
+  monthOf,
+  monthWindow,
+  moveMonth,
+} from "@/lib/domain/periods";
 
 export type AdminViewKind = "list" | "month";
 
@@ -208,11 +213,7 @@ export function movedPeriod(
   params: AdminViewParams,
   steps: number
 ): { focusDate: string; fromDate: string; toDate: string } {
-  const [year, month] = params.fromDate.split("-").map(Number);
-  const moved = new Date(Date.UTC(year, month - 1 + steps, 1));
-  const window = monthWindow(
-    `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, "0")}`
-  );
+  const window = monthWindow(moveMonth(monthOf(params.fromDate), steps));
   return {
     focusDate: clampDate(params.focusDate, window.fromDate, window.toDate),
     fromDate: window.fromDate,
