@@ -27,6 +27,7 @@ import { cphDate } from "@/lib/domain/opening-hours";
 import { formatKroner } from "@/lib/format";
 import { findPublicRoom, type PublicRoom } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 import {
   parseRoomPrefill,
   parseRoomSearch,
@@ -194,10 +195,11 @@ export default async function RoomPage({
   // The day periods depend only on the roomId from the URL, not on the room
   // row, so they load in parallel with the room and the viewer — the route
   // was paying a third sequential round trip for them.
-  const [room, viewer, initialPeriods] = await Promise.all([
+  const [room, viewer, initialPeriods, terms] = await Promise.all([
     findPublicRoom(supabase, roomId),
     getBookingViewer(supabase, session),
     listRoomDayPeriods(supabase, roomId, initialDate),
+    getCurrentTerms(),
   ]);
   if (!room) {
     notFound();
@@ -242,6 +244,7 @@ export default async function RoomPage({
               initialPeriods={initialPeriods}
               prefill={prefill}
               room={room}
+              terms={terms}
               viewer={viewer}
             />
           </div>

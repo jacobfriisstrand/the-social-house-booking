@@ -27,6 +27,7 @@ const holdInput = {
   participantCount: 8,
   roomId: "00000000-0000-0000-0000-0000000000c1",
   termsAccepted: true,
+  termsVersionIds: [],
   ...FOUR_HOURS,
 };
 

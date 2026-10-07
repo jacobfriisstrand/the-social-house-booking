@@ -25,6 +25,7 @@ import { buildDayGrid } from "@/lib/notice-board/grid";
 import { listShownNotices } from "@/lib/notices/data";
 import { listPublicRooms } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 import { messages } from "@/messages/da";
 
 const copy = messages.home;
@@ -52,14 +53,16 @@ export default async function HomePage({
   const date = pageDate(params.dato, today);
   const isAdmin = session.appRole === "admin";
   const supabase = await createClient();
-  const [viewer, rooms, entries, events, details, notices] = await Promise.all([
-    getBookingViewer(supabase, session),
-    listPublicRooms(supabase),
-    listDayEntries(supabase, date),
-    listTodayHouseEvents(supabase, now),
-    listDayBookingDetails(supabase, date, isAdmin),
-    listShownNotices(supabase, now),
-  ]);
+  const [viewer, rooms, entries, events, details, notices, terms] =
+    await Promise.all([
+      getBookingViewer(supabase, session),
+      listPublicRooms(supabase),
+      listDayEntries(supabase, date),
+      listTodayHouseEvents(supabase, now),
+      listDayBookingDetails(supabase, date, isAdmin),
+      listShownNotices(supabase, now),
+      getCurrentTerms(),
+    ]);
   const grid = buildDayGrid({
     date,
     details,
@@ -98,6 +101,7 @@ export default async function HomePage({
               dateLabel={formatDateString(date)}
               entries={grid.entries}
               rows={grid.rows}
+              terms={terms}
               viewer={viewer}
             />
           </CardContent>

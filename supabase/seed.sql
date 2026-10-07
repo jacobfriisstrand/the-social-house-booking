@@ -305,4 +305,15 @@ insert into public.settings (setting_wifi_network, setting_wifi_password)
 values ('TheSocialHouseguest', 'SocialHouse')
 on conflict (setting_id) do nothing;
 
+-- Booking terms, privacy policy, and GDPR overview (#15): version 1 of
+-- each, published, so the booking dialog has texts to link and record.
+-- Placeholders only: The Social House delivers the real texts, and an
+-- admin publishes them under Betingelser in each cloud project.
+insert into public.terms_versions (
+  terms_version_name, terms_version_version, terms_version_content, terms_version_published_at
+) values
+  ('Booking terms', '1', E'Eksempeltekst til lokal udvikling.\n\nAfbooking mere end 72 timer før mødet er gratis. Fra 72 til 24 timer før betaler I 50 % af lokaleprisen efter rabat. Under 24 timer før betaler I 100 %.\n\nAlle priser er ekskl. moms.', now()),
+  ('Privacy policy', '1', E'Eksempeltekst til lokal udvikling.\n\nVi gemmer bookerens navn, arbejdsemail og mobilnummer for at kunne håndtere bookingen.', now()),
+  ('GDPR overview', '1', E'Eksempeltekst til lokal udvikling.\n\nOversigten over persondata, databehandlere og sletning skrives ud fra docs/compliance/gdpr-data-inventory.md.', now());
+
 commit;

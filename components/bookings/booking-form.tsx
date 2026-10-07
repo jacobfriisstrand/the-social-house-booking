@@ -7,6 +7,7 @@
 // company's submit creates the hold (#2); an admin's creates the confirmed
 // booking for the chosen company (#14, ADR-0023).
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import {
   type FormEvent,
   startTransition,
@@ -60,6 +61,7 @@ import {
 } from "@/lib/domain/price-overview";
 import { roomTotalOre } from "@/lib/domain/pricing";
 import { buildSnapshot } from "@/lib/domain/snapshot";
+import { ACCEPTED_ON_BOOKING, type CurrentTerms } from "@/lib/domain/terms";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
 import {
@@ -120,9 +122,15 @@ const toPeriods = (periods: SerializedPeriod[]): Period[] =>
 const prefillInstant = (date?: string, time?: string): string =>
   date && time ? cphToUtc(date, time).toISOString() : "";
 
+// The versions the terms links open, sent back with the booking so the
+// server records what was shown (#15).
+const shownTermsIds = (terms: CurrentTerms): string[] =>
+  ACCEPTED_ON_BOOKING.flatMap((document) => terms[document] ?? []);
+
 const defaultValues = (
   room: DialogRoom,
-  prefill: RoomPrefill
+  prefill: RoomPrefill,
+  terms: CurrentTerms
 ): BookingFormValues => ({
   addOnIds: [],
   bookerEmail: "",
@@ -135,6 +143,7 @@ const defaultValues = (
   roomId: room.roomId,
   startAt: prefillInstant(prefill.dato, prefill.fra),
   termsAccepted: false,
+  termsVersionIds: shownTermsIds(terms),
 });
 
 // Blocked periods per day: the initial day comes from the server, others
@@ -326,13 +335,40 @@ function CompanyField({
   );
 }
 
+// A text the booker accepts, opened in a new tab so the dialog keeps its
+// values. Unlinked while the text has no published version; the server
+// then refuses the booking.
+function TermsLink({
+  children,
+  versionId,
+}: {
+  children: string;
+  versionId: string | undefined;
+}) {
+  if (!versionId) {
+    return children;
+  }
+  return (
+    <Link
+      className="underline underline-offset-4"
+      href={`/terms/${versionId}`}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      {children}
+    </Link>
+  );
+}
+
 // The box stays on the label's line; the error goes under the label.
 function TermsField({
   className,
   control,
+  terms,
 }: {
   className?: string;
   control: Control<BookingFormValues>;
+  terms: CurrentTerms;
 }) {
   const { field, fieldState } = useController({
     control,
@@ -353,7 +389,18 @@ function TermsField({
       />
       <FieldContent>
         <FieldLabel className="font-normal" htmlFor="booking-terms">
-          {copy.terms}
+          {/* One span: the label is a flex row, and the links must stay in
+              the sentence's flow. */}
+          <span>
+            {copy.terms.start}
+            <TermsLink versionId={terms["Booking terms"]}>
+              {copy.terms.bookingTerms}
+            </TermsLink>
+            {copy.terms.middle}
+            <TermsLink versionId={terms["Privacy policy"]}>
+              {copy.terms.privacyPolicy}
+            </TermsLink>
+          </span>
         </FieldLabel>
         {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
       </FieldContent>
@@ -668,12 +715,14 @@ function StepNav({
   pending,
   step,
   submitCopy,
+  terms,
 }: {
   control: Control<BookingFormValues>;
   onBack: () => void;
   pending: boolean;
   step: number;
   submitCopy: { submit: string; submitting: string };
+  terms: CurrentTerms;
 }) {
   const last = step === LAST_STEP;
   return (
@@ -684,7 +733,9 @@ function StepNav({
         </Button>
       ) : null}
       <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-        {last ? <TermsField className="w-auto" control={control} /> : null}
+        {last ? (
+          <TermsField className="w-auto" control={control} terms={terms} />
+        ) : null}
         {last ? (
           <PendingButton
             idleLabel={submitCopy.submit}
@@ -707,6 +758,7 @@ interface BookingFormProps extends ResultHandlers {
   prefill: RoomPrefill;
   room: DialogRoom;
   step: number;
+  terms: CurrentTerms;
   viewer: BookingViewer;
 }
 
@@ -719,10 +771,11 @@ export function BookingForm({
   prefill,
   room,
   step,
+  terms,
   viewer,
 }: BookingFormProps) {
   const form = useForm<BookingFormValues>({
-    defaultValues: defaultValues(room, prefill),
+    defaultValues: defaultValues(room, prefill, terms),
     resolver: zodResolver(schemaFor(viewer)),
   });
   const { control, formState } = form;
@@ -784,6 +837,7 @@ export function BookingForm({
         pending={pending}
         step={step}
         submitCopy={submitCopyFor(viewer)}
+        terms={terms}
       />
     </form>
   );
