@@ -5,6 +5,9 @@ import { messages } from "@/messages/da";
 
 export const loginSchema = z.object({
   email: z.email(messages.login.invalidEmail),
+  // Where to go after login (#88); the action keeps it only when it is a
+  // path on this site (lib/auth/next-path.ts).
+  next: z.string().optional(),
   password: z.string().min(1, messages.login.missingPassword),
 });
 

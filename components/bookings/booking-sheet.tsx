@@ -2,18 +2,18 @@
 
 // The booking sheet on the member overview (DESIGN.md "Bookinger (member)"):
 // a row click opens the booking's details, and a confirmed upcoming booking
-// carries the destructive "Aflys booking" flow — the confirm dialog states
-// the fee in one sentence (Platform message 1's in-app twin), and the action
-// recomputes it server-side at the exact confirm moment (#5, ADR-0006).
+// carries the destructive "Aflys booking" flow — the confirm dialog is
+// Platform message 1 with the live fee (#11), and the action recomputes it
+// server-side at the exact confirm moment (#5, ADR-0006).
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
+import { CancellationSummary } from "@/components/bookings/cancellation-summary";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,12 +33,13 @@ import { formatDate, formatOre, formatTime } from "@/lib/format";
 import { messages } from "@/messages/da";
 
 const copy = messages.bookings.sheet;
+const cancellationCopy = messages.cancellation;
 
-// The confirm dialog (DESIGN.md "Confirm before destroying"): the
-// consequence in one sentence — the fee, if any, stated in it — a secondary
-// "Fortryd" and a destructive confirm. It mounts only while confirming, so
-// a refresh or an error cannot leave a dead dialog open behind the sheet.
-// The fee explanation and the final destructive action stay in one dialog.
+// The confirm dialog is Platform message 1 (DESIGN.md "Confirm before
+// destroying", the cancellation exception): the booking, the live fee, a
+// secondary "Behold bookingen" and a destructive "Bekræft afbooking". It
+// mounts only while confirming, so a refresh or an error cannot leave a
+// dead dialog open behind the sheet.
 // fallow-ignore-next-line complexity
 function CancelConfirmDialog({
   booking,
@@ -80,20 +81,23 @@ function CancelConfirmDialog({
     });
   }, [booking.bookingId, onClose, router]);
 
-  const fee = booking.liveCancellationFeeOre ?? 0;
-  const sentence =
-    fee > 0 ? copy.confirmSentence(formatOre(fee)) : copy.confirmSentenceFree;
-
   return (
     <Dialog onOpenChange={handleOpenChange} open>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{copy.cancel}</DialogTitle>
-          <DialogDescription>{sentence}</DialogDescription>
+          <DialogTitle>
+            {cancellationCopy.confirmTitle(booking.roomName)}
+          </DialogTitle>
         </DialogHeader>
+        <CancellationSummary
+          bookingNumber={booking.bookingNumber}
+          endAt={booking.endAt}
+          feeOre={booking.liveCancellationFeeOre ?? 0}
+          startAt={booking.bookingStartAt}
+        />
         <DialogFooter className="justify-end gap-2">
           <Button onClick={onClose} type="button" variant="outline">
-            {copy.keep}
+            {cancellationCopy.keepBooking}
           </Button>
           <Button
             disabled={pending}
@@ -102,7 +106,7 @@ function CancelConfirmDialog({
             variant="destructive"
           >
             {pending ? <Spinner aria-hidden="true" /> : null}
-            {pending ? copy.cancelling : copy.confirmCancel}
+            {pending ? cancellationCopy.confirming : cancellationCopy.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -118,7 +122,7 @@ function CancellationRules() {
     <div className="rounded-lg border bg-muted/50 p-3 text-muted-foreground text-sm">
       <p className="mb-1 font-medium text-foreground">{copy.termsTitle}</p>
       <ul className="list-disc space-y-1 pl-4">
-        {messages.cancellation.rules.map((rule) => (
+        {cancellationCopy.rules.map((rule) => (
           <li key={rule}>{rule}</li>
         ))}
       </ul>

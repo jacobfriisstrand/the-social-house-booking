@@ -6,6 +6,7 @@
 // every failure so the form never discloses whether an email exists.
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { createClient } from "@/lib/supabase/server";
 import {
   type LoginValues,
@@ -34,13 +35,14 @@ export async function logIn(
     return { error: issueMessage(parsed.error), status: "error" };
   }
 
+  const { email, next, password } = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     return { error: messages.login.failed, status: "error" };
   }
 
-  redirect("/");
+  redirect(safeNextPath(next) ?? "/");
 }
 
 export async function signOut(): Promise<void> {

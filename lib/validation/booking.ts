@@ -131,13 +131,3 @@ export type VerifyCodeValues = z.infer<typeof verifyCodeSchema>;
 export const bookingIdSchema = z.object({
   bookingId: z.guid(),
 });
-
-// The secure cancellation link (#5): the id from the URL path and the token
-// from the mail link. The token itself is judged against the booking id by
-// the timing-safe HMAC check in lib/domain/cancel-link.ts.
-export const cancelByLinkSchema = z.object({
-  bookingId: z.guid(),
-  token: z.string().min(1, messages.booking.errors.required),
-});
-
-export type CancelByLinkValues = z.infer<typeof cancelByLinkSchema>;

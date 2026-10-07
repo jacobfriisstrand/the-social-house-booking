@@ -8,8 +8,15 @@ import { messages } from "@/messages/da";
 
 // Bookinger (member, #8): only the company's own rows are loaded. The member
 // guard also prevents an admin session from reaching the admin branch of RLS.
-export default async function CompanyBookingsPage() {
+// `?booking=<id>` (the link in Mail 4, 5 and 6, #88) opens that booking's
+// sheet when it is one of the company's own rows.
+export default async function CompanyBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ booking?: string }>;
+}) {
   const { company } = await requireOwnCompany();
+  const { booking } = await searchParams;
   const supabase = await createClient();
   const bookings = await listOwnBookingOverview(supabase, company.company_id);
   const lists = splitBookingOverview(bookings, new Date());
@@ -18,7 +25,7 @@ export default async function CompanyBookingsPage() {
     <>
       <PageHeader title={messages.shell.bookings} />
       <PagePanel>
-        <BookingOverview bookings={lists} />
+        <BookingOverview bookings={lists} initialBookingId={booking} />
       </PagePanel>
     </>
   );

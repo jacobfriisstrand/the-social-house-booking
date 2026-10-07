@@ -170,9 +170,13 @@ function SeedHintCard() {
 export function LoginForm({
   emailChanged,
   isDevelopment,
+  next,
 }: {
   emailChanged?: string;
   isDevelopment: boolean;
+  // A same-site path to land on after login (#88), already checked by the
+  // page; the action checks it again.
+  next?: string;
 }) {
   const [state, formAction, pending] = useActionState(logIn, initialState);
   const form = useForm<LoginValues>({
@@ -180,7 +184,7 @@ export function LoginForm({
     resolver: zodResolver(loginSchema),
   });
   const handleSubmit = form.handleSubmit((values) =>
-    startTransition(() => formAction(values))
+    startTransition(() => formAction({ ...values, next }))
   );
 
   useEffect(() => {

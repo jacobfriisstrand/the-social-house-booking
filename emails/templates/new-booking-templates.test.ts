@@ -38,7 +38,9 @@ describe("#5 admin new-booking mail", () => {
 
   it("shows the discount line only when there is a discount", () => {
     const withDiscount = adminNewBookingPriceOverviewHtml(base);
-    expect(withDiscount).toContain("Rabat: 50 % / 800,00");
+    expect(withDiscount).toContain("Rabat (50 %)");
+    expect(withDiscount).toContain("−800,00 kr");
+    expect(withDiscount).toContain("Lokaleleje efter rabat");
     expect(withDiscount).toContain("Samlet forventet beløb");
 
     const withoutDiscount = adminNewBookingPriceOverviewHtml({
@@ -47,8 +49,10 @@ describe("#5 admin new-booking mail", () => {
       bookingExpectedTotalOre: 110_000,
       discountPercent: 0,
     });
-    expect(withoutDiscount).not.toContain("Rabat:");
-    expect(withoutDiscount).toContain("Tilvalg: Lunch (6 stk.): 300,00");
+    expect(withoutDiscount).not.toContain("Rabat (");
+    expect(withoutDiscount).not.toContain("Lokaleleje efter rabat");
+    expect(withoutDiscount).toContain("Tilvalg: Lunch (6 stk.)");
+    expect(withoutDiscount).toContain("300,00 kr");
   });
 
   it("reports service flags without echoing practical notes", () => {

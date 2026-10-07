@@ -61,12 +61,13 @@ RLS is the security boundary. Admins are ordinary authenticated users whose JWT 
 The service-role client (`lib/supabase/admin.ts`) may be imported in exactly these places. Adding a sixth requires updating this list in the same PR.
 
 1. `lib/bookings/actions.ts` — the `verification_codes` reads and writes in the booker verification flow (#2); the table is admin-only and the booker is not an auth user (ADR-0004). The booking row itself is written under the company's session.
-2. `lib/bookings/cancel-actions.ts` and `app/(public)/cancel-booking/[bookingId]/page.tsx` — cancellation via the secure link (#5) is unauthenticated: the service-role client reads and cancels the booking after the timing-safe token check. The member's booking sheet cancels under the company's session.
+2. *(Retired in #88: cancelling requires the company login and runs under the session, ADR-0024.)*
 3. `lib/email/send-mail.ts` and the Resend webhook — `outbound_emails` writes.
 4. `supabase/functions/send-email` — the Auth Send Email Hook (Deno, uses its own env).
 5. `lib/companies/admin-actions.ts` — admin company creation, re-invite and email change through the Auth admin API (`inviteUserByEmail`, `updateUserById`), which has no RLS-scoped equivalent (#1). The `companies` row itself is written under the admin's session.
 6. `lib/companies/change-actions.ts` — member company-change request tokens, atomic approval RPCs, Auth email change, and global session invalidation for #70.
 7. `lib/auth/recovery-actions.ts` — the generic forgot-password company lookup before asking Auth to send the recovery email.
+8. `app/api/jobs/send-reminders/route.ts` — the hourly job (#11) runs without a session: it calls `expire_stale_holds()` and reads the bookings due a reminder, passing its client to `lib/bookings/reminders.ts`.
 
 One further consumer of the service-role key exists outside this list: `scripts/create-admin.ts` builds its own client in a standalone process (`lib/supabase/admin.ts` is `server-only`, unusable there).
 

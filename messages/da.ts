@@ -321,14 +321,7 @@ export const messages = {
       addOns: "Tilkøb",
       cancel: "Aflys booking",
       cancelledAt: "Afbooket",
-      cancelling: "Aflyser …",
-      confirmCancel: "Ja, aflys bookingen",
-      confirmSentence: (fee: string) =>
-        `Bookingen aflyses, og lokalet frigives med det samme. Afbestillingsgebyret bliver ${fee} ekskl. moms.`,
-      confirmSentenceFree:
-        "Bookingen aflyses, og lokalet frigives med det samme. Der kommer intet afbestillingsgebyr.",
       date: "Dato",
-      keep: "Fortryd",
       participants: (count: number) => `${count} deltagere`,
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
@@ -352,28 +345,30 @@ export const messages = {
   },
   cancellation: {
     alreadyCancelled: "Bookingen er allerede afbooket.",
-    // Platform message 1 (#5, Bilag 1 "Afbooking"): the screen that shows
-    // the live fee before the user confirms. The final fee is recomputed
-    // server-side at the exact confirm moment.
+    // Platform message 1 (Bilag 2, verbatim; #5, #11): the booking sheet's
+    // confirm dialog. The fee shown is the live one; the action recomputes
+    // it server-side at the exact confirm moment (ADR-0006).
+    bookingNumber: "Bookingnummer",
     confirm: "Bekræft afbooking",
     confirming: "Afbooker …",
-    feeLine: (fee: string) => `Afbestillingsgebyr lige nu: ${fee} ekskl. moms.`,
-    feeNote:
-      "Gebyret beregnes igen, i det øjeblik afbookingen bekræftes, og er det beløb, der registreres.",
-    invalidLink:
-      "Linket er ikke gyldigt. Brug linket fra bekræftelses- eller påmindelsesmailen.",
+    confirmTitle: (room: string) => `Vil I afbooke ${room}?`,
+    date: "Dato",
+    extraCosts:
+      "Eventuelle allerede påløbne udgifter til forplejning eller service kan blive faktureret særskilt.",
+    feeAmount: (fee: string) => `${fee} ekskl. moms`,
+    feeIntro: "Hvis I afbooker nu, bliver afbestillingsgebyret:",
     keepBooking: "Behold bookingen",
-    memberPriceLine: (price: string) =>
-      `Gebyret beregnes af lokalelejen efter rabat: ${price} ekskl. moms.`,
     noLongerUpcoming:
       "Bookingen kan ikke afbookes, fordi starttidspunktet er passeret. Kontakt The Social House.",
+    release:
+      "Når afbookingen bekræftes, frigives lokalet og den efterfølgende buffer.",
     rules: [
       "Mere end 72 timer før: intet afbestillingsgebyr.",
       "Fra og med 24 timer til og med 72 timer før: 50 %.",
       "Mindre end 24 timer før: 100 %.",
     ],
-    rulesTitle: "Afbestillingsregler",
     success: "Bookingen er nu afbooket, og lokalet er igen ledigt.",
+    time: "Tidspunkt",
     title: "Afbook bookingen",
     tooltip: "Afbestillingsregler",
   },

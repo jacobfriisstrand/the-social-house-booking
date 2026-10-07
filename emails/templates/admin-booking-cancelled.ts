@@ -7,9 +7,11 @@
 // implementation.
 
 import { z } from "zod";
-import { formatOre } from "../../lib/format.ts";
 import { escapeHtml } from "../../supabase/functions/send-email/handler.ts";
-import { bookingCancelledDetailsVariables } from "./booking-cancelled.ts";
+import {
+  bookingCancelledDetailsVariables,
+  cancellationAmountTable,
+} from "./booking-cancelled.ts";
 import {
   emailHeading,
   emailLayout,
@@ -44,10 +46,10 @@ export const bookingCancelledAdminVariables = (input: {
         ? emailParagraph(
             "Der er ikke registreret et beløb til faktureringsgrundlaget."
           )
-        : emailParagraph(
-            `Afbestillingsgebyr: <strong>${formatOre(feeOre)}</strong> ekskl. moms<br>` +
-              `Øvrige registrerede omkostninger: ${formatOre(input.addOnsOre)} ekskl. moms<br>` +
-              `Samlet beløb til faktureringsgrundlaget: <strong>${formatOre(charged)}</strong> ekskl. moms`
+        : cancellationAmountTable(
+            feeOre,
+            input.addOnsOre,
+            "Samlet beløb til faktureringsgrundlaget"
           ),
   };
 };
@@ -55,14 +57,16 @@ export const bookingCancelledAdminVariables = (input: {
 export const bookingCancelledAdmin = {
   html: emailLayout({
     body: `${emailHeading("Afbooking", "En booking er blevet afbooket")}
+${emailParagraph("Bookingnummer: <strong>{{{BOOKING_NUMBER}}}</strong>")}
+${emailRule()}
 ${emailParagraph(
-  "<strong>Bookingnummer:</strong> {{{BOOKING_NUMBER}}}<br>" +
-    "<strong>Virksomhed:</strong> {{{COMPANY_DISPLAY_NAME}}}<br>" +
-    "<strong>Ansvarlig booker:</strong> {{{BOOKER_NAME}}}<br>" +
-    "<strong>Lokale:</strong> {{{ROOM_NAME}}}<br>" +
-    "<strong>Dato:</strong> {{{BOOKING_DATE}}}<br>" +
-    "<strong>Tidspunkt:</strong> {{{BOOKING_TIME}}}<br>" +
-    "<strong>Afbooket:</strong> {{{CANCELLED_AT}}}"
+  "<strong>Booking</strong><br>" +
+    "Virksomhed: {{{COMPANY_DISPLAY_NAME}}}<br>" +
+    "Ansvarlig booker: {{{BOOKER_NAME}}}<br>" +
+    "Lokale: {{{ROOM_NAME}}}<br>" +
+    "Dato: {{{BOOKING_DATE}}}<br>" +
+    "Tidspunkt: {{{BOOKING_TIME}}}<br>" +
+    "Afbooket: {{{CANCELLED_AT}}}"
 )}
 ${emailRule()}
 {{{PRICE_OVERVIEW_HTML}}}

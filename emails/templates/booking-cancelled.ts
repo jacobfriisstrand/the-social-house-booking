@@ -16,6 +16,7 @@ import {
 } from "../../lib/format.ts";
 import { escapeHtml } from "../../supabase/functions/send-email/handler.ts";
 import {
+  emailAmountTable,
   emailHeading,
   emailLayout,
   emailParagraph,
@@ -45,6 +46,19 @@ export const bookingCancelledDetailsVariables = (
   ROOM_NAME: text(input.roomName),
 });
 
+// Fee, registered costs and their total as an amount table; Mail 9 uses it
+// with its own total label.
+export const cancellationAmountTable = (
+  feeOre: number,
+  addOnsOre: number,
+  totalLabel: string
+): string =>
+  emailAmountTable([
+    { amount: formatOre(feeOre), label: "Afbestillingsgebyr" },
+    { amount: formatOre(addOnsOre), label: "Øvrige registrerede omkostninger" },
+    { amount: formatOre(feeOre + addOnsOre), label: totalLabel, total: true },
+  ]);
+
 // The PRISOVERSIGT section: itemized when there is a fee or registered
 // costs, otherwise the Bilag 2 fallback line. Built here — with the copy —
 // so the action stays thin; the amounts are already escaped by formatOre.
@@ -58,11 +72,10 @@ export const bookingCancelledPriceOverviewHtml = (input: {
       "Der er ikke registreret et beløb til efterfølgende fakturering."
     );
   }
-  const feeOre = input.feeOre ?? 0;
-  return emailParagraph(
-    `Afbestillingsgebyr: <strong>${formatOre(feeOre)}</strong> ekskl. moms<br>` +
-      `Øvrige registrerede omkostninger: ${formatOre(input.addOnsOre)} ekskl. moms<br>` +
-      `Samlet beløb til efterfølgende fakturering: <strong>${formatOre(charged)}</strong> ekskl. moms`
+  return cancellationAmountTable(
+    input.feeOre ?? 0,
+    input.addOnsOre,
+    "Samlet beløb til efterfølgende fakturering"
   );
 };
 
@@ -82,17 +95,19 @@ export const bookingCancelledVariables = (
 export const bookingCancelled = {
   html: emailLayout({
     body: `${emailHeading("Afbooking", "Jeres booking er afbooket")}
+${emailParagraph("Kære {{{COMPANY_DISPLAY_NAME}}}")}
+${emailParagraph("Jeres booking er nu afbooket, og lokalet er igen ledigt.")}
+${emailRule()}
 ${emailParagraph(
-  "Kære {{{COMPANY_DISPLAY_NAME}}}. Jeres booking er nu afbooket, og lokalet er igen ledigt."
-)}
-${emailParagraph(
-  "<strong>Bookingnummer:</strong> {{{BOOKING_NUMBER}}}<br>" +
-    "<strong>Lokale:</strong> {{{ROOM_NAME}}}<br>" +
-    "<strong>Dato:</strong> {{{BOOKING_DATE}}}<br>" +
-    "<strong>Tidspunkt:</strong> {{{BOOKING_TIME}}}<br>" +
-    "<strong>Afbooket:</strong> {{{CANCELLED_AT}}}"
+  "<strong>Booking</strong><br>" +
+    "Bookingnummer: <strong>{{{BOOKING_NUMBER}}}</strong><br>" +
+    "Lokale: {{{ROOM_NAME}}}<br>" +
+    "Dato: {{{BOOKING_DATE}}}<br>" +
+    "Tidspunkt: {{{BOOKING_TIME}}}<br>" +
+    "Afbooket: {{{CANCELLED_AT}}}"
 )}
 ${emailRule()}
+${emailParagraph("<strong>Prisoversigt</strong>", 6)}
 {{{PRICE_OVERVIEW_HTML}}}
 ${emailRule()}
 ${emailParagraph(
