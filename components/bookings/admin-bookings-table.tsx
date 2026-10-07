@@ -235,9 +235,14 @@ function BookingRow({
           <Tooltip>
             <TooltipTrigger
               aria-label={copy.selection.reasons[reason]}
-              render={<span className="inline-flex" role="img" />}
+              render={
+                <span
+                  className="flex size-4 items-center justify-center"
+                  role="img"
+                />
+              }
             >
-              <XIcon aria-hidden className="size-4 text-muted-foreground" />
+              <XIcon aria-hidden className="size-3.5 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>{copy.selection.reasons[reason]}</TooltipContent>
           </Tooltip>
