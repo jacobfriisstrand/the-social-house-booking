@@ -217,8 +217,9 @@ function requiredName(
 // The admins behind the manual amounts' creator ids (#16): one lookup for
 // the whole list, so every entry can show who added it. Admins are
 // auth users, which PostgREST cannot embed, and the admin session may read
-// the registry (policies/admins.sql).
-async function adminDisplayNames(
+// the registry (policies/admins.sql). Shared with the admin booking
+// overview's rows (lib/bookings/admin-data.ts).
+export async function adminDisplayNames(
   supabase: SupabaseClient<Database>,
   adminIds: readonly (string | null)[]
 ): Promise<Map<string, string>> {

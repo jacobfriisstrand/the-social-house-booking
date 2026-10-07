@@ -122,3 +122,12 @@ const shareFormatter = new Intl.NumberFormat("da-DK", {
 export function formatShare(fraction: number): string {
   return shareFormatter.format(fraction);
 }
+
+const hoursFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 2,
+});
+
+// formatHours(150) → "2,5 t" — billable hours as a Danish decimal.
+export function formatHours(minutes: number): string {
+  return `${hoursFormatter.format(minutes / 60)} t`;
+}
