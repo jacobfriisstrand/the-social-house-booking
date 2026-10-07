@@ -2,11 +2,13 @@
 
 // The day grid's date control (DESIGN.md "Hjem"): "Vælg dato" opens a
 // calendar, then a previous/next pair with the date between them. The
-// date travels in the URL (?dato=yyyy-mm-dd) so a day can be shared.
+// date travels in the URL (?dato=yyyy-mm-dd) so a day can be shared. A
+// new day loads as a transition: the old day stays while data-pending
+// marks the control, so the card around it can dim the grid and show the
+// spinner (loading.tsx does not fire for a search-param change).
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { da } from "react-day-picker/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,18 +28,28 @@ const dayHref = (date: string): string => `/?dato=${date}`;
 export function DateControl({ date }: { date: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const go = useCallback(
+    (day: string) => startTransition(() => router.push(dayHref(day))),
+    [router]
+  );
   const select = useCallback(
     (selected: Date | undefined) => {
       if (selected) {
         setOpen(false);
-        router.push(dayHref(dateToIso(selected)));
+        go(dateToIso(selected));
       }
     },
-    [router]
+    [go]
   );
+  const previous = useCallback(() => go(addDays(date, -1)), [date, go]);
+  const next = useCallback(() => go(addDays(date, 1)), [date, go]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div
+      className="flex items-center gap-3"
+      data-pending={pending ? "" : undefined}
+    >
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger render={<Button type="button" variant="secondary" />}>
           <CalendarIcon data-icon="inline-start" />
@@ -55,9 +67,9 @@ export function DateControl({ date }: { date: string }) {
       <div className="flex h-9 items-center rounded-md border bg-card">
         <Button
           aria-label={copy.previousDay}
-          nativeButton={false}
-          render={<Link href={dayHref(addDays(date, -1))} />}
+          onClick={previous}
           size="icon"
+          type="button"
           variant="ghost"
         >
           <ChevronLeftIcon />
@@ -67,9 +79,9 @@ export function DateControl({ date }: { date: string }) {
         </span>
         <Button
           aria-label={copy.nextDay}
-          nativeButton={false}
-          render={<Link href={dayHref(addDays(date, 1))} />}
+          onClick={next}
           size="icon"
+          type="button"
           variant="ghost"
         >
           <ChevronRightIcon />
