@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { countOutstandingInvoices } from "@/lib/bookings/data";
 import { getWifiSettings } from "@/lib/settings/data";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 
 export default async function AdminLayout({
   children,
@@ -16,15 +17,17 @@ export default async function AdminLayout({
 }) {
   await requireAdmin();
   const supabase = await createClient();
-  const [wifi, outstandingInvoices] = await Promise.all([
+  const [wifi, outstandingInvoices, terms] = await Promise.all([
     getWifiSettings(supabase),
     countOutstandingInvoices(supabase),
+    getCurrentTerms(),
   ]);
   return (
     <AppShell
       badgeCounts={{ "/admin/bookings": outstandingInvoices }}
       defaultOpen={await sidebarDefaultOpen()}
       isAdmin
+      terms={terms}
       wifi={wifi}
     >
       {children}

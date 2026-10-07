@@ -18,6 +18,7 @@ import {
 import { getWifiSettings } from "@/lib/settings/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 
 export default async function GatedCompanyLayout({
   children,
@@ -26,15 +27,17 @@ export default async function GatedCompanyLayout({
 }) {
   const session = await requireCompletedCompany();
   const supabase = await createClient();
-  const [wifi, badgeCounts] = await Promise.all([
+  const [wifi, badgeCounts, terms] = await Promise.all([
     getWifiSettings(supabase),
     sidebarBadgeCounts(session, supabase),
+    getCurrentTerms(),
   ]);
   return (
     <AppShell
       badgeCounts={badgeCounts}
       defaultOpen={await sidebarDefaultOpen()}
       isAdmin={session.appRole === "admin"}
+      terms={terms}
       wifi={wifi}
     >
       {children}
