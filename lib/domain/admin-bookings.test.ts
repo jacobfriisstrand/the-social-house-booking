@@ -9,6 +9,7 @@ import {
   adminRowParts,
   adminTotals,
   bookingIsInvoicable,
+  bookingNotInvoicableReason,
   breakdownAdminRows,
   sortAdminRows,
 } from "./admin-bookings";
@@ -286,5 +287,42 @@ describe("bookingIsInvoicable", () => {
         now
       )
     ).toBe(false);
+  });
+});
+
+describe("bookingNotInvoicableReason", () => {
+  const now = new Date("2026-10-02T12:00:00Z");
+
+  it("gives null for an ended booking that still waits for its invoice", () => {
+    expect(
+      bookingNotInvoicableReason(
+        { endAt: "2026-10-02T12:00:00Z", invoicingStatus: "not_invoiced" },
+        now
+      )
+    ).toBe(null);
+  });
+
+  it("says a booking that has not ended is in the future", () => {
+    expect(
+      bookingNotInvoicableReason(
+        { endAt: "2026-10-02T12:00:01Z", invoicingStatus: "not_invoiced" },
+        now
+      )
+    ).toBe("future");
+  });
+
+  it("carries the row's status when it is already invoiced or refused", () => {
+    expect(
+      bookingNotInvoicableReason(
+        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "invoiced" },
+        now
+      )
+    ).toBe("invoiced");
+    expect(
+      bookingNotInvoicableReason(
+        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "not_invoicable" },
+        now
+      )
+    ).toBe("not_invoicable");
   });
 });

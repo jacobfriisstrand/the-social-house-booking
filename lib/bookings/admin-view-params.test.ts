@@ -41,13 +41,13 @@ describe("parseAdminViewParams", () => {
       sort: "total",
       status: "invoiced",
       to: "2026-09-30",
-      view: "week",
+      view: "month",
     });
     expect(params.companyIds).toEqual(["c1"]);
     expect(params.roomIds).toEqual(["r1"]);
     expect(params.invoicingStatuses).toEqual(["invoiced"]);
     expect(params.includeHouseEvents).toBe(false);
-    expect(params.view).toBe("week");
+    expect(params.view).toBe("month");
     expect(params.sort).toBe("total");
     expect(params.sortDir).toBe("desc");
   });
@@ -132,22 +132,21 @@ describe("adminViewHref", () => {
 });
 
 describe("movedPeriod", () => {
-  const base = parse({ view: "week" });
-
-  it("moves a week by seven days, focus included", () => {
+  it("the list's arrows step a month too", () => {
+    const list = parse({ view: "list" });
     const moved = movedPeriod(
       {
-        ...base,
+        ...list,
         focusDate: "2026-10-02",
-        fromDate: "2026-09-28",
-        toDate: "2026-10-04",
+        fromDate: "2026-10-01",
+        toDate: "2026-10-31",
       },
-      1
+      -1
     );
     expect(moved).toEqual({
-      focusDate: "2026-10-09",
-      fromDate: "2026-10-05",
-      toDate: "2026-10-11",
+      focusDate: "2026-09-30",
+      fromDate: "2026-09-01",
+      toDate: "2026-09-30",
     });
   });
 
@@ -178,23 +177,5 @@ describe("movedPeriod", () => {
     );
     expect(acrossYear.fromDate).toBe("2027-01-01");
     expect(acrossYear.toDate).toBe("2027-01-31");
-  });
-
-  it("moves a day by one day", () => {
-    const day = parse({ view: "day" });
-    const moved = movedPeriod(
-      {
-        ...day,
-        focusDate: "2026-10-02",
-        fromDate: "2026-10-02",
-        toDate: "2026-10-02",
-      },
-      -1
-    );
-    expect(moved).toEqual({
-      focusDate: "2026-10-01",
-      fromDate: "2026-10-01",
-      toDate: "2026-10-01",
-    });
   });
 });

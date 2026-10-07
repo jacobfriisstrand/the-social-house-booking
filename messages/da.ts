@@ -282,6 +282,7 @@ export const messages = {
         status: "Faktureringsstatus",
         statusAll: "Alle statuser",
         to: "Til",
+        today: "I dag",
       },
       houseEventRow: {
         company: "The Social House",
@@ -351,6 +352,11 @@ export const messages = {
       selection: {
         clear: "Fravælg alle",
         none: "Vælg bookinger for at markere dem",
+        reasons: {
+          future: "Er ikke slut endnu",
+          invoiced: "Allerede faktureret",
+          not_invoicable: "Ikke fakturerbar",
+        },
         selectAll: "Vælg alle",
         selected: (count: number) => `${count} valgt`,
         selectRow: (bookingNumber: string) => `Vælg ${bookingNumber}`,
@@ -366,10 +372,8 @@ export const messages = {
         roomRent: "Lokaleleje efter rabat",
       },
       view: {
-        day: "Dag",
         list: "Liste",
         month: "Måned",
-        week: "Uge",
       },
     },
     allPricesExclVat: "Alle priser ekskl. moms",

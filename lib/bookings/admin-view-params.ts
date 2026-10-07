@@ -3,21 +3,14 @@
 // state and a view switch keeps the filters. Parsing is pure and today is
 // injected, so the defaults are testable.
 
-import { addDays } from "@/lib/calendar-date";
 import type {
   AdminMembership,
   AdminSortKey,
 } from "@/lib/domain/admin-bookings";
 import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
-import {
-  type CalendarViewKind,
-  clampDate,
-  monthOf,
-  monthWindow,
-  weekdayIndexMondayFirst,
-} from "@/lib/domain/periods";
+import { clampDate, monthOf, monthWindow } from "@/lib/domain/periods";
 
-export type AdminViewKind = CalendarViewKind | "list";
+export type AdminViewKind = "list" | "month";
 
 export type InvoicingStatusParam = BookingInvoicingStatus;
 
@@ -42,7 +35,7 @@ export interface AdminViewParams {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
 
-export const ADMIN_VIEWS: AdminViewKind[] = ["list", "day", "week", "month"];
+export const ADMIN_VIEWS: AdminViewKind[] = ["list", "month"];
 
 export const ADMIN_SORT_KEYS: AdminSortKey[] = [
   "addOns",
@@ -193,24 +186,13 @@ export function adminViewHref(
   return `/admin/bookings?${search.toString()}`;
 }
 
-/** The period a picked date opens, per view: the date itself in the day
- * view, its week, its month — and the month for the list, which has no
- * calendar granularity of its own. */
-export function windowAround(
-  view: AdminViewKind,
-  date: string
-): { focusDate: string; fromDate: string; toDate: string } {
-  if (view === "day") {
-    return { focusDate: date, fromDate: date, toDate: date };
-  }
-  if (view === "week") {
-    const monday = addDays(date, -weekdayIndexMondayFirst(date));
-    return {
-      focusDate: date,
-      fromDate: monday,
-      toDate: addDays(monday, 6),
-    };
-  }
+/** The period a picked date opens: that date's month, the focus clamped
+ * into it — the list and the month view share the month's window. */
+export function windowAround(date: string): {
+  focusDate: string;
+  fromDate: string;
+  toDate: string;
+} {
   const window = monthWindow(monthOf(date));
   return {
     focusDate: clampDate(date, window.fromDate, window.toDate),
@@ -219,30 +201,21 @@ export function windowAround(
   };
 }
 
-/** The period moved by whole calendar views (the calendar's arrows). */
+/** The period moved by whole months (the arrows), whatever the view: a
+ * month's step moves from the first of one month to the next, however
+ * long the months are. */
 export function movedPeriod(
   params: AdminViewParams,
   steps: number
 ): { focusDate: string; fromDate: string; toDate: string } {
-  if (params.view === "month") {
-    // A month's step moves from the first of one month to the next,
-    // however long the months are.
-    const [year, month] = params.fromDate.split("-").map(Number);
-    const moved = new Date(Date.UTC(year, month - 1 + steps, 1));
-    const window = monthWindow(
-      `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, "0")}`
-    );
-    return {
-      focusDate: clampDate(params.focusDate, window.fromDate, window.toDate),
-      fromDate: window.fromDate,
-      toDate: window.toDate,
-    };
-  }
-
-  const stepDays = params.view === "day" ? 1 : 7;
+  const [year, month] = params.fromDate.split("-").map(Number);
+  const moved = new Date(Date.UTC(year, month - 1 + steps, 1));
+  const window = monthWindow(
+    `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, "0")}`
+  );
   return {
-    focusDate: addDays(params.focusDate, stepDays * steps),
-    fromDate: addDays(params.fromDate, stepDays * steps),
-    toDate: addDays(params.toDate, stepDays * steps),
+    focusDate: clampDate(params.focusDate, window.fromDate, window.toDate),
+    fromDate: window.fromDate,
+    toDate: window.toDate,
   };
 }

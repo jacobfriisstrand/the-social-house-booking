@@ -7,7 +7,12 @@
 // date and number, or "Ikke fakturerbar". Only ended, still un-invoiced
 // rows enable the bulk actions; the server and the database re-check.
 // Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  XIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
@@ -40,6 +45,11 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   type AdminViewParams,
   adminViewHref,
 } from "@/lib/bookings/admin-view-params";
@@ -50,6 +60,7 @@ import {
   adminRowParts,
   adminTotals,
   bookingIsInvoicable,
+  bookingNotInvoicableReason,
   breakdownAdminRows,
   sortAdminRows,
 } from "@/lib/domain/admin-bookings";
@@ -196,9 +207,19 @@ function BookingRow({
 }) {
   const { row } = entry;
   const parts = adminRowParts(row);
+  // Why the row cannot be picked: already invoiced/not invoicable, or the
+  // booking has not ended yet — an X with a tooltip instead of a checkbox.
+  const reason = bookingNotInvoicableReason(row, now);
   const onToggle = useCallback(
     () => toggle(row.bookingId),
     [toggle, row.bookingId]
+  );
+  const checkbox = (
+    <Checkbox
+      aria-label={copy.selection.selectRow(row.bookingNumber)}
+      checked={selected}
+      onCheckedChange={onToggle}
+    />
   );
   const invoicedLine =
     row.invoicingStatus === "invoiced" && row.invoiceDate
@@ -208,12 +229,16 @@ function BookingRow({
   return (
     <TableRow>
       <TableCell>
-        <Checkbox
-          aria-label={copy.selection.selectRow(row.bookingNumber)}
-          checked={selected}
-          disabled={!bookingIsInvoicable(row, now)}
-          onCheckedChange={onToggle}
-        />
+        {reason === null ? (
+          checkbox
+        ) : (
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              <XIcon aria-hidden className="size-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>{copy.selection.reasons[reason]}</TooltipContent>
+          </Tooltip>
+        )}
       </TableCell>
       <TableCell className="font-mono">{row.bookingNumber}</TableCell>
       <TableCell className="truncate font-medium">{row.companyName}</TableCell>

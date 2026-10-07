@@ -8,3 +8,5 @@ The calendar is a single day grid: 30-minute rows from 09:00 to 22:00, one colum
 - **Bookinger (admin) has day, week and month**, on one page with the list, sharing the period, company, room and invoicing-status filters. The day view is the same day grid as Hjem; week and month are compact date grids — one cell per date with its bookings and House Events in start order, colour-coded like the day grid — because a 30-minute week grid across six rooms remains unreadable. A month cell shows a date's blocks, not their hours; the invoicing list next to it carries the detail.
 
 The original reasoning stands everywhere else: one day grid for "now", and the invoicing view as the place where longer spans are read with filters and totals rather than raw room columns.
+
+**Amendment (2026-10-07, issue #9):** the overview's day and week views are dropped again. The list carries the detail and the date picker moves the period, so the admin page is the list and the month grid only; the 30-minute day grid stays on Hjem, and the week grid across six rooms remains unreadable.

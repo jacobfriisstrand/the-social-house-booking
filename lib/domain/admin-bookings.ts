@@ -295,13 +295,20 @@ export function sortAdminRows(
   });
 }
 
-/** Whether the row can be marked invoiced (or not invoicable) right now. */
-export function bookingIsInvoicable(
+/** Why the row's checkbox is off: it is already invoiced/not invoicable, or
+ * the booking ends in the future. Null means it can be marked now. The
+ * status guard runs first so the future branch only sees "not_invoiced". */
+export function bookingNotInvoicableReason(
   row: Pick<AdminBookingRow, "endAt" | "invoicingStatus">,
   now: Date
-): boolean {
-  return (
-    row.invoicingStatus === "not_invoiced" &&
-    new Date(row.endAt).getTime() <= now.getTime()
-  );
+): Exclude<BookingInvoicingStatus, "not_invoiced"> | "future" | null {
+  if (row.invoicingStatus !== "not_invoiced") {
+    return row.invoicingStatus;
+  }
+  return new Date(row.endAt).getTime() <= now.getTime() ? null : "future";
 }
+
+export const bookingIsInvoicable = (
+  row: Pick<AdminBookingRow, "endAt" | "invoicingStatus">,
+  now: Date
+): boolean => bookingNotInvoicableReason(row, now) === null;

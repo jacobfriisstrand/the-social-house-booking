@@ -13,11 +13,8 @@ import {
   listAdminOverviewRows,
 } from "@/lib/bookings/admin-data";
 import { parseAdminViewParams } from "@/lib/bookings/admin-view-params";
-import { getBookingViewer } from "@/lib/bookings/viewer";
 import { cphDate } from "@/lib/domain/opening-hours";
 import { calendarDates, calendarWindow } from "@/lib/domain/periods";
-import { buildDayGrid } from "@/lib/notice-board/grid";
-import { listPublicRooms } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
@@ -35,10 +32,7 @@ export default async function AdminBookingsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const [rawParams, session] = await Promise.all([
-    searchParams,
-    requireSession(),
-  ]);
+  const [rawParams] = await Promise.all([searchParams, requireSession()]);
   const now = new Date();
   const today = cphDate(now);
   const params = parseAdminViewParams(await rawParams, today);
@@ -56,9 +50,9 @@ export default async function AdminBookingsPage({
 
   const options = await listAdminFilterOptions(supabase);
 
-  // The calendar shows its own visible range — the day, week or month the
-  // focus date sits in — so the arrows move the whole period and the list
-  // follows (the period filter is shared, #9).
+  // The calendar shows its own visible range — the month the focus date
+  // sits in — so the arrows move the whole period and the list follows
+  // (the period filter is shared, #9).
   if (params.view !== "list") {
     const window = calendarWindow(params.view, params.focusDate);
     const calendarFilter = {
@@ -71,35 +65,13 @@ export default async function AdminBookingsPage({
       listAdminBookingDetails(supabase, window.fromDate, window.toDate),
     ]);
 
-    const calendar: AdminCalendarModel =
-      params.view === "day"
-        ? await (async () => {
-            const [viewer, rooms] = await Promise.all([
-              getBookingViewer(supabase, session),
-              listPublicRooms(supabase),
-            ]);
-            return {
-              date: params.focusDate,
-              grid: buildDayGrid({
-                date: params.focusDate,
-                details,
-                entries,
-                isToday: params.focusDate === today,
-                now,
-                rooms,
-              }),
-              kind: "day" as const,
-              viewer,
-            };
-          })()
-        : {
-            cells: buildAdminCalendarCells({
-              dates: calendarDates(params.view, params.focusDate),
-              details,
-              entries,
-            }),
-            kind: params.view,
-          };
+    const calendar: AdminCalendarModel = {
+      cells: buildAdminCalendarCells({
+        dates: calendarDates(params.view, params.focusDate),
+        details,
+        entries,
+      }),
+    };
 
     return (
       <>

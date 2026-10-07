@@ -13,8 +13,8 @@ import { useRouter } from "next/navigation";
 // the calendar. Every control writes its change to the URL, so the two
 // views share one state and a switch keeps the filters; the server re-reads
 // the set. The list's sorting, selection and bulk mark live with the table
-// (admin-bookings-table.tsx); the calendar's compact grid is
-// admin-calendar-grid.tsx and its day view is the day grid from Hjem.
+// (admin-bookings-table.tsx); the calendar's month grid is
+// admin-calendar-grid.tsx.
 import type * as React from "react";
 import { useCallback, useState } from "react";
 import { da } from "react-day-picker/locale";
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AdminCalendarCell } from "@/lib/bookings/admin-calendar";
 import type { AdminFilterOptions } from "@/lib/bookings/admin-data";
 import {
@@ -43,11 +43,8 @@ import {
   movedPeriod,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
-import type { BookingViewer } from "@/lib/bookings/viewer";
 import { dateToIso, isoToDate } from "@/lib/calendar-date";
 import type { AdminOverviewRow } from "@/lib/domain/admin-bookings";
-import { formatDateString } from "@/lib/format";
-import type { DayGridModel } from "@/lib/notice-board/grid";
 import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 import { AdminBookingsTable } from "./admin-bookings-table";
@@ -55,11 +52,10 @@ import { AdminCalendarGrid } from "./admin-calendar-grid";
 
 const copy = messages.bookings.admin;
 
-/** What the server built for a calendar view: the day grid for a day, or
- * the compact cells of a week or month. */
-export type AdminCalendarModel =
-  | { date: string; grid: DayGridModel; kind: "day"; viewer: BookingViewer }
-  | { cells: AdminCalendarCell[]; kind: "week" | "month" };
+/** What the server built for the calendar: the month's compact cells. */
+export interface AdminCalendarModel {
+  cells: AdminCalendarCell[];
+}
 
 const monthName = (date: string): string => {
   const [year, month] = date.split("-").map(Number);
@@ -68,16 +64,6 @@ const monthName = (date: string): string => {
     timeZone: "UTC",
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, 1)));
-};
-
-const periodLabel = (params: AdminViewParams): string => {
-  if (params.view === "day") {
-    return formatDateString(params.focusDate);
-  }
-  if (params.view === "week") {
-    return `${formatDateString(params.fromDate)} - ${formatDateString(params.toDate)}`;
-  }
-  return monthName(params.fromDate);
 };
 
 // A filter's multi-select: every option carries a checkbox, so the
@@ -169,25 +155,26 @@ function FilterMultiSelect({
   );
 }
 
-function PeriodControl({ params }: { params: AdminViewParams }) {
+function PeriodControl({
+  params,
+  today,
+}: {
+  params: AdminViewParams;
+  today: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const move = useCallback(
     (steps: number) => {
-      // The list has no calendar granularity: its arrows step a month.
-      router.push(
-        adminViewHref(
-          params,
-          movedPeriod(
-            params.view === "list" ? { ...params, view: "month" } : params,
-            steps
-          )
-        )
-      );
+      router.push(adminViewHref(params, movedPeriod(params, steps)));
     },
     [params, router]
   );
+
+  const goToday = useCallback(() => {
+    router.push(adminViewHref(params, windowAround(today)));
+  }, [params, router, today]);
 
   const pick = useCallback(
     (picked: Date | undefined) => {
@@ -195,8 +182,7 @@ function PeriodControl({ params }: { params: AdminViewParams }) {
         return;
       }
       setOpen(false);
-      const date = dateToIso(picked);
-      router.push(adminViewHref(params, windowAround(params.view, date)));
+      router.push(adminViewHref(params, windowAround(dateToIso(picked))));
     },
     [params, router]
   );
@@ -215,12 +201,15 @@ function PeriodControl({ params }: { params: AdminViewParams }) {
       >
         <ChevronLeftIcon aria-hidden="true" />
       </Button>
+      <Button onClick={goToday} size="sm" type="button" variant="outline">
+        {copy.filters.today}
+      </Button>
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger
           render={
             <Button size="sm" type="button" variant="outline">
               <CalendarIcon aria-hidden="true" />
-              {periodLabel(params)}
+              {monthName(params.fromDate)}
             </Button>
           }
         />
@@ -300,7 +289,7 @@ export function AdminBookingsView({
         invoicingStatuses: [],
         memberships: [],
         roomIds: [],
-        ...windowAround(params.view, today),
+        ...windowAround(today),
       })
     );
   }, [params, router, today]);
@@ -354,8 +343,10 @@ export function AdminBookingsView({
     [update]
   );
   const onViewChange = useCallback(
-    (value: string | null) => {
-      if (value !== null) {
+    (values: string[]) => {
+      // A click on the active segment empties the group; the view stays.
+      const value = values.at(-1);
+      if (value !== undefined) {
         update({ view: value as AdminViewParams["view"] });
       }
     },
@@ -368,7 +359,7 @@ export function AdminBookingsView({
           row and the view toggle stay visible while the views scroll. */}
       <Card className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex flex-wrap items-center gap-3">
-          <PeriodControl params={view} />
+          <PeriodControl params={view} today={today} />
           <FilterMultiSelect
             allLabel={copy.filters.companyAll}
             label={copy.filters.company}
@@ -412,14 +403,15 @@ export function AdminBookingsView({
             {copy.filters.reset}
           </Button>
         </div>
-        <Tabs onValueChange={onViewChange} value={view.view}>
-          <TabsList>
-            <TabsTrigger value="list">{copy.view.list}</TabsTrigger>
-            <TabsTrigger value="day">{copy.view.day}</TabsTrigger>
-            <TabsTrigger value="week">{copy.view.week}</TabsTrigger>
-            <TabsTrigger value="month">{copy.view.month}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <ToggleGroup
+          onValueChange={onViewChange}
+          spacing={0}
+          value={[view.view]}
+          variant="outline"
+        >
+          <ToggleGroupItem value="list">{copy.view.list}</ToggleGroupItem>
+          <ToggleGroupItem value="month">{copy.view.month}</ToggleGroupItem>
+        </ToggleGroup>
       </Card>
       {calendar ? (
         <AdminCalendarGrid calendar={calendar} />
