@@ -249,7 +249,6 @@ export const messages = {
       calendar: {
         legendBooking: "Booking",
         legendHouseEvent: "House Event",
-        weekLabel: (from: string, to: string) => `Uge ${from} - ${to}`,
       },
       columns: {
         company: "Virksomhed",
