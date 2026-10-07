@@ -13,6 +13,7 @@ import { requireOwnCompany } from "@/lib/auth/require-company";
 import type { AddOnLine } from "@/lib/domain/addons";
 import type { CompanyRow } from "@/lib/domain/company-master-data";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
+import { acceptedVersionIds } from "@/lib/domain/terms";
 import {
   canResendCode,
   holdExpiry,
@@ -25,6 +26,7 @@ import { sendMail } from "@/lib/email/send-mail";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { findPublishedVersions } from "@/lib/terms/data";
 import {
   bookingIdSchema,
   type CreateHoldValues,
@@ -205,36 +207,128 @@ const heldState = (hold: LiveHold, expiresAt: Date): HoldState => ({
   status: "held",
 });
 
+// The terms the booker accepted (#15): the versions the dialog showed,
+// one published version each of the booking terms and the privacy policy.
+// Checked before the hold, so a refusal never blocks the room. A failed
+// read refuses too: no booking without its accepted versions.
+async function findAcceptedTerms(
+  supabase: SessionClient,
+  shownIds: string[]
+): Promise<Step<string[]>> {
+  const published = await findPublishedVersions(supabase, shownIds);
+  const versionIds = acceptedVersionIds(shownIds, published);
+  if (!versionIds) {
+    return {
+      ok: false,
+      state: {
+        error: errors.termsUnavailable,
+        fieldErrors: { termsAccepted: [errors.termsUnavailable] },
+        status: "error",
+      },
+    };
+  }
+  return { ok: true, value: versionIds };
+}
+
+// One row per accepted text, stamped now by Postgres (Bilag 1: the time
+// and the version accepted).
+async function recordTermsAcceptance(
+  supabase: SessionClient,
+  companyId: string,
+  bookingId: string,
+  versionIds: string[]
+): Promise<boolean> {
+  const { error } = await supabase.from("terms_acceptances").insert(
+    versionIds.map((versionId) => ({
+      terms_acceptance_booking_id: bookingId,
+      terms_acceptance_company_id: companyId,
+      terms_acceptance_terms_version_id: versionId,
+    }))
+  );
+  return error === null;
+}
+
+// What a hold is built from once its input is checked: the room's price,
+// the add-on lines (#7), and the accepted terms versions (#15).
+interface CheckedHold {
+  lines: AddOnLine[];
+  roomHourlyPriceOre: number;
+  termsVersionIds: string[];
+}
+
+// The room and add-ons, then the terms. The selected add-ons are
+// re-checked against the room's active ones (#7): the ids come from a
+// form, so a stale or forged id fails here rather than pricing a booking
+// with an add-on the room does not offer.
+async function checkHoldInput(
+  supabase: SessionClient,
+  input: CreateHoldValues
+): Promise<Step<CheckedHold>> {
+  const validated = await findRoomAndAddOns(supabase, input);
+  if (!validated.ok) {
+    return { ok: false, state: validated.state };
+  }
+  const terms = await findAcceptedTerms(supabase, input.termsVersionIds);
+  if (!terms.ok) {
+    return terms;
+  }
+  return {
+    ok: true,
+    value: {
+      lines: validated.lines,
+      roomHourlyPriceOre: validated.roomHourlyPriceOre,
+      termsVersionIds: terms.value,
+    },
+  };
+}
+
+// The rows a new hold carries besides itself; false when either write
+// fails.
+const writeHoldRows = async (
+  supabase: SessionClient,
+  companyId: string,
+  bookingId: string,
+  checked: CheckedHold
+): Promise<boolean> =>
+  (await writeAddOnLines(supabase, bookingId, checked.lines)) &&
+  (await recordTermsAcceptance(
+    supabase,
+    companyId,
+    bookingId,
+    checked.termsVersionIds
+  ));
+
 // The pending_verification row (insertPendingBooking carries the snapshot)
-// with its add-on lines (#7): the lines are written while the booking is
-// pending — the frozen add-on rows (ADR-0005) — and Postgres moves the
-// booking's add-on and expected totals by their sum
-// (booking_addons_sync_totals). The database rejects an overlapping slot,
-// so no separate availability query runs first. The overview is read back
-// from the snapshot columns afterwards, so the verification step shows
-// exactly what was frozen, not a recomputation.
+// with its add-on lines (#7) and the accepted terms (#15): the lines are
+// written while the booking is pending — the frozen add-on rows
+// (ADR-0005) — and Postgres moves the booking's add-on and expected totals
+// by their sum (booking_addons_sync_totals). The database rejects an
+// overlapping slot, so no separate availability query runs first. The
+// overview is read back from the snapshot columns afterwards, so the
+// verification step shows exactly what was frozen, not a recomputation.
 async function insertHold(
   supabase: SessionClient,
   company: CompanyRow,
   input: CreateHoldValues,
-  roomHourlyPriceOre: number,
-  lines: AddOnLine[],
+  checked: CheckedHold,
   expiresAt: Date
 ): Promise<Step<LiveHold>> {
   const inserted = await insertPendingBooking(
     supabase,
     company,
     input,
-    roomHourlyPriceOre,
+    checked.roomHourlyPriceOre,
     { booking_hold_expires_at: expiresAt.toISOString() }
   );
   if (!inserted.ok) {
     return fail(slotFailureMessage(inserted.error));
   }
   const { bookingId } = inserted;
-  if (!(await writeAddOnLines(supabase, bookingId, lines))) {
-    // No lines, no booking: release the hold so the room does not sit
-    // blocked on a row the booker cannot complete.
+  if (
+    !(await writeHoldRows(supabase, company.company_id, bookingId, checked))
+  ) {
+    // No lines or no recorded acceptance, no booking: release the hold so
+    // the room does not sit blocked on a row the booker cannot complete.
     await releaseHold(supabase, bookingId);
     return fail(errors.createFailed);
   }
@@ -268,10 +362,8 @@ async function issueFirstCode(
   return heldState(hold, expiresAt);
 }
 
-// "Book nu": the hold, then the first code. The selected add-ons are
-// re-checked against the room's active ones (#7) — the ids come from a
-// form, so a stale or forged id fails here rather than pricing a booking
-// with an add-on the room does not offer.
+// "Book nu": the checked input (checkHoldInput), the hold, then the first
+// code.
 export async function createHold(
   _prevState: HoldState,
   values: CreateHoldValues
@@ -282,17 +374,16 @@ export async function createHold(
     return invalidFormState(parsed.error, errors.createFailed);
   }
   const supabase = await createClient();
-  const validated = await findRoomAndAddOns(supabase, parsed.data);
-  if (!validated.ok) {
-    return validated.state;
+  const checked = await checkHoldInput(supabase, parsed.data);
+  if (!checked.ok) {
+    return checked.state;
   }
   const expiresAt = holdExpiry(new Date());
   const hold = await insertHold(
     supabase,
     company,
     parsed.data,
-    validated.roomHourlyPriceOre,
-    validated.lines,
+    checked.value,
     expiresAt
   );
   if (!hold.ok) {

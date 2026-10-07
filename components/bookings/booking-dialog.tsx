@@ -18,6 +18,7 @@ import {
 import type { Hold } from "@/lib/bookings/actions";
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import type { BookingViewer } from "@/lib/bookings/viewer";
+import type { CurrentTerms } from "@/lib/domain/terms";
 import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
 import { BookingForm, type DialogRoom, FORM_STEP_COUNT } from "./booking-form";
@@ -33,6 +34,7 @@ export interface BookingDialogProps {
   open: boolean;
   prefill: RoomPrefill;
   room: DialogRoom;
+  terms: CurrentTerms;
   viewer: BookingViewer;
 }
 
@@ -43,6 +45,7 @@ export function BookingDialog({
   open,
   prefill,
   room,
+  terms,
   viewer,
 }: BookingDialogProps) {
   const router = useRouter();
@@ -111,6 +114,7 @@ export function BookingDialog({
             prefill={prefill}
             room={room}
             step={step}
+            terms={terms}
             viewer={viewer}
           />
         )}

@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { requireSession } from "@/lib/auth/require-session";
 import { getBookingViewer, viewerDiscount } from "@/lib/bookings/viewer";
 import { cphDate } from "@/lib/domain/opening-hours";
@@ -25,6 +26,7 @@ import { buildDayGrid } from "@/lib/notice-board/grid";
 import { listShownNotices } from "@/lib/notices/data";
 import { listPublicRooms } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 import { messages } from "@/messages/da";
 
 const copy = messages.home;
@@ -52,14 +54,16 @@ export default async function HomePage({
   const date = pageDate(params.dato, today);
   const isAdmin = session.appRole === "admin";
   const supabase = await createClient();
-  const [viewer, rooms, entries, events, details, notices] = await Promise.all([
-    getBookingViewer(supabase, session),
-    listPublicRooms(supabase),
-    listDayEntries(supabase, date),
-    listTodayHouseEvents(supabase, now),
-    listDayBookingDetails(supabase, date, isAdmin),
-    listShownNotices(supabase, now),
-  ]);
+  const [viewer, rooms, entries, events, details, notices, terms] =
+    await Promise.all([
+      getBookingViewer(supabase, session),
+      listPublicRooms(supabase),
+      listDayEntries(supabase, date),
+      listTodayHouseEvents(supabase, now),
+      listDayBookingDetails(supabase, date, isAdmin),
+      listShownNotices(supabase, now),
+      getCurrentTerms(),
+    ]);
   const grid = buildDayGrid({
     date,
     details,
@@ -81,8 +85,10 @@ export default async function HomePage({
           now={now}
         />
         {/* shrink-0: the panel is a fixed-height scrolling column. On phone
-            the date control drops under the title. */}
-        <Card className="shrink-0">
+            the date control drops under the title. group/day: the date
+            control marks itself data-pending while another day loads; the
+            grid dims and the spinner shows (#15). */}
+        <Card className="group/day shrink-0">
           <CardHeader>
             <CardTitle className="text-lg">
               <h2>{copy.dayTitle}</h2>
@@ -91,15 +97,24 @@ export default async function HomePage({
               <DateControl date={date} />
             </CardAction>
           </CardHeader>
-          <CardContent>
-            <DayGrid
-              columns={grid.columns}
-              date={date}
-              dateLabel={formatDateString(date)}
-              entries={grid.entries}
-              rows={grid.rows}
-              viewer={viewer}
-            />
+          <CardContent className="relative">
+            <div className="transition-opacity group-has-data-pending/day:opacity-50">
+              <DayGrid
+                columns={grid.columns}
+                date={date}
+                dateLabel={formatDateString(date)}
+                entries={grid.entries}
+                rows={grid.rows}
+                terms={terms}
+                viewer={viewer}
+              />
+            </div>
+            <div className="absolute inset-0 hidden items-center justify-center group-has-data-pending/day:flex">
+              <Spinner
+                aria-label={messages.common.loading}
+                className="size-6 text-muted-foreground"
+              />
+            </div>
           </CardContent>
         </Card>
         <RoomCarousel discountPercent={viewerDiscount(viewer)} rooms={rooms} />

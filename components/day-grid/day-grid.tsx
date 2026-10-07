@@ -28,6 +28,7 @@ import {
 } from "@/lib/domain/availability";
 import { SLOT_MINUTES } from "@/lib/domain/booking-window";
 import type { GridCell, PlacedCell } from "@/lib/domain/day-grid";
+import type { CurrentTerms } from "@/lib/domain/terms";
 import { timeOptions } from "@/lib/domain/time";
 import type { DayGridColumn } from "@/lib/notice-board/grid";
 import type { GridEntryView } from "@/lib/notice-board/view";
@@ -108,7 +109,7 @@ function EntryCell({
 function BufferCell({ cell }: { cell: Extract<GridCell, { kind: "buffer" }> }) {
   return (
     <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
-      <div className={cn(BLOCK_CLASS, "bg-muted")}>
+      <div className={cn(BLOCK_CLASS, "bg-secondary")}>
         <span className="sr-only">{copy.buffer}</span>
       </div>
     </TableCell>
@@ -228,6 +229,7 @@ function GridBookingDialog({
   onOpenChange,
   open,
   target,
+  terms,
   viewer,
 }: {
   columns: DayGridColumn[];
@@ -235,6 +237,7 @@ function GridBookingDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   target: BookingTarget | null;
+  terms: CurrentTerms;
   viewer: BookingViewer;
 }) {
   const column = target ? columns[target.column] : undefined;
@@ -250,6 +253,7 @@ function GridBookingDialog({
       open={open}
       prefill={{ dato: date, fra: target.start }}
       room={column.room}
+      terms={terms}
       viewer={viewer}
     />
   );
@@ -261,6 +265,7 @@ export function DayGrid({
   dateLabel,
   entries,
   rows,
+  terms,
   viewer,
 }: {
   columns: DayGridColumn[];
@@ -268,6 +273,7 @@ export function DayGrid({
   dateLabel: string;
   entries: Record<string, GridEntryView>;
   rows: PlacedCell[][];
+  terms: CurrentTerms;
   viewer: BookingViewer;
 }) {
   const [openEntry, setOpenEntry] = useState<string | null>(null);
@@ -336,6 +342,7 @@ export function DayGrid({
         onOpenChange={setDialogOpen}
         open={dialogOpen}
         target={target}
+        terms={terms}
         viewer={viewer}
       />
     </>

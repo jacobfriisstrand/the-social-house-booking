@@ -7,7 +7,18 @@
 // it lines up with whatever sits under the title.
 import type { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Spinner } from "@/components/ui/spinner";
 import { messages } from "@/messages/da";
+
+function SidebarToggle() {
+  return (
+    <SidebarTrigger
+      aria-label={messages.shell.toggleSidebar}
+      className="-ml-0.5 justify-start px-0 hover:bg-transparent active:translate-y-0 [&_svg]:size-6"
+      size="icon-lg"
+    />
+  );
+}
 
 export function PageHeader({
   title,
@@ -21,11 +32,7 @@ export function PageHeader({
     // title and the house mark beside it share one centre line (2026-09-29).
     <div className="flex min-h-9 flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-1">
-        <SidebarTrigger
-          aria-label={messages.shell.toggleSidebar}
-          className="-ml-0.5 justify-start px-0 hover:bg-transparent active:translate-y-0 [&_svg]:size-6"
-          size="icon-lg"
-        />
+        <SidebarToggle />
         <h1 className="font-semibold text-xl">{title}</h1>
       </div>
       {children}
@@ -38,5 +45,26 @@ export function PagePanel({ children }: { children?: ReactNode }) {
     <div className="flex flex-1 flex-col gap-6 rounded-xl bg-muted p-3 md:min-h-0 md:overflow-y-auto">
       {children}
     </div>
+  );
+}
+
+// What a page shows while its server data loads (each shell group's
+// loading.tsx): the header row keeps the sidebar toggle so nothing jumps,
+// the title arrives with the page, and the spinner sits in the panel.
+export function PageLoading() {
+  return (
+    <>
+      <div className="flex min-h-9 items-center">
+        <SidebarToggle />
+      </div>
+      <PagePanel>
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner
+            aria-label={messages.common.loading}
+            className="size-6 text-muted-foreground"
+          />
+        </div>
+      </PagePanel>
+    </>
   );
 }

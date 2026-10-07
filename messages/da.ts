@@ -149,7 +149,14 @@ export const messages = {
       },
       submit: "Book nu",
       submitting: "Opretter …",
-      terms: "Jeg accepterer bookingbetingelserne",
+      // "Jeg accepterer bookingbetingelserne og har læst
+      // privatlivspolitikken", each text a link (#15).
+      terms: {
+        bookingTerms: "bookingbetingelserne",
+        middle: " og har læst ",
+        privacyPolicy: "privatlivspolitikken",
+        start: "Jeg accepterer ",
+      },
     },
     errors: {
       addOnInvalid:
@@ -179,6 +186,8 @@ export const messages = {
       roomNotFound: "Lokalet findes ikke.",
       slotTaken: "Lokalet er ikke ledigt i det valgte tidsrum.",
       termsRequired: "Du skal acceptere bookingbetingelserne.",
+      termsUnavailable:
+        "Betingelserne kunne ikke findes. Genindlæs siden, og prøv igen.",
       tooLong: "Teksten er for lang.",
       tooManyResends:
         "Der kan ikke sendes flere koder til denne booking. Start bookingen forfra.",
@@ -957,6 +966,37 @@ export const messages = {
     openMenu: "Åbn menu",
     rooms: "Lokaler",
     settings: "Indstillinger",
+    terms: "Betingelser",
     toggleSidebar: "Vis eller skjul sidepanel",
+  },
+  // Booking terms, privacy policy, and GDPR overview (#15).
+  terms: {
+    admin: {
+      description:
+        "Teksterne vises for bookerne. Når du gemmer, bliver teksten offentliggjort som en ny version. De tidligere versioner bliver gemt, så du altid kan se, hvilken version en booker har accepteret.",
+      errors: {
+        contentRequired: "Skriv en tekst.",
+        saveFailed: "Teksten kunne ikke offentliggøres. Prøv igen.",
+        tooLong: "Teksten er for lang.",
+        unchanged: "Teksten er ikke ændret.",
+      },
+      notPublished: "Ikke offentliggjort endnu",
+      saved: "Den nye version er offentliggjort",
+      saving: "Offentliggør …",
+      submit: "Offentliggør ny version",
+      title: "Betingelser",
+      view: "Se den offentliggjorte version",
+    },
+    content: "Tekst",
+    documents: {
+      "Booking terms": "Bookingbetingelser",
+      "GDPR overview": "Persondata",
+      "Privacy policy": "Privatlivspolitik",
+    },
+    member: {
+      title: "Betingelser og persondata",
+    },
+    version: (version: string, publishedOn: string) =>
+      `Version ${version}, offentliggjort ${publishedOn}`,
   },
 } as const;

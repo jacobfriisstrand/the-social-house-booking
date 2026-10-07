@@ -30,6 +30,7 @@ describe("shellAdminLinks", () => {
       "/admin/companies",
       "/admin/addons",
       "/admin/notices",
+      "/admin/terms",
       "/admin/settings",
     ]);
   });

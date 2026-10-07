@@ -9,6 +9,7 @@ import {
   type BookingWindowOutcome,
   bookingWindowOutcome,
 } from "@/lib/domain/booking-window";
+import { ACCEPTED_ON_BOOKING } from "@/lib/domain/terms";
 import { VERIFICATION_CODE_LENGTH } from "@/lib/domain/verification";
 import { messages } from "@/messages/da";
 
@@ -58,9 +59,12 @@ export const addOnFields = {
   cateringAccepted: mustAccept(errors.cateringAcceptRequired),
 };
 
-// The booking terms (DESIGN.md "Booking dialog"); #15 records the version.
+// The booking terms and privacy policy (DESIGN.md "Booking dialog"), and
+// the versions the dialog showed: #15 records those for a member's booking
+// once lib/domain/terms.ts has found them published.
 const termsFields = {
   termsAccepted: mustAccept(errors.termsRequired),
+  termsVersionIds: z.array(z.guid()).max(ACCEPTED_ON_BOOKING.length),
 };
 
 const bookingFields = {

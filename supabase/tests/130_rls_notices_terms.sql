@@ -45,8 +45,9 @@ select throws_ok(
   'insert into public.notices (notice_title, notice_body) values (''x'', ''x'')',
   '42501', null,
   'company cannot post notices');
-select is((select count(*) from public.terms_versions), 1::bigint, 'company reads published terms only');
-select is((select terms_version_name from public.terms_versions), 'Booking terms', 'published version is readable');
+-- Scoped to the fixtures: the seed publishes its own versions (#15).
+select is((select count(*) from public.terms_versions where terms_version_id in ('BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB02')), 1::bigint, 'company reads published terms only');
+select is((select terms_version_name from public.terms_versions where terms_version_id in ('BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB02')), 'Booking terms', 'published version is readable');
 select is((select count(*) from public.terms_acceptances), 0::bigint, 'foreign acceptances are invisible');
 select lives_ok(
   'insert into public.terms_acceptances (terms_acceptance_company_id, terms_acceptance_terms_version_id) values (''22222222-2222-2222-2222-222222222001'', ''BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01'')',
@@ -61,7 +62,7 @@ select throws_ok(
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
 select is((select count(*) from public.notices), 4::bigint, 'admin reads every notice, off and ended ones too');
-select is((select count(*) from public.terms_versions), 2::bigint, 'admin reads drafts too');
+select is((select count(*) from public.terms_versions where terms_version_id in ('BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB02')), 2::bigint, 'admin reads drafts too');
 select is((select count(*) from public.terms_acceptances), 2::bigint, 'admin reads all acceptances');
 select lives_ok(
   'update public.terms_versions set terms_version_published_at = now() where terms_version_version = ''1.0-draft''',

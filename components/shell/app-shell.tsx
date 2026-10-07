@@ -41,6 +41,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
+import { type CurrentTerms, TERMS_DOCUMENTS } from "@/lib/domain/terms";
 import type { WifiSettings } from "@/lib/settings/data";
 import {
   isShellLinkActive,
@@ -264,7 +265,39 @@ function ShellSidebar({
   );
 }
 
-function ShellFooter({ wifi }: { wifi: WifiSettings }) {
+// The texts every member must be able to find (#15): the current version
+// of each, as plain links. A text never published is left out.
+function TermsLinks({ terms }: { terms: CurrentTerms }) {
+  return (
+    <nav aria-label={messages.terms.member.title}>
+      <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        {TERMS_DOCUMENTS.flatMap((document) => {
+          const versionId = terms[document];
+          return versionId
+            ? [
+                <li key={document}>
+                  <Link
+                    className="underline-offset-4 hover:text-foreground hover:underline"
+                    href={`/terms/${versionId}`}
+                  >
+                    {messages.terms.documents[document]}
+                  </Link>
+                </li>,
+              ]
+            : [];
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function ShellFooter({
+  terms,
+  wifi,
+}: {
+  terms: CurrentTerms;
+  wifi: WifiSettings;
+}) {
   const [copying, setCopying] = useState(false);
 
   const handleCopy = useCallback(async (): Promise<void> => {
@@ -291,22 +324,29 @@ function ShellFooter({ wifi }: { wifi: WifiSettings }) {
   );
 
   return (
-    <footer className="flex flex-wrap items-center justify-center gap-2 text-muted-foreground text-xs md:justify-end">
-      <span className="inline-flex">
-        <WifiIcon aria-hidden="true" className="size-4" />
-      </span>
-      <span>{wifi.network}</span>
-      <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
-      <span>{messages.shell.footer.passwordLabel}</span>
-      <span className="inline-flex items-center gap-1">
-        <span className="font-mono text-foreground">{wifi.password}</span>
-        <Tooltip>
-          <TooltipTrigger render={<span className="inline-flex" />}>
-            {copyButton}
-          </TooltipTrigger>
-          <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
-        </Tooltip>
-      </span>
+    // The Wi-Fi left, the texts right from tablet up; both centred on phone.
+    <footer className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-muted-foreground text-xs md:justify-between">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <span className="inline-flex">
+          <WifiIcon aria-hidden="true" className="size-4" />
+        </span>
+        <span>{wifi.network}</span>
+        <Separator
+          className="my-auto h-3.5 self-center"
+          orientation="vertical"
+        />
+        <span>{messages.shell.footer.passwordLabel}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="font-mono text-foreground">{wifi.password}</span>
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              {copyButton}
+            </TooltipTrigger>
+            <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
+          </Tooltip>
+        </span>
+      </div>
+      <TermsLinks terms={terms} />
     </footer>
   );
 }
@@ -316,12 +356,14 @@ export function AppShell({
   children,
   isAdmin,
   defaultOpen,
+  terms,
   wifi,
 }: {
   badgeCounts?: Record<string, number>;
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
+  terms: CurrentTerms;
   wifi: WifiSettings;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -347,7 +389,7 @@ export function AppShell({
             content. */}
         <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
           {children}
-          <ShellFooter wifi={wifi} />
+          <ShellFooter terms={terms} wifi={wifi} />
         </div>
       </SidebarInset>
     </SidebarProvider>
