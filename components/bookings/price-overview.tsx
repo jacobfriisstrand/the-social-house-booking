@@ -123,7 +123,7 @@ function ManualAmountRow({
 
 export function PriceOverview({ model }: { model: PriceOverviewModel }) {
   return (
-    <dl className="flex flex-col gap-2 rounded-lg bg-muted">
+    <dl className="flex flex-col gap-2 rounded-lg bg-muted p-4">
       <PriceRow label={copy.room} value={formatOre(model.roomNormalTotalOre)} />
       {model.addOnsOre > 0 ? <AddOnsRow model={model} /> : null}
       {model.showSavings ? (
