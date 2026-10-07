@@ -40,12 +40,10 @@ export default async function AdminBookingsPage({
 
   const filter: AdminOverviewFilter = {
     companyIds: params.companyIds,
-    fromDate: params.fromDate,
     includeHouseEvents: params.includeHouseEvents,
     invoicingStatuses: params.invoicingStatuses,
     memberships: params.memberships,
     roomIds: params.roomIds,
-    toDate: params.toDate,
   };
 
   const options = await listAdminFilterOptions(supabase);

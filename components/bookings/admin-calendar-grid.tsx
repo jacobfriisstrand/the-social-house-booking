@@ -1,10 +1,11 @@
 "use client";
 
 // The admin calendar (#9): the month grid — one cell per date, each
-// holding its blocks in start order, a booking in primary and a House
-// Event in info, the same colour code as the day grid. A block opens the
-// same entry sheet. The arrows and the date picker live in the shared
-// filter row, so a navigation moves the list's period too.
+// holding its blocks in start order with their company, room and
+// timeslot, a booking in primary and a House Event in info, the same
+// colour code as the day grid. A block opens the same entry sheet. The
+// arrows and the month name live in the shared filter row, shown only
+// with the calendar.
 import { useCallback, useState } from "react";
 import { EntrySheet } from "@/components/day-grid/entry-sheet";
 import { Card } from "@/components/ui/card";
@@ -48,11 +49,9 @@ const BLOCK_EVENT = "border-info bg-info text-info-foreground";
 function EntryButton({
   block,
   onOpen,
-  showTime,
 }: {
   block: { key: string; view: GridEntryView };
   onOpen: (view: GridEntryView) => void;
-  showTime: boolean;
 }) {
   const open = useCallback(() => onOpen(block.view), [block.view, onOpen]);
   return (
@@ -68,11 +67,10 @@ function EntryButton({
       <span className="w-full truncate font-medium text-xs">
         {block.view.name}
       </span>
-      {showTime ? (
-        <span className="w-full truncate text-xs tabular-nums">
-          {block.view.time}
-        </span>
-      ) : null}
+      <span className="w-full truncate text-xs">{block.view.roomName}</span>
+      <span className="w-full truncate text-xs tabular-nums">
+        {block.view.time}
+      </span>
     </button>
   );
 }
@@ -138,7 +136,6 @@ function CompactGrid({
                       block={block}
                       key={block.key}
                       onOpen={onOpen}
-                      showTime={false}
                     />
                   ))}
                 </div>

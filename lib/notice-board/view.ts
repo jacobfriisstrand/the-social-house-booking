@@ -27,6 +27,7 @@ export interface GridEntryView {
   kind: "booking" | "house_event";
   name: string;
   price: PriceOverviewModel | null;
+  roomName: string;
   time: string;
 }
 
@@ -101,6 +102,7 @@ export function bookingView(
     kind: "booking",
     name,
     price: detail?.kind === "admin" ? detail.price : null,
+    roomName: entry.roomName,
     time: timeRange(entry),
   };
 }
@@ -127,6 +129,7 @@ export function houseEventView(
     kind: "house_event",
     name,
     price: null,
+    roomName: entry.roomName,
     time: timeRange(entry),
   };
 }

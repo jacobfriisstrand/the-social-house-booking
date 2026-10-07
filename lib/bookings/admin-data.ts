@@ -25,15 +25,17 @@ type Client = SupabaseClient<Database>;
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
 /** The filters the URL carries; both views read the same set (#9). An
- * empty list selects everything — the multi-select's no-selection state. */
+ * empty list selects everything — the multi-select's no-selection state.
+ * The list reads the set without a period and shows every booking; the
+ * calendar always narrows to its month window. */
 export interface AdminOverviewFilter {
   companyIds: string[];
-  fromDate: string;
+  fromDate?: string;
   includeHouseEvents: boolean;
   invoicingStatuses: BookingInvoicingStatus[];
   memberships: AdminMembership[];
   roomIds: string[];
-  toDate: string;
+  toDate?: string;
 }
 
 /** What the filter selects offer: every company and every room. */
@@ -164,28 +166,33 @@ function toAdminBookingRow(
   };
 }
 
-// Bookings that start on a date in the period, one row per booking. The
-// period filter reads the Copenhagen wall clock (ADR-0021) through the
-// UTC window; company, room and invoicing status are the SQL filters.
+// One row per booking, in start order. The period is optional: the list
+// shows every booking, the calendar narrows to its window. The period
+// filter reads the Copenhagen wall clock (ADR-0021) through the UTC
+// window; company, room and invoicing status are the SQL filters.
 async function listAdminBookings(
   supabase: Client,
   filter: AdminOverviewFilter & { options: AdminFilterOptions }
 ): Promise<AdminBookingRow[]> {
   const { options } = filter;
-  const window = periodUtcWindow(filter.fromDate, filter.toDate);
   let query = supabase
     .from("bookings")
     .select(
       "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)"
     )
     .in("booking_status", ["confirmed", "cancelled"])
-    .gte("booking_start_at", window.startUtc.toISOString())
-    .lt("booking_start_at", window.endUtc.toISOString())
     .order("booking_start_at")
     .order("manual_amount_created_at", {
       ascending: true,
       referencedTable: "manual_amounts",
     });
+
+  if (filter.fromDate && filter.toDate) {
+    const window = periodUtcWindow(filter.fromDate, filter.toDate);
+    query = query
+      .gte("booking_start_at", window.startUtc.toISOString())
+      .lt("booking_start_at", window.endUtc.toISOString());
+  }
 
   // Company and membership type intersect: the booking's company must
   // answer to both filters. A membership filter is the resolved id list,
@@ -255,15 +262,19 @@ async function listAdminHouseEvents(
   supabase: Client,
   filter: AdminOverviewFilter
 ): Promise<AdminHouseEventRow[]> {
-  const window = periodUtcWindow(filter.fromDate, filter.toDate);
   let query = supabase
     .from("house_events")
     .select(
       "house_event_description, house_event_end_at, house_event_id, house_event_rooms(rooms(room_id, room_name)), house_event_start_at, house_event_title"
     )
-    .lt("house_event_start_at", window.endUtc.toISOString())
-    .gt("house_event_end_at", window.startUtc.toISOString())
     .order("house_event_start_at");
+
+  if (filter.fromDate && filter.toDate) {
+    const window = periodUtcWindow(filter.fromDate, filter.toDate);
+    query = query
+      .lt("house_event_start_at", window.endUtc.toISOString())
+      .gt("house_event_end_at", window.startUtc.toISOString());
+  }
 
   if (filter.roomIds.length > 0) {
     // The room filter reads the embedded rooms (see
@@ -278,8 +289,8 @@ async function listAdminHouseEvents(
   ).map(toAdminHouseEventRow);
 }
 
-/** The overview rows for the period and its filters: bookings and House
- * Events, start order is applied by the list's sort. The options carry the
+/** The overview rows for the filters: every booking when the filter
+ * carries no period, the period's otherwise. The options carry the
  * membership → company-ids resolution (see membershipCompanyIds). */
 export async function listAdminOverviewRows(
   supabase: Client,
@@ -400,7 +411,11 @@ export function calendarUtcWindow(
 /** Every live booking and House Event touching the window, per room. */
 export async function listAdminCalendarEntries(
   supabase: Client,
-  filter: AdminOverviewFilter & { options: AdminFilterOptions }
+  filter: AdminOverviewFilter & {
+    fromDate: string;
+    toDate: string;
+    options: AdminFilterOptions;
+  }
 ): Promise<AdminCalendarEntry[]> {
   const { options } = filter;
   const window = calendarUtcWindow(filter.fromDate, filter.toDate);

@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  CalendarIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ListIcon,
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -321,7 +323,9 @@ export function AdminBookingsView({
           row and the view toggle stay visible while the views scroll. */}
       <Card className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex flex-wrap items-center gap-3">
-          <PeriodControl params={view} today={today} />
+          {view.view === "month" ? (
+            <PeriodControl params={view} today={today} />
+          ) : null}
           <FilterMultiSelect
             allLabel={copy.filters.companyAll}
             label={copy.filters.company}
@@ -371,8 +375,14 @@ export function AdminBookingsView({
           value={[view.view]}
           variant="outline"
         >
-          <ToggleGroupItem value="list">{copy.view.list}</ToggleGroupItem>
-          <ToggleGroupItem value="month">{copy.view.month}</ToggleGroupItem>
+          <ToggleGroupItem value="list">
+            <ListIcon aria-hidden="true" />
+            {copy.view.list}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="month">
+            <CalendarIcon aria-hidden="true" />
+            {copy.view.month}
+          </ToggleGroupItem>
         </ToggleGroup>
       </Card>
       {calendar ? (
