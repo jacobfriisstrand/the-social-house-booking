@@ -300,16 +300,23 @@ function BookingPanel({
   );
 }
 
-// One sheet for the whole overview: the row a click or keyboard landed on.
-// After a cancel the row re-reads on refresh, so the sheet closes to a
-// fresh table.
+// One sheet for the whole overview: the row a click or keyboard landed on,
+// or on arrival the row the mail link names (#88) — an id that is not one
+// of the company's rows opens nothing. After a cancel the row re-reads on
+// refresh, so the sheet closes to a fresh table.
 export function BookingOverview({
   bookings,
+  initialBookingId,
 }: {
   bookings: BookingOverviewLists<BookingOverviewRow>;
+  initialBookingId?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<BookingOverviewRow | null>(null);
+  const [selected, setSelected] = useState<BookingOverviewRow | null>(
+    () =>
+      bookings.all.find((booking) => booking.bookingId === initialBookingId) ??
+      null
+  );
+  const [open, setOpen] = useState(() => selected !== null);
   const openBooking = useCallback((booking: BookingOverviewRow) => {
     setSelected(booking);
     setOpen(true);

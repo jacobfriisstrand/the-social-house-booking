@@ -5,7 +5,6 @@ import { envSchema } from "./env-schema.ts";
 
 const required = {
   APP_ENV: "development",
-  BOOKING_CANCEL_SECRET: "tsh-dev-cancellation-link-secret-32",
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
   RESEND_FROM: "The Social House <booking@thesocialhouse.dk>",

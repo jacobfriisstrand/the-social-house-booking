@@ -78,7 +78,7 @@ The number of people attending, entered at booking. Drives capacity checks and p
 A unique, human-readable identifier shown in mail and the admin panel.
 
 **Cancellation** (afbooking):
-Calling off a booking via a secure link. Frees the room and buffer immediately; the booking stays in history.
+Calling off a booking from the company's Bookinger page, behind the company login; the link in the confirmation and reminder opens the booking there (ADR-0024). Frees the room and buffer immediately; the booking stays in history.
 _Avoid_: cancel, no-show, delete
 
 **Cancellation fee** (afbestillingsgebyr):

@@ -29,7 +29,7 @@ import {
   type Step,
   slotFailureMessage,
 } from "./new-booking";
-import { notifyAdminNewBooking } from "./notify-admin-booking";
+import { notifyBookingConfirmed } from "./notify-booking-confirmed";
 
 const { errors } = messages.booking;
 const adminErrors = messages.booking.admin.errors;
@@ -113,7 +113,7 @@ async function insertConfirmedBooking(
       status: "error",
     };
   }
-  await notifyAdminNewBooking(supabase, bookingId);
+  await notifyBookingConfirmed(supabase, bookingId);
   return {
     bookingId,
     bookingNumber: inserted.bookingNumber,

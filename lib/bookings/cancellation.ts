@@ -1,6 +1,6 @@
-// Cancellation (#5, Bilag 1 "Afbooking", ADR-0006) shared by the three
-// entry points: the secure link (public page, unauthenticated — service-role
-// allowlist entry 2), the member's booking sheet, and the admin actions.
+// Cancellation (#5, Bilag 1 "Afbooking", ADR-0006) shared by the two
+// entry points: the member's booking sheet (behind the company login,
+// ADR-0024) and the admin actions.
 // The fee is always recomputed at the exact confirm moment from the booking's
 // frozen price snapshot columns (ADR-0005); the preview a screen shows is
 // the same computation at its render time. The row update is guarded so
@@ -13,7 +13,6 @@ import { bookingCancelledVariables } from "@/emails/templates/booking-cancelled.
 import {
   bookingCancellationFeeOre,
   type CancellationBasis,
-  memberPriceOreForBooking,
 } from "@/lib/domain/cancellation";
 import { sendMail } from "@/lib/email/send-mail";
 import { env } from "@/lib/env";
@@ -85,38 +84,6 @@ export const cancellationFeeAt = (
   booking: Parameters<typeof cancellationBasisOf>[0],
   now: Date
 ): number => bookingCancellationFeeOre(cancellationBasisOf(booking), now);
-
-export interface CancellationPreview {
-  addOnsOre: number;
-  bookerName: string;
-  bookingNumber: string;
-  companyDisplayName: string;
-  endAt: string;
-  feeOre: number;
-  memberPriceOre: number;
-  roomName: string;
-  startAt: string;
-}
-
-// What Platform message 1 shows before the user confirms: the booking, the
-// member price the fee is computed on, and the fee as it stands right now.
-// Null-safe fallbacks for optional company and room joins account for the
-// complexity score; the function only maps the cancellation preview.
-// fallow-ignore-next-line complexity
-export const cancellationPreviewOf = (
-  booking: CancellationBooking,
-  now: Date
-): CancellationPreview => ({
-  addOnsOre: booking.booking_addon_total_ore,
-  bookerName: booking.booking_booker_name,
-  bookingNumber: booking.booking_number,
-  companyDisplayName: booking.companies?.company_display_name ?? "",
-  endAt: booking.booking_end_at,
-  feeOre: cancellationFeeAt(booking, now),
-  memberPriceOre: memberPriceOreForBooking(cancellationBasisOf(booking)),
-  roomName: booking.rooms?.room_name ?? "",
-  startAt: booking.booking_start_at,
-});
 
 const sentryTags = (booking: CancellationBooking) => ({
   booking_number: booking.booking_number,

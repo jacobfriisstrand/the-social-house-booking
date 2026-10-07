@@ -328,6 +328,8 @@ The booker must be able to cancel through a secure link in the booking confirmat
 
 The link leads to a confirmation page where the current fee is shown before the cancellation is completed.
 
+> **Decision (ADR-0024):** The link goes through the company login and opens the booking on the company's Bookinger page; the confirmation with the current fee is the booking sheet's Platform message 1. Cancelling always requires the login.
+
 The cancellation fee is calculated on the actual room price after member discount:
 
 - More than 72 hours before: free.

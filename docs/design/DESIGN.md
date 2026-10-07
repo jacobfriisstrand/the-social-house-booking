@@ -190,7 +190,7 @@ Charts on Statistik use the shadcn `Chart` wrapper over Recharts, with the serie
 
 **Toasts.** One library: the Base UI Toast (`components/ui/toast.tsx`), tan `bg-primary` with the type's icon, top right on every screen, stacked above dialogs and sheets (`z-100`) so a result raised from inside a dialog is never hidden behind its backdrop. Every server action result ends in a toast: success or failure, one line, Danish. Field errors stay inline; a toast never names a field. Page-level error alerts are not used.
 
-**Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence.
+**Confirm before destroying.** Cancellation, marking as invoiced, deleting a room or a user: a dialog with the consequence in one sentence, a secondary "Fortryd" and a destructive confirm. The fee, if any, is stated in the sentence. Cancelling a booking is the exception (decided 2026-10-07 in #11): its confirm is Platform message 1 with the Bilag 2 text — the title "Vil I afbooke [lokale]?", booking number, date and time, the live fee, the extra-costs and release lines — and "Behold bookingen" / "Bekræft afbooking" as its buttons, in the booking sheet. The mails' "Se eller afbook bookingen" opens that sheet behind the login (ADR-0024).
 
 ## Screens
 

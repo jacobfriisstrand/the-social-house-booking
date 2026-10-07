@@ -9,10 +9,13 @@
 // implementation.
 
 import { z } from "zod";
-import { discountAmountOre, memberPriceOre } from "../../lib/domain/pricing.ts";
 import { hoursBetween } from "../../lib/domain/time.ts";
-import { formatDate, formatOre, formatTime } from "../../lib/format.ts";
+import { formatDate, formatTime } from "../../lib/format.ts";
 import { escapeHtml } from "../../supabase/functions/send-email/handler.ts";
+import {
+  type BookingPriceAddOnLine,
+  bookingPriceTableHtml,
+} from "./booking-sections.ts";
 import {
   emailButton,
   emailHeading,
@@ -31,15 +34,9 @@ const hoursFormatter = new Intl.NumberFormat("da-DK", {
   maximumFractionDigits: 2,
 });
 
-export interface AdminNewBookingAddOnLine {
-  addonName: string | null;
-  quantity: number;
-  totalOre: number;
-}
-
 export interface AdminNewBookingInput {
   actionUrl: string;
-  addOnLines: AdminNewBookingAddOnLine[];
+  addOnLines: BookingPriceAddOnLine[];
   bookerEmail: string;
   bookerName: string;
   bookerPhone: string;
@@ -59,51 +56,20 @@ export interface AdminNewBookingInput {
   roomName: string;
 }
 
-// The PRISOVERSIGT section: the discount line only exists when there is a
-// discount, and the add-on list only when there are add-ons ("empty
-// sections hidden"). Built here — with the copy — so the sending module
-// stays thin.
+// The PRISOVERSIGT section: the shared booking price table with the admin
+// labels (Bilag 2, Mail 8).
 export const adminNewBookingPriceOverviewHtml = (
   input: AdminNewBookingInput
-): string => {
-  // booking_room_price_ore is the frozen room rental for the booked hours
-  // (ADR-0005) — read it directly, no second multiply by the hours.
-  const roomTotal = input.bookingRoomPriceOre;
-  const member = memberPriceOre(roomTotal, input.discountPercent);
-  const lines: string[] = [
-    `Normal lokalepris: <strong>${formatOre(roomTotal)}</strong> ekskl. moms`,
-  ];
-  if (input.discountPercent > 0) {
-    lines.push(
-      `Rabat: ${text(String(input.discountPercent))} % / ${formatOre(
-        discountAmountOre(roomTotal, input.discountPercent)
-      )} ekskl. moms`
-    );
-  }
-  lines.push(
-    `Lokaleleje efter rabat: <strong>${formatOre(member)}</strong> ekskl. moms`
+): string =>
+  bookingPriceTableHtml(
+    {
+      addOnLines: input.addOnLines,
+      discountPercent: input.discountPercent,
+      expectedTotalOre: input.bookingExpectedTotalOre,
+      roomPriceOre: input.bookingRoomPriceOre,
+    },
+    { discount: "Rabat", memberPrice: "Lokaleleje efter rabat" }
   );
-  if (input.addOnLines.length > 0) {
-    const addOnLines = input.addOnLines
-      .map((line) =>
-        line.addonName
-          ? `${text(line.addonName)}${
-              line.quantity > 1 ? ` (${text(String(line.quantity))} stk.)` : ""
-            }: ${formatOre(line.totalOre)} ekskl. moms`
-          : null
-      )
-      .filter((line): line is string => line !== null);
-    if (addOnLines.length > 0) {
-      lines.push(`Tilvalg: ${addOnLines.join("<br>")}`);
-    }
-  }
-  lines.push(
-    `Samlet forventet beløb: <strong>${formatOre(
-      input.bookingExpectedTotalOre
-    )}</strong> ekskl. moms`
-  );
-  return emailParagraph(lines.join("<br>"));
-};
 
 // SERVICE OG PRAKTISKE BEHOV: only the fact that special information is
 // registered — never its content. When House Host, catering or special

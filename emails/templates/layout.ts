@@ -70,6 +70,36 @@ export const emailHeading = (eyebrow: string, heading: string): string => `
 export const emailParagraph = (content: string, bottomPadding = 16): string => `
 <tr><td style="padding-bottom:${bottomPadding}px;color:${COLORS.foreground};font-size:14px;line-height:22px;">${content}</td></tr>`;
 
+export interface EmailAmountRow {
+  // Already escaped and formatted ("325,00 kr", "−162,50 kr").
+  amount: string;
+  // Already escaped; may carry inline HTML.
+  label: string;
+  // The closing total: bold, under a hairline.
+  total?: boolean;
+}
+
+// Amounts as a two-column table: the label left, the amount right-aligned so
+// the figures line up, and one muted VAT line under it instead of
+// "ekskl. moms" on every row.
+export const emailAmountTable = (rows: EmailAmountRow[]): string => {
+  const cells = rows
+    .map((row) => {
+      const rule = row.total
+        ? `border-top:1px solid ${COLORS.border};padding-top:10px;font-weight:600;`
+        : "";
+      return `<tr><td style="padding:3px 16px 3px 0;${rule}">${row.label}</td><td align="right" style="padding:3px 0;white-space:nowrap;text-align:right;${rule}">${row.amount}</td></tr>`;
+    })
+    .join("\n");
+  return `
+<tr><td style="padding-bottom:16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="color:${COLORS.foreground};font-size:14px;line-height:22px;">
+${cells}
+<tr><td colspan="2" align="right" style="padding-top:4px;color:${COLORS.muted};font-size:12px;line-height:18px;text-align:right;">Alle beløb er ekskl. moms</td></tr>
+</table>
+</td></tr>`;
+};
+
 export const emailRule = (): string => `
 <tr><td style="height:1px;padding:8px 0 20px;font-size:0;line-height:0;"><div style="height:1px;background:${COLORS.border};">&nbsp;</div></td></tr>`;
 

@@ -21,6 +21,7 @@ Email is the only login credential (decided 2026-09-03, revising #25's username 
 - The auth user's email **is** the company's real contact email (`companies.company_email`), so password reset works unchanged. Same for admins.
 - The `/login` server action calls `signInWithPassword({ email, password })` with the normal server client — no service-role lookup step. On any failure (unknown email or wrong password), return the same generic error so the form never discloses whether an email exists.
 - `company_display_name` / `admin_display_name` are for showing people, never for signing in.
+- `/login?next=<path>` lands there after login, and passes a visitor who is already logged in straight on (#88). `safeNextPath()` in `lib/auth/next-path.ts` keeps only a path on this site; anything else falls back to `/`. The booking link in Mail 4, 5 and 6 uses it to open the booking on Bookinger (ADR-0024).
 
 ## Roles in the JWT
 
