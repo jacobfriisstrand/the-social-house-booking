@@ -109,7 +109,7 @@ function EntryCell({
 function BufferCell({ cell }: { cell: Extract<GridCell, { kind: "buffer" }> }) {
   return (
     <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
-      <div className={cn(BLOCK_CLASS, "bg-muted")}>
+      <div className={cn(BLOCK_CLASS, "bg-secondary")}>
         <span className="sr-only">{copy.buffer}</span>
       </div>
     </TableCell>
