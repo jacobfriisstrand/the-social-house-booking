@@ -961,8 +961,60 @@ export const messages = {
     openMenu: "Åbn menu",
     rooms: "Lokaler",
     settings: "Indstillinger",
+    statistics: "Statistik",
     terms: "Betingelser",
     toggleSidebar: "Vis eller skjul sidepanel",
+  },
+  // Statistik (admin, #10, ADR-0014): the monthly booking economy across
+  // every company. Only held bookings count; the rest of the month is
+  // expected value and never part of the invoicing basis.
+  statistics: {
+    cancellations: {
+      description: (year: string) => `Aflyste bookinger pr. måned i ${year}`,
+      title: "Aflyste bookinger",
+    },
+    economy: {
+      addons: "Tilkøb",
+      cancellationFees: "Afbestillingsgebyrer",
+      description: (year: string) =>
+        `Faktureringsgrundlag pr. måned i ${year}, ekskl. moms`,
+      footnote:
+        "Kun afholdte bookinger tæller med. Bookinger, der er markeret som ikke fakturerbare, tæller ikke med i beløbene.",
+      manualAmounts: "Manuelle beløb",
+      roomRent: "Lokaleleje efter rabat",
+      title: "Bookingøkonomi",
+    },
+    expected: {
+      bookings: (count: number) =>
+        count === 1 ? "1 booking" : `${count} bookinger`,
+      description:
+        "Bookinger i måneden, der ikke er afholdt endnu. Beløbet kommer med i faktureringsgrundlaget, når mødet er slut.",
+      title: "Forventet",
+    },
+    held: {
+      description: (year: string) => `Afholdte bookinger pr. måned i ${year}`,
+      title: "Bookinger",
+    },
+    kpi: {
+      basis: "Faktureringsgrundlag",
+      bookings: "Bookinger",
+      cancellations: "Aflyste bookinger",
+      roomHours: "Lokaletimer",
+    },
+    membership: {
+      description: (month: string) => `Faktureringsgrundlag i ${month}`,
+      emptyDescription:
+        "Der er ingen afholdte bookinger med et beløb i måneden.",
+      emptyTitle: "Intet faktureringsgrundlag endnu",
+      external: "Eksterne virksomheder",
+      member: "Medlemsvirksomheder",
+      memberShare: "medlemmer",
+      title: "Medlemmer og eksterne",
+    },
+    nextMonth: "Næste måned",
+    previousMonth: "Forrige måned",
+    // The comparison line under a number: "august 2026: 39.830,00 kr".
+    previousValue: (month: string, value: string) => `${month}: ${value}`,
   },
   // Booking terms, privacy policy, and GDPR overview (#15).
   terms: {

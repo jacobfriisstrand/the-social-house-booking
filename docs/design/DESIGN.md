@@ -84,13 +84,13 @@ One shell for everyone. Members and admins see the same sidebar; the admin group
 │  Lokaler     │ │                                      │ │
 │              │ │                                      │ │
 │  ADMIN       │ │                                      │ │
+│  Statistik   │ │                                      │ │
 │  Bookinger   │ │                                      │ │
 │  Lokaler     │ │                                      │ │
 │  Virksomheder│ │                                      │ │
 │  Tilkøb      │ │                                      │ │
 │  Rabatter    │ │                                      │ │
 │  Opslag      │ │                                      │ │
-│  Statistik   │ │                                      │ │
 │              │ │                                      │ │
 │  Profil      │ └──────────────────────────────────────┘ │
 │  Log ud      │              Wi-Fi thesocialhouseguest · … │
@@ -269,9 +269,15 @@ One tab per text: "Bookingbetingelser", "Privatlivspolitik", "Persondata". Each 
 
 ### Statistik (admin)
 
-ADR-0014's monthly economy overview. Page header with a month control (prev, month name, next). Then two tile groups side by side, each a white card with a title ("Bookingøkonomi", "Bookinger") and a period chip, tiles inside separated by borders in a 3-column grid (2 columns when a group has four tiles). A tile is a 12px muted label, a 28px 600 number, and a small secondary chip with last month's value. Groups cover total bookings, room hours, room-rental value after discount, add-ons and services, cancellation fees, total invoicing basis excl. VAT, and the member versus external split. Future bookings are a separate tile labelled "Forventet" and never sum into the invoicable amount.
+ADR-0014's monthly booking economy as a dashboard of shadcn cards, modelled on shadcnuikit's website-analytics dashboard (decided 2026-10-10 in #10). The page header has a month control: previous, the month, next. The month travels in the URL as `?maaned=yyyy-mm`, and the figures dim to 50 % while the next month loads. Every card is a white `Card` whose header (16px 500 title, 12px muted description) sits above a bottom border.
 
-Below, three white cards with monthly bar charts since January of the current year: bookings, cancellations, invoicing basis. Bars in primary, cancellations in destructive, months without data in muted. Card title 18px 500 with a 12px muted subtitle. No refresh buttons.
+1. **Four stat cards** in a row (two on tablet, one on phone): Faktureringsgrundlag, Bookinger, Lokaletimer, Aflyste bookinger. The header holds the title and a change badge: the change from last month in per cent with a trend arrow, `success` when the change is good news and `destructive` when it is bad (more cancellations is bad), `outline` at 0 %, and no badge when last month was zero. Under it the number at `text-3xl` 600 ("ekskl. moms" beside an amount) and last month's value in 12px muted ("september 2026: 9.100,00 kr").
+2. **Bookingøkonomi** (two thirds) beside **Medlemmer og eksterne** (one third). Bookingøkonomi shows the invoicing basis as monthly bars for the year, then the month's basis in four parts, each with an icon, its amount and a `Progress` bar for its share: Lokaleleje efter rabat, Tilkøb, Afbestillingsgebyrer, Manuelle beløb. A footer line says what counts. Medlemmer og eksterne is a donut with the member share in the middle and both amounts listed under it, or `Empty` when the month has no basis.
+3. **Bookinger** and **Aflyste bookinger** as monthly bars for the year, and **Forventet**: the value of the month's bookings that have not been held yet. It never adds to the invoicing basis.
+
+Bars are primary, cancellations destructive. The selected month is drawn at full strength and the other months at 45 %; months after the current one have no bar. Hovering a bar shows the month and its value. The donut uses primary for member companies and chart-4 (`#964900`) for external ones. No refresh or export buttons.
+
+What counts: only bookings whose meeting has ended, the same line the invoicing worklist draws. Manual amounts are part of the basis. A booking marked "Ikke fakturerbar" stays in the booking and room-hour counts but adds no amount.
 
 ### Other admin pages
 
