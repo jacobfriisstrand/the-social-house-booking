@@ -52,7 +52,7 @@ const toEditor = (name: TermsDocument, current: TermsVersion | null): Editor =>
 // The link opens the published version the way a booker sees it.
 function TermsEditor({ editor }: { editor: Editor }) {
   return (
-    <Card className="max-w-3xl">
+    <Card>
       <CardHeader>
         <CardTitle>{copy.documents[editor.name]}</CardTitle>
         <CardDescription>{editor.description}</CardDescription>
@@ -88,7 +88,7 @@ export default async function AdminTermsPage() {
     <>
       <PageHeader title={copy.admin.title} />
       <PagePanel>
-        <p className="max-w-3xl text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-sm">
           {copy.admin.description}
         </p>
         <Tabs className="w-full" defaultValue={TERMS_DOCUMENTS[0]}>

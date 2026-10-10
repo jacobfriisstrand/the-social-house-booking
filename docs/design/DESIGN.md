@@ -265,7 +265,7 @@ Two tabs: "Beskeder" and "House Events". Each is a table with a "Nyt opslag" / "
 
 ### Betingelser (admin)
 
-One tab per text: "Bookingbetingelser", "Privatlivspolitik", "Persondata". Each tab is a white card titled with the text, "Version N, offentliggjort DD/MM/YYYY" (or "Ikke offentliggjort endnu") as its description, a "Se den offentliggjorte version" link top right, and the text in a growing textarea with "Offentliggør ny version" under it. Saving publishes a new version; old versions are never edited. The editor sits inline on the page, not in the side panel: a legal text needs the page's width (decided in #15). Members reach the current versions from the footer line; each text opens on its own page, full panel width, plain text with its line breaks.
+One tab per text: "Bookingbetingelser", "Privatlivspolitik", "Persondata". Each tab is a white card titled with the text, "Version N, offentliggjort DD/MM/YYYY" (or "Ikke offentliggjort endnu") as its description, a "Se den offentliggjorte version" link top right, and the text in a growing textarea with "Offentliggør ny version" under it. Saving publishes a new version; old versions are never edited. The editor sits inline on the page at the panel's full width, not in the side panel: a legal text needs the room (decided in #15). Members reach the current versions from the footer line; each text opens on its own page, full panel width, plain text with its line breaks.
 
 ### Statistik (admin)
 
