@@ -42,6 +42,10 @@
     },
     { "file": "components/ui/card.tsx", "exports": ["CardAction"] },
     {
+      "file": "components/ui/progress.tsx",
+      "exports": ["ProgressLabel", "ProgressValue"]
+    },
+    {
       "file": "components/ui/input-group.tsx",
       "exports": ["InputGroupText", "InputGroupTextarea"]
     },

@@ -137,7 +137,7 @@ One of "Not invoiced" (ikke faktureret), "Invoiced" (faktureret), or "Not invoic
 The amount ready to invoice for a booking or period, excl. VAT.
 
 **Monthly booking economy** (månedens samlede bookingøkonomi):
-A cross-company admin view of one month's totals: bookings, booked room hours, room-rental value after discounts, add-ons, cancellation fees, and invoicing basis excl. VAT, split between members and external customers.
+A cross-company admin view of one month's totals: bookings, booked room hours, room-rental value after discounts, add-ons, cancellation fees, manual amounts, and invoicing basis excl. VAT, split between member and external companies. A booking belongs to the month its meeting starts in. Only bookings whose meeting has ended count; the rest of the month is shown as expected value. A booking marked not invoicable counts as a booking but adds no amount.
 
 **Invoice date / number** (fakturadato / fakturanummer):
 Recorded when admin marks bookings as invoiced.

@@ -66,3 +66,59 @@ export function formatWeekday(instant: Date | string | number): string {
 export function formatDate(instant: Date | string | number): string {
   return dateFormatter.format(new Date(instant)).replaceAll(".", "/");
 }
+
+const monthFormatter = new Intl.DateTimeFormat("da-DK", {
+  month: "long",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
+const shortMonthFormatter = new Intl.DateTimeFormat("da-DK", {
+  month: "short",
+  timeZone: "UTC",
+});
+
+const monthStart = (month: string): Date => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1, 1));
+};
+
+// formatMonth("2026-09") → "september 2026".
+export function formatMonth(month: string): string {
+  return monthFormatter.format(monthStart(month));
+}
+
+// formatShortMonth("2026-09") → "sep" (chart axes; Danish adds a dot).
+export function formatShortMonth(month: string): string {
+  return shortMonthFormatter.format(monthStart(month)).replace(".", "");
+}
+
+const decimalFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 1,
+});
+
+// formatNumber(148.5) → "148,5", formatNumber(1200) → "1.200".
+export function formatNumber(value: number): string {
+  return decimalFormatter.format(value);
+}
+
+const changeFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+  style: "percent",
+});
+
+// formatChange(0.121) → "+12,1 %", formatChange(-0.05) → "-5 %".
+export function formatChange(fraction: number): string {
+  return changeFormatter.format(fraction);
+}
+
+const shareFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 0,
+  style: "percent",
+});
+
+// formatShare(0.684) → "68 %".
+export function formatShare(fraction: number): string {
+  return shareFormatter.format(fraction);
+}

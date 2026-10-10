@@ -25,6 +25,7 @@ describe("shellMainLinks", () => {
 describe("shellAdminLinks", () => {
   it("lists the admin routes that exist", () => {
     expect(shellAdminLinks().map((link) => link.href)).toEqual([
+      "/admin/statistics",
       "/admin/bookings",
       "/admin/rooms",
       "/admin/companies",

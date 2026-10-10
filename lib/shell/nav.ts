@@ -6,6 +6,7 @@
 import {
   Building2Icon,
   CalendarIcon,
+  ChartColumnIcon,
   DoorOpenIcon,
   HouseIcon,
   type LucideIcon,
@@ -46,8 +47,14 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
   return links;
 }
 
+// Statistik leads the admin group (2026-10-10, #10).
 export function shellAdminLinks(): ShellNavLink[] {
   return [
+    {
+      href: "/admin/statistics",
+      icon: ChartColumnIcon,
+      label: messages.shell.statistics,
+    },
     {
       badgeTone: "warning",
       href: "/admin/bookings",
