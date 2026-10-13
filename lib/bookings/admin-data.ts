@@ -5,7 +5,7 @@
 // frozen snapshot yet and an expired hold never happened, so neither is a
 // row, but the hold still blocks its room and shows on the calendar.
 // The calendar reads the same window with the live statuses.
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import type {
   AdminBookingRow,
@@ -23,6 +23,7 @@ import {
   adminCalendarStateCuts,
   outstandingInvoicesFilter,
 } from "./filters";
+import { rowsOrThrow } from "./rows";
 
 type Client = SupabaseClient<Database>;
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
@@ -61,16 +62,6 @@ export interface AdminFilterOptions {
     membershipStatus: AdminMembership;
   }>;
   rooms: Array<{ roomId: string; roomName: string }>;
-}
-
-function rowsOrThrow<T>(
-  result: { data: T[] | null; error: PostgrestError | null },
-  subject: string
-): T[] {
-  if (result.error) {
-    throw new Error(`could not list ${subject}: ${result.error.message}`);
-  }
-  return result.data ?? [];
 }
 
 // A name embed the foreign keys guarantee but that RLS could still hide:

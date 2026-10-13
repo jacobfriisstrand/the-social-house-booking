@@ -31,6 +31,9 @@
       ]
     },
     { "file": "components/ui/alert.tsx", "exports": ["AlertAction"] },
+    // Toggle ships beside ToggleGroup (shadcn adds them together); the
+    // group is what the screens compose, the lone toggle stays available.
+    { "file": "components/ui/toggle.tsx", "exports": ["Toggle"] },
     { "file": "components/ui/table.tsx", "exports": ["TableFooter"] },
     {
       "file": "components/ui/breadcrumb.tsx",
@@ -98,11 +101,41 @@
   ],
   // Kept intentionally before first use, not dead code:
   // - lib/bookings/admin-cancel-actions.ts: #9 and #12 wire these actions to admin screens
-  // - lib/format.ts: formatDateTime lands with the booking overview (#8)
-  "ignoreFindings": ["lib/bookings/admin-cancel-actions.ts", "lib/format.ts"],
+  "ignoreFindings": ["lib/bookings/admin-cancel-actions.ts"],
   // netlify-cli is a manual CLI tool (docs/agents/deploy.md), never imported
   // from source, so the unused-devDependency finding is a false positive.
   "ignoreDependencies": ["netlify-cli"],
+  // Accepted complexity, kept visible as numeric ceilings (the schema's
+  // own alternative to binary suppressions). The booking overview's table
+  // and view are one client component each because the selection state,
+  // bulk actions, controls and pending-skeleton wiring share closures;
+  // splitting them is a queued refactor, not this branch.
+  "health": {
+    "thresholdOverrides": [
+      {
+        "files": ["components/bookings/admin-bookings-table.tsx"],
+        "maxCyclomatic": 24,
+        "maxCognitive": 48,
+        "reason": "AdminBookingsTable: selection, bulk actions and row overlays share one component's closures; split is queued."
+      },
+      {
+        "files": ["components/bookings/admin-bookings-view.tsx"],
+        "maxCognitive": 24,
+        "maxCrap": 250,
+        "reason": "AdminBookingsView: every URL-writing control rides one transition; the component split is queued with the table's."
+      },
+      {
+        "files": ["lib/bookings/admin-data.ts"],
+        "maxCrap": 40,
+        "reason": "CRAP is estimated without unit coverage on the admin read queries; the queries run under the seeded overview and the pgTap RLS suite."
+      },
+      {
+        "files": ["components/ui/toggle-group.tsx"],
+        "maxCrap": 32,
+        "reason": "shadcn-owned composition block, kept as added (DESIGN.md: ui components are owned, not restructured)."
+      }
+    ]
+  },
   "duplicates": {
     // :root and .dark repeat the generated shadcn token values on purpose;
     // .dark exists only so components compile (DESIGN.md: no dark mode in v1).

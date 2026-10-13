@@ -661,8 +661,108 @@ export function AdminBookingsTable({
     [move, selected]
   );
 
-  // While the rows re-read: the column headers (plain, not sortable — a
-  // sort would only queue another re-read), one skeleton row per row on
+  const selectionCount = selected.size;
+
+  // The table's head is the same in both states — the caption, the column
+  // grid, and the header row (the selection's bulk actions included, so a
+  // filter change mid-selection keeps its actions reachable) — and is
+  // stated once so the loading table cannot drift from the real one.
+  const tableCaption = (
+    <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
+  );
+  const tableHeader = (
+    <TableHeader>
+      <TableRow>
+        <TableHead className="sticky left-0 z-10 w-10">
+          <Checkbox
+            aria-label={copy.selection.selectAll}
+            checked={allSelected}
+            indeterminate={someSelected && !allSelected}
+            onCheckedChange={toggleAll}
+          />
+        </TableHead>
+        {selectionCount > 0 ? (
+          // The bulk header: the actions stand where the column titles
+          // were, and swap back when the selection clears.
+          <TableHead colSpan={COLUMNS.length + 1}>
+            {/* Left-aligned: the actions start right after the sticky
+                checkbox column, reachable even at phone width. */}
+            <div className="flex items-center gap-2">
+              <p className="whitespace-nowrap text-sm">
+                {copy.selection.selected(selectionCount)}
+              </p>
+              <Button
+                disabled={moving || !allowance.canInvoice}
+                onClick={openBulkDialog}
+                size="sm"
+                type="button"
+              >
+                {copy.markInvoiced.button}
+              </Button>
+              <Button
+                disabled={moving || !allowance.canNotInvoiced}
+                onClick={moveSelectedNotInvoiced}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {copy.markInvoiced.notInvoicedButton}
+              </Button>
+              <Button
+                disabled={moving || !allowance.canNotInvoicable}
+                onClick={moveSelectedNotInvoicable}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {copy.markInvoiced.notInvoicableButton}
+              </Button>
+              <Button
+                aria-label={copy.selection.clear}
+                onClick={clearSelection}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <XIcon aria-hidden="true" />
+              </Button>
+            </div>
+          </TableHead>
+        ) : (
+          <>
+            {COLUMNS.map((column) => (
+              <SortHead
+                column={column}
+                key={column.key}
+                onParamChange={onParamChange}
+                params={params}
+              />
+            ))}
+            <TableHead className="w-14" />
+          </>
+        )}
+      </TableRow>
+    </TableHeader>
+  );
+  // The column grid stated once, up front: table-fixed takes the widths
+  // from the cols instead of whichever header row renders first, so the
+  // swap between the column titles and the bulk actions cannot shift the
+  // columns.
+  const columnGrid = (
+    <colgroup>
+      <col className="w-10" />
+      <col className="w-36" />
+      <col />
+      <col />
+      <col />
+      <col />
+      <col />
+      <col />
+      <col className="w-14" />
+    </colgroup>
+  );
+
+  // While the rows re-read: the same head, one skeleton row per row on
   // the stale page (at least four, so an empty set still shows movement),
   // the pagination footer so the card's height holds, and a status line
   // announcing the wait the way the day grid's spinner does.
@@ -677,35 +777,9 @@ export function AdminBookingsTable({
           {messages.common.loading}
         </p>
         <Table aria-busy className="min-w-[58rem] table-fixed">
-          <colgroup>
-            <col className="w-10" />
-            <col className="w-36" />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col className="w-14" />
-          </colgroup>
-          <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="sticky left-0 z-10 w-10" />
-              {COLUMNS.map((column) => (
-                <TableHead
-                  className={cn(
-                    column.width,
-                    column.align === "right" && "text-right"
-                  )}
-                  key={column.key}
-                >
-                  {column.label}
-                </TableHead>
-              ))}
-              <TableHead className="w-14" />
-            </TableRow>
-          </TableHeader>
+          {columnGrid}
+          {tableCaption}
+          {tableHeader}
           <TableBody>
             {skeletonKeys.map((key) => (
               <SkeletonRow key={key} />
@@ -732,8 +806,6 @@ export function AdminBookingsTable({
     );
   }
 
-  const selectionCount = selected.size;
-
   return (
     <div className="flex flex-col gap-6">
       <Card className="min-w-0 gap-0 py-0">
@@ -741,94 +813,9 @@ export function AdminBookingsTable({
           className="min-w-[58rem] table-fixed"
           onMouseDownCapture={stopShiftTextSelect}
         >
-          {/* The column grid stated once, up front: table-fixed takes the
-              widths from the cols instead of whichever header row renders
-              first, so the swap between the column titles and the bulk
-              actions cannot shift the columns. */}
-          <colgroup>
-            <col className="w-10" />
-            <col className="w-36" />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col className="w-14" />
-          </colgroup>
-          <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="sticky left-0 z-10 w-10">
-                <Checkbox
-                  aria-label={copy.selection.selectAll}
-                  checked={allSelected}
-                  indeterminate={someSelected && !allSelected}
-                  onCheckedChange={toggleAll}
-                />
-              </TableHead>
-              {selectionCount > 0 ? (
-                // The bulk header: the actions stand where the column
-                // titles were, and swap back when the selection clears.
-                <TableHead colSpan={COLUMNS.length + 1}>
-                  {/* Left-aligned: the actions start right after the sticky
-                      checkbox column, reachable even at phone width. */}
-                  <div className="flex items-center gap-2">
-                    <p className="whitespace-nowrap text-sm">
-                      {copy.selection.selected(selectionCount)}
-                    </p>
-                    <Button
-                      disabled={moving || !allowance.canInvoice}
-                      onClick={openBulkDialog}
-                      size="sm"
-                      type="button"
-                    >
-                      {copy.markInvoiced.button}
-                    </Button>
-                    <Button
-                      disabled={moving || !allowance.canNotInvoiced}
-                      onClick={moveSelectedNotInvoiced}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      {copy.markInvoiced.notInvoicedButton}
-                    </Button>
-                    <Button
-                      disabled={moving || !allowance.canNotInvoicable}
-                      onClick={moveSelectedNotInvoicable}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      {copy.markInvoiced.notInvoicableButton}
-                    </Button>
-                    <Button
-                      aria-label={copy.selection.clear}
-                      onClick={clearSelection}
-                      size="icon-sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <XIcon aria-hidden="true" />
-                    </Button>
-                  </div>
-                </TableHead>
-              ) : (
-                <>
-                  {COLUMNS.map((column) => (
-                    <SortHead
-                      column={column}
-                      key={column.key}
-                      onParamChange={onParamChange}
-                      params={params}
-                    />
-                  ))}
-                  <TableHead className="w-14" />
-                </>
-              )}
-            </TableRow>
-          </TableHeader>
+          {columnGrid}
+          {tableCaption}
+          {tableHeader}
           <TableBody>
             {visible.map((row) => (
               <BookingRow
