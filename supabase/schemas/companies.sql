@@ -45,3 +45,37 @@ alter table public.companies enable row level security;
 -- here so every write path obeys, like the escalation guard in policies/.
 alter table public.companies add constraint companies_external_no_discount
   check (company_membership_status = 'member' or company_discount_percent = 0);
+
+-- ---------------------------------------------------------------------------
+-- Outlook mirror (#13, ADR-0003): the calendar entry's subject carries the
+-- company's display name (lib/domain/outlook-event.ts), so a rename re-marks
+-- the upcoming rows of the company's confirmed bookings (calendar_events.sql).
+-- SECURITY DEFINER like the other mirror triggers. ponytail: bookings that
+-- have already ended keep the name they were created with; upgrade: drop the
+-- > now() bound if staff ever need history corrected.
+create or replace function public.mark_company_bookings_calendar_dirty()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.calendar_events ce
+  set calendar_event_needs_sync = true,
+      calendar_event_updated_at = now()
+  where ce.calendar_event_booking_id in (
+    select b.booking_id
+    from public.bookings b
+    where b.booking_company_id = new.company_id
+      and b.booking_status = 'confirmed'
+      and b.booking_end_at > now()
+  );
+  return null;
+end;
+$$;
+
+create trigger companies_calendar_dirty
+  after update of company_display_name
+  on public.companies
+  for each row
+  execute function public.mark_company_bookings_calendar_dirty();

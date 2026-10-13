@@ -153,3 +153,69 @@ revoke execute on function public.save_house_event(text, timestamptz, timestampt
   from public, anon;
 grant execute on function public.save_house_event(text, timestamptz, timestamptz, uuid[], text, uuid)
   to authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- Outlook mirror (#13, ADR-0003): a house event mirrors as ONE Graph entry
+-- even when it blocks several rooms; room changes re-mark the same row
+-- (calendar_events.sql). SECURITY DEFINER like the bookings trigger — the
+-- writer is an admin session and the mirror table has no policies. The
+-- junction trigger also fires on the cascade delete of house_event_rooms
+-- when the event itself is deleted; the parent-exists guard keeps it from
+-- re-inserting a row for the deleted id while the FK actions land.
+create or replace function public.mark_house_event_calendar_dirty()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.calendar_events (calendar_event_house_event_id, calendar_event_needs_sync)
+  values (new.house_event_id, true)
+  on conflict (calendar_event_house_event_id) do update
+    set calendar_event_needs_sync = true,
+        calendar_event_updated_at = now();
+  return null;
+end;
+$$;
+
+create trigger house_events_calendar_dirty
+  after insert or update of house_event_title, house_event_description,
+    house_event_start_at, house_event_end_at
+  on public.house_events
+  for each row
+  execute function public.mark_house_event_calendar_dirty();
+
+create or replace function public.mark_house_event_rooms_calendar_dirty()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_house_event_id uuid;
+begin
+  -- On DELETE `new` is unassigned and on INSERT `old` is (bookings.sql).
+  if tg_op = 'DELETE' then
+    v_house_event_id := old.house_event_room_event_id;
+  else
+    v_house_event_id := new.house_event_room_event_id;
+  end if;
+
+  if exists (
+    select 1 from public.house_events he
+    where he.house_event_id = v_house_event_id
+  ) then
+    insert into public.calendar_events (calendar_event_house_event_id, calendar_event_needs_sync)
+    values (v_house_event_id, true)
+    on conflict (calendar_event_house_event_id) do update
+      set calendar_event_needs_sync = true,
+          calendar_event_updated_at = now();
+  end if;
+  return null;
+end;
+$$;
+
+create trigger house_event_rooms_calendar_dirty
+  after insert or delete on public.house_event_rooms
+  for each row
+  execute function public.mark_house_event_rooms_calendar_dirty();

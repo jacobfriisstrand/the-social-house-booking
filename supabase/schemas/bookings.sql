@@ -557,3 +557,46 @@ create trigger bookings_invoicing_event
   for each row
   when (old.booking_invoicing_status is distinct from new.booking_invoicing_status)
   execute function public.record_invoicing_event();
+
+-- ---------------------------------------------------------------------------
+-- Outlook mirror (#13, ADR-0003): writes to a booking mark its calendar_events
+-- row (calendar_events.sql) for the sync worker. Only confirmed bookings are
+-- mirrored — a hold has no calendar entry yet, and a cancellation or an
+-- expired hold re-marks an existing row so the worker removes the Graph
+-- entry. Runs SECURITY DEFINER (set search_path = '') because the writing
+-- session is RLS-scoped — usually the company — while calendar_events
+-- carries no policies: the mirror is service-role state. The column list
+-- keeps invoicing-status flips and reminder bookkeeping from touching the
+-- mirror.
+create or replace function public.mark_booking_calendar_dirty()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.booking_status = 'confirmed' then
+    insert into public.calendar_events (calendar_event_booking_id, calendar_event_needs_sync)
+    values (new.booking_id, true)
+    on conflict (calendar_event_booking_id) do update
+      set calendar_event_needs_sync = true,
+          calendar_event_updated_at = now();
+  elsif new.booking_status in ('cancelled', 'expired') then
+    update public.calendar_events ce
+    set calendar_event_needs_sync = true,
+        calendar_event_updated_at = now()
+    where ce.calendar_event_booking_id = new.booking_id;
+  end if;
+  -- 'pending_verification' holds are not mirrored.
+  return null;
+end;
+$$;
+
+create trigger bookings_calendar_dirty
+  after insert or update of booking_company_id, booking_room_id, booking_status,
+    booking_start_at, booking_end_at, booking_participant_count,
+    booking_booker_name, booking_booker_email, booking_booker_phone,
+    booking_reference
+  on public.bookings
+  for each row
+  execute function public.mark_booking_calendar_dirty();

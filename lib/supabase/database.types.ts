@@ -291,6 +291,54 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          calendar_event_booking_id: string | null
+          calendar_event_created_at: string
+          calendar_event_graph_event_id: string | null
+          calendar_event_house_event_id: string | null
+          calendar_event_id: string
+          calendar_event_last_synced_at: string | null
+          calendar_event_needs_sync: boolean
+          calendar_event_updated_at: string
+        }
+        Insert: {
+          calendar_event_booking_id?: string | null
+          calendar_event_created_at?: string
+          calendar_event_graph_event_id?: string | null
+          calendar_event_house_event_id?: string | null
+          calendar_event_id?: string
+          calendar_event_last_synced_at?: string | null
+          calendar_event_needs_sync?: boolean
+          calendar_event_updated_at?: string
+        }
+        Update: {
+          calendar_event_booking_id?: string | null
+          calendar_event_created_at?: string
+          calendar_event_graph_event_id?: string | null
+          calendar_event_house_event_id?: string | null
+          calendar_event_id?: string
+          calendar_event_last_synced_at?: string | null
+          calendar_event_needs_sync?: boolean
+          calendar_event_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_calendar_event_booking_id_fkey"
+            columns: ["calendar_event_booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_calendar_event_house_event_id_fkey"
+            columns: ["calendar_event_house_event_id"]
+            isOneToOne: true
+            referencedRelation: "house_events"
+            referencedColumns: ["house_event_id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           company_attention: string | null

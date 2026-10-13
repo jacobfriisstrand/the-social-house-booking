@@ -85,6 +85,30 @@ export function cphToUtc(date: string, time: string): Date {
   return new Date(naive - cphOffsetMinutes(new Date(guess)) * MS_PER_MINUTE);
 }
 
+const cphStampFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  hour: "2-digit",
+  hourCycle: "h23",
+  minute: "2-digit",
+  month: "2-digit",
+  second: "2-digit",
+  timeZone: CPH_TIMEZONE,
+  year: "numeric",
+});
+
+// The instant as a Copenhagen wall-clock stamp ("2026-10-14", "09:05:00"),
+// the shape the Graph API wants for an event's naive datetime plus named
+// zone (lib/domain/outlook-event.ts, ADR-0021).
+export function cphStamp(utc: Date): { date: string; time: string } {
+  const parts = cphStampFormatter.formatToParts(utc);
+  const part = (type: string): string =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    time: `${part("hour")}:${part("minute")}:${part("second")}`,
+  };
+}
+
 /** Whether the period is exactly one Copenhagen wall-clock day — the House
  * Event form's "Hele dagen" sends 00:00/24:00, which is this span. Reading
  * the wall clock instead of the millisecond span keeps it true across a

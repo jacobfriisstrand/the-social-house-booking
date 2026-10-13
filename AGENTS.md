@@ -35,7 +35,8 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 | `docs/agents/typescript.md` | discriminated unions for state, type modeling |
 | `docs/agents/supabase.md` | declarative schemas, migrations, generated types, RLS, pgTAP, service-role allowlist, local Edge Functions |
 | `docs/agents/auth.md` | email login, admin role in JWT, booker verification, holds |
-| `docs/agents/email.md` | `sendMail()`, Resend templates, webhook, the one hourly job |
+| `docs/agents/email.md` | `sendMail()`, Resend templates, webhook, the reminder job |
+| `docs/agents/outlook-sync.md` | Outlook one-way calendar mirror, Microsoft Graph, the sync job |
 | `docs/agents/deploy.md` | environments, branches, CI, Netlify |
 | `docs/agents/ui.md` | shadcn/Base UI, forms, `messages/da.ts` |
 | `docs/agents/testing.md` | what Vitest and pgTAP each own |
@@ -45,7 +46,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 ## Hard rules
 
 - **Money** is integer øre, excl. VAT, everywhere (ADR-0019, ADR-0020). **Time** is `timestamptz` UTC; display in `Europe/Copenhagen` (ADR-0021). **Columns** carry the singular table-name prefix (ADR-0018).
-- **Data access**: user session + RLS by default, admins included. The service-role client is allowed only in the four places listed in `docs/agents/supabase.md` (plus `scripts/create-admin.ts`, which builds its own in a standalone process).
+- **Data access**: user session + RLS by default, admins included. The service-role client is allowed only in the places listed in `docs/agents/supabase.md` (plus `scripts/create-admin.ts`, which builds its own in a standalone process).
 - **Mutations** are Server Actions validated with zod. The only `route.ts` files are `app/api/webhooks/resend/`, `app/api/webhooks/sentry/` and `app/api/jobs/*`.
 - **Email** goes through `lib/email/sendMail.ts` (app) or `supabase/functions/send-email` (auth). Nothing else imports Resend. Development redirects all mail to `EMAIL_REDIRECT_TO`.
 - **Schema** changes are edits to `supabase/schemas/` + `supabase db diff` + regenerated `lib/supabase/database.types.ts` + a pgTAP test, in one PR. Never `db push` from a laptop; never change anything in the Supabase dashboard.
@@ -53,7 +54,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 - **Copy**: Danish strings live in `messages/da.ts` (UI) or `emails/templates/` (email); none in components. Code, comments, commits, docs in English.
 - **Lint/format**: Ultracite only. No ESLint, no Prettier. `npm run fix` before committing.
 - **Output**: user-facing text goes through `unslop` (plain language, ISO 24495-1). Applies to what the agent sends, never to its reasoning.
-- **Scheduling**: one Netlify scheduled function → `POST /api/jobs/send-reminders`. No croner, no pg_cron, no Resend `scheduledAt`.
+- **Scheduling**: two Netlify scheduled functions, production only → `POST /api/jobs/send-reminders` (`@hourly`) and `POST /api/jobs/sync-calendar` (`*/5 * * * *`, since #13). No croner, no pg_cron, no Resend `scheduledAt`.
 - **Sentry** never receives booker or contact data; correlate on `company_id` and `booking_number`.
 - **Layout**: `app/`, `components/`, `lib/`, `emails/`, `messages/`, `scripts/`, `netlify/`, `supabase/`, `docs/` at the root. No `src/`.
 
@@ -61,7 +62,7 @@ Two environments only: `development` (local, `develop` branch, deploy previews) 
 
 Branch from `develop` → PR into `develop` (squash) → release PR `develop` → `main`. Conventional commits. CI must be green: `check`, `tsc`, `vitest`, `supabase test db`, types up to date, `next build`. Agents open PRs; humans merge. Skills in `.agents/skills/`: load `supabase-postgres-best-practices` before SQL, `supabase` before any Supabase work (edge functions, auth hooks, clients), `shadcn` before components, `vercel-react-best-practices` before React, and `tdd` when building a behaviour test-first.
 
-Out of scope until their milestone: Microsoft Graph / Outlook sync, English UI, payments.
+Out of scope until their milestone: English UI, payments.
 
 
 # Ultracite Code Standards

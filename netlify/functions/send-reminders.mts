@@ -1,6 +1,7 @@
-// The one scheduled job (docs/agents/email.md). Netlify runs it hourly on the
-// production deploy only. It does nothing itself: it calls the job route,
-// which owns the reminder and hold-release logic behind JOB_SECRET.
+// One of the two scheduled jobs (docs/agents/email.md). Netlify runs it
+// hourly on the production deploy only. It does nothing itself: it calls the
+// job route, which owns the reminder and hold-release logic behind
+// JOB_SECRET.
 //
 // process.env is read here by design (Netlify function, outside the Next.js
 // bundle); the exemption is in biome.jsonc.

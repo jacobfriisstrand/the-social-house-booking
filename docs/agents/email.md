@@ -56,7 +56,7 @@ The Supabase Send Email Hook is the Edge Function `supabase/functions/send-email
 
 ## The hourly job
 
-There is exactly one scheduled job.
+One of the two scheduled jobs (the other is the Outlook sync, `docs/agents/outlook-sync.md`).
 
 - **Trigger**: `netlify/functions/send-reminders.mts` with `export const config = { schedule: "@hourly" }`. Its only job is `POST ${NEXT_PUBLIC_SITE_URL}/api/jobs/send-reminders` with `Authorization: Bearer ${JOB_SECRET}`. Netlify runs scheduled functions on the **production** deploy only; on `develop`, call the route manually with the secret.
 - **Route**: `app/api/jobs/send-reminders/route.ts`, verifies `JOB_SECRET`, then:
