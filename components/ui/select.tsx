@@ -25,12 +25,19 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   return (
     <SelectPrimitive.Value
-      className={cn("flex flex-1 text-left", className)}
+      className={cn("line-clamp-1 flex min-w-0 flex-1 text-left", className)}
       data-slot="select-value"
       {...props}
     />
   );
 }
+
+// The trigger's box, exported for the filter row's date-range picker so
+// the picker sizes and reads exactly like the selects it sits beside
+// (admin-bookings-view.tsx). The data-size variants work on any element
+// carrying data-size.
+export const selectTriggerBox =
+  "cursor-pointer text-left flex w-fit select-none items-center whitespace-nowrap rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=md]:py-2 data-placeholder:text-muted-foreground dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 dark:hover:bg-input/50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0";
 
 function SelectTrigger({
   className,
@@ -38,24 +45,27 @@ function SelectTrigger({
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
-  size?: "sm" | "default";
+  // sm for dense table rows, md for the filter row — md is the default box
+  // with more padding top and bottom.
+  size?: "sm" | "default" | "md";
 }) {
   return (
     <SelectPrimitive.Trigger
-      className={cn(
-        "flex w-fit select-none items-center justify-between gap-1.5 whitespace-nowrap rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-placeholder:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 dark:hover:bg-input/50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        className
-      )}
+      className={cn(selectTriggerBox, className)}
       data-size={size}
       data-slot="select-trigger"
       {...props}
     >
-      {children}
-      <SelectPrimitive.Icon
-        render={
-          <ChevronsUpDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-        }
-      />
+      {/* The trailing group keeps the caller's clear x and the chevron
+          next to each other, gap-0.5, whatever the value length. */}
+      <span className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+        {children}
+        <SelectPrimitive.Icon
+          render={
+            <ChevronsUpDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+          }
+        />
+      </span>
     </SelectPrimitive.Trigger>
   );
 }

@@ -42,6 +42,17 @@ export function formatDateString(value: string): string {
   return `${day}/${month}/${year}`;
 }
 
+// formatMonthYear("2026-10-01") → "oktober 2026" — a bare yyyy-mm-dd
+// date's month and year, for period titles.
+export function formatMonthYear(value: string): string {
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("da-DK", {
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, (month ?? 1) - 1, 1)));
+}
+
 // formatDateTime("2026-09-02T17:00:00Z") → "02/09/2026 19:00" (Danish locale writes "19.00"; the spec wants "HH:mm").
 export function formatDateTime(instant: Date | string | number): string {
   return `${formatDate(instant)} ${formatTime(instant)}`;

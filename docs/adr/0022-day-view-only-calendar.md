@@ -9,4 +9,4 @@ The calendar is a single day grid: 30-minute rows from 09:00 to 22:00, one colum
 
 The original reasoning stands everywhere else: one day grid for "now", and the invoicing view as the place where longer spans are read with filters and totals rather than raw room columns.
 
-**Amendment (2026-10-07, issue #9):** the overview's day and week views are dropped again. The list carries the detail and prev / I dag / next steps the period a month at a time, so the admin page is the list and the month grid only; the 30-minute day grid stays on Hjem, and the week grid across six rooms remains unreadable.
+**Amendment (2026-10-07, issue #9):** the overview's day and week views are dropped again. The list carries the detail and prev / Denne måned / next steps the period a month at a time, so the admin page is the list and the month grid only; the 30-minute day grid stays on Hjem, and the week grid across six rooms remains unreadable.

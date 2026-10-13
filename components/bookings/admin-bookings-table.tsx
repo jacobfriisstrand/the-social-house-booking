@@ -1,20 +1,39 @@
 "use client";
 
 // Bookinger (admin), the invoicing list (#9, DESIGN.md "Bookinger
-// (admin)"): one booking per row with its snapshot numbers, House Events
-// as "Ikke fakturerbar" rows, a totals row for the filtered set, sortable
-// columns, and the bulk mark — "Markér som faktureret" with the invoice
-// date and number, or "Ikke fakturerbar". Only ended, still un-invoiced
-// rows enable the bulk actions; the server and the database re-check.
-// Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
+// (admin)"): one booking per row — number, company, room, date, the price
+// after discount, status — sortable columns. With rows ticked, the header
+// row swaps its column titles for the bulk actions — mark invoiced, not
+// invoiced, not invoicable — and swaps back when the selection clears.
+// Every booking is
+// selectable, a future one too, so it can be refused before it is held;
+// the row's ⋯ menu carries the same three actions for one booking. The
+// row's numbers beyond those live in the detail sheet (row click or
+// ⋯ menu); the ⋯ menu holds the invoice actions and the edit sheet. The
+// server and the database re-check every move. Amounts
+// integer øre, excl. VAT (ADR-0019, ADR-0020).
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
+  BanIcon,
+  EllipsisIcon,
+  FileCheckIcon,
+  FileXIcon,
+  ListIcon,
+  PencilIcon,
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
 import {
   BookingStatusBadge,
@@ -23,9 +42,8 @@ import {
 import { MarkInvoicedDialog } from "@/components/bookings/mark-invoiced-dialog";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
@@ -34,43 +52,37 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
+import {
   Table,
   TableBody,
   TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   type AdminViewParams,
   adminViewHref,
 } from "@/lib/bookings/admin-view-params";
-import { markBookingsNotInvoicable } from "@/lib/bookings/invoicing-actions";
+import { setBookingsInvoicingStatus } from "@/lib/bookings/invoicing-actions";
 import {
-  type AdminOverviewRow,
+  type AdminBookingRow,
   type AdminSortKey,
   adminRowParts,
-  adminTotals,
-  bookingIsInvoicable,
-  bookingNotInvoicableReason,
-  breakdownAdminRows,
+  invoicingActionAllowance,
+  shiftRangeIds,
   sortAdminRows,
 } from "@/lib/domain/admin-bookings";
-import {
-  formatDate,
-  formatDateString,
-  formatHours,
-  formatOre,
-  formatTime,
-} from "@/lib/format";
+import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
+import { formatDate, formatOre, formatTime } from "@/lib/format";
 import { slicePage } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
@@ -78,39 +90,65 @@ import { messages } from "@/messages/da";
 const copy = messages.bookings.admin;
 const bookingsCopy = messages.bookings;
 
+/** One row-scoped overlay: which booking and which sheet — the detail
+ * view or the edit sheet; the invoice dialog has its own ids state. */
+interface Overlay {
+  bookingId: string;
+  kind: "detail" | "edit";
+}
+
 const NONE = "-";
+
+// Frozen empty arrays: the dialogs' bookingIds prop must keep its
+// identity across renders or the reset effect wipes the form mid-typing.
+const NO_IDS: string[] = [];
+const EMPTY_MANUAL_AMOUNTS: AdminBookingRow["manualAmounts"] = [];
+
+// The tick cell and the ⋯ cell opt out of the row's open-detail click;
+// the stable identity is the callback-bound lint rule.
+const stopRowClick = (event: { stopPropagation: () => void }): void => {
+  event.stopPropagation();
+};
+
+/** The booking row an id picked, or null — the id list is the trigger, so
+ * a sort re-read keeps the open sheet. */
+function bookingRowById(
+  rows: AdminBookingRow[],
+  bookingId: string | null
+): AdminBookingRow | null {
+  if (bookingId === null) {
+    return null;
+  }
+  return rows.find((row) => row.bookingId === bookingId) ?? null;
+}
 
 interface ColumnDef {
   align?: "right";
   key: AdminSortKey;
   label: string;
+  // Explicit width in a table-fixed table; the rest share what remains.
+  width?: string;
 }
 
 // The columns between the first and the last share the width evenly
 // (table-fixed); every money column is right-aligned (DESIGN.md
-// "Components").
+// "Components"). Status first after the checkbox and as narrow as the
+// widest badge needs, so the shared columns keep their room; the slim
+// list: number, company, room, date, the price after discount — the rest
+// of the numbers live in the row's detail sheet, the actions in the ⋯
+// menu.
 const COLUMNS: ColumnDef[] = [
+  { key: "status", label: bookingsCopy.columns.status, width: "w-36" },
   { key: "bookingNumber", label: bookingsCopy.columns.bookingNumber },
   { key: "company", label: copy.columns.company },
   { key: "room", label: bookingsCopy.columns.room },
   { key: "date", label: bookingsCopy.columns.dateTime },
-  { align: "right", key: "hours", label: copy.columns.hours },
-  { align: "right", key: "roomPrice", label: copy.columns.roomRent },
-  { align: "right", key: "discount", label: copy.columns.discount },
+  { key: "addOns", label: bookingsCopy.columns.addOns },
   {
     align: "right",
     key: "memberPrice",
-    label: copy.columns.roomRentAfterDiscount,
+    label: copy.columns.totalPrice,
   },
-  { align: "right", key: "addOns", label: bookingsCopy.columns.addOns },
-  {
-    align: "right",
-    key: "fee",
-    label: bookingsCopy.columns.cancellationFee,
-  },
-  { align: "right", key: "manualAmounts", label: copy.columns.manualAmounts },
-  { align: "right", key: "total", label: copy.columns.total },
-  { key: "status", label: bookingsCopy.columns.status },
 ];
 
 function SortHead({
@@ -138,7 +176,7 @@ function SortHead({
   return (
     <TableHead
       aria-sort={ariaSort}
-      className={cn(column.align === "right" && "text-right")}
+      className={cn(column.width, column.align === "right" && "text-right")}
     >
       <button
         className={cn(
@@ -155,98 +193,184 @@ function SortHead({
   );
 }
 
-function HouseEventRow({
-  entry,
+// One row's ⋯ menu (#9): the details view, the three invoice actions and
+// the edit sheet in one place — the same actions the bulk header runs,
+// just for the one booking. The item matching the row's current status is
+// absent (it is already there), and marking invoiced stays off until the
+// booking has ended: the dialog carries date and number.
+function RowActionsMenu({
+  bookingId,
+  bookingNumber,
+  canEdit,
+  ended,
+  invoicingStatus,
+  moving,
+  onDetail,
+  onEdit,
+  onInvoice,
+  onMove,
 }: {
-  entry: AdminOverviewRow & { kind: "house_event" };
+  bookingId: string;
+  bookingNumber: string;
+  canEdit: boolean;
+  ended: boolean;
+  invoicingStatus: BookingInvoicingStatus;
+  moving: boolean;
+  onDetail: (bookingId: string) => void;
+  onEdit: (bookingId: string) => void;
+  onInvoice: (bookingId: string) => void;
+  onMove: (
+    bookingIds: string[],
+    target: "not_invoiced" | "not_invoicable"
+  ) => void;
 }) {
-  const { row } = entry;
+  const openDetails = useCallback(
+    () => onDetail(bookingId),
+    [onDetail, bookingId]
+  );
+  const openInvoice = useCallback(
+    () => onInvoice(bookingId),
+    [onInvoice, bookingId]
+  );
+  const moveToNotInvoiced = useCallback(
+    () => onMove([bookingId], "not_invoiced"),
+    [onMove, bookingId]
+  );
+  const moveToNotInvoicable = useCallback(
+    () => onMove([bookingId], "not_invoicable"),
+    [onMove, bookingId]
+  );
+  const openEditor = useCallback(() => onEdit(bookingId), [onEdit, bookingId]);
   return (
-    <TableRow>
-      <TableCell>
-        <span className="text-muted-foreground">{NONE}</span>
-      </TableCell>
-      <TableCell className="truncate font-medium">
-        {copy.houseEventRow.company}
-      </TableCell>
-      <TableCell className="truncate">{row.roomNames.join(", ")}</TableCell>
-      <TableCell className="tabular-nums">
-        <span className="block">{formatDate(row.startAt)}</span>
-        <span className="block text-muted-foreground text-xs">
-          {formatTime(row.startAt)} - {formatTime(row.endAt)}
-        </span>
-      </TableCell>
-      {COLUMNS.slice(4, 12).map((column) => (
-        <TableCell className="text-right tabular-nums" key={column.key}>
-          <span className="text-muted-foreground">{NONE}</span>
-        </TableCell>
-      ))}
-      <TableCell>
-        <div className="flex flex-col items-start gap-1">
-          <Badge variant="info">
-            {row.title ?? messages.home.houseEventBadge}
-          </Badge>
-          <InvoicingStatusBadge status="not_invoicable" />
-        </div>
-      </TableCell>
-      <TableCell />
-    </TableRow>
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            aria-label={copy.actions.open(bookingNumber)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={openDetails}>
+          <ListIcon aria-hidden="true" />
+          {copy.actions.details}
+        </MenuItem>
+        {invoicingStatus === "invoiced" ? null : (
+          <MenuItem disabled={!ended} onClick={openInvoice}>
+            <FileCheckIcon aria-hidden="true" />
+            {copy.markInvoiced.button}
+          </MenuItem>
+        )}
+        {invoicingStatus === "not_invoiced" ? null : (
+          <MenuItem disabled={moving} onClick={moveToNotInvoiced}>
+            <FileXIcon aria-hidden="true" />
+            {copy.markInvoiced.notInvoicedButton}
+          </MenuItem>
+        )}
+        {invoicingStatus === "not_invoicable" ? null : (
+          <MenuItem disabled={moving} onClick={moveToNotInvoicable}>
+            <BanIcon aria-hidden="true" />
+            {copy.markInvoiced.notInvoicableButton}
+          </MenuItem>
+        )}
+        {canEdit ? (
+          <>
+            <MenuSeparator />
+            <MenuItem onClick={openEditor}>
+              <PencilIcon aria-hidden="true" />
+              {copy.editLabel}
+            </MenuItem>
+          </>
+        ) : null}
+      </MenuContent>
+    </Menu>
   );
 }
 
 function BookingRow({
-  entry,
+  row,
   now,
+  onDetail,
+  onEdit,
+  onInvoice,
+  onMove,
   selected,
   toggle,
+  moving,
 }: {
-  entry: AdminOverviewRow & { kind: "booking" };
+  row: AdminBookingRow;
   now: Date;
+  onDetail: (bookingId: string) => void;
+  onEdit: (bookingId: string) => void;
+  onInvoice: (bookingId: string) => void;
+  onMove: (
+    bookingIds: string[],
+    target: "not_invoiced" | "not_invoicable"
+  ) => void;
   selected: boolean;
-  toggle: (bookingId: string) => void;
+  toggle: (bookingId: string, shiftKey: boolean) => void;
+  moving: boolean;
 }) {
-  const { row } = entry;
   const parts = adminRowParts(row);
-  // Why the row cannot be picked: already invoiced/not invoicable, or the
-  // booking has not ended yet — an X with a tooltip instead of a checkbox.
-  const reason = bookingNotInvoicableReason(row, now);
-  const onToggle = useCallback(
-    () => toggle(row.bookingId),
-    [toggle, row.bookingId]
-  );
+  // The invoice mark waits for the end time; refusing and un-invoicing do
+  // not.
+  const ended = new Date(row.endAt).getTime() <= now.getTime();
+  // Shift-click range selection: the modifier is read in the capture phase
+  // on the checkbox root itself — a click there is what triggers the
+  // change (the label forwards it to the hidden input, a sibling, whose
+  // click would otherwise reset the flag) — and consumed by the change it
+  // triggers. Keyboard toggles never pass a click through the root, so
+  // the flag stays unset.
+  const shiftKey = useRef(false);
+  const readShift = useCallback((event: MouseEvent): void => {
+    shiftKey.current = event.shiftKey;
+  }, []);
+  const onToggle = useCallback(() => {
+    const shift = shiftKey.current;
+    shiftKey.current = false;
+    toggle(row.bookingId, shift);
+  }, [toggle, row.bookingId]);
   const checkbox = (
     <Checkbox
       aria-label={copy.selection.selectRow(row.bookingNumber)}
       checked={selected}
       onCheckedChange={onToggle}
+      onClickCapture={readShift}
     />
   );
-  const invoicedLine =
-    row.invoicingStatus === "invoiced" && row.invoiceDate
-      ? `${formatDateString(row.invoiceDate)}${row.invoiceNumber ? ` · ${row.invoiceNumber}` : ""}`
-      : null;
+  const openRow = useCallback(
+    () => onDetail(row.bookingId),
+    [onDetail, row.bookingId]
+  );
+  // The row's total: the room price after discount, or — on a cancelled
+  // booking, whose room was never served (ADR-0006) — the payable fee
+  // alone. A waived fee leaves nothing to invoice.
+  const amountOre =
+    parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
 
   return (
-    <TableRow>
+    // Clicking the row opens the detail sheet; the tick and the ⋯ menu
+    // opt out below.
+    <TableRow className="cursor-pointer" onClick={openRow}>
+      <TableCell onClick={stopRowClick}>{checkbox}</TableCell>
       <TableCell>
-        {reason === null ? (
-          checkbox
-        ) : (
-          <Tooltip>
-            <TooltipTrigger
-              aria-label={copy.selection.reasons[reason]}
-              render={
-                <span
-                  className="flex size-4 items-center justify-center"
-                  role="img"
-                />
-              }
-            >
-              <XIcon aria-hidden className="size-3.5 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent>{copy.selection.reasons[reason]}</TooltipContent>
-          </Tooltip>
-        )}
+        {/* Every row reserves the fullest badge stack — two badges plus
+            the gap between them (2 × h-5 + gap-1 = min-h-11) — so a
+            cancelled booking's second badge never makes its row taller
+            than the rest; the lone badge centers in the reserved room. */}
+        <div className="flex min-h-11 flex-col items-start justify-center gap-1">
+          <InvoicingStatusBadge status={row.invoicingStatus} />
+          {row.bookingStatus === "cancelled" ? (
+            <BookingStatusBadge status={row.bookingStatus} />
+          ) : null}
+          {/* The invoice date and number live in the detail sheet, not
+              here. */}
+        </div>
       </TableCell>
       <TableCell className="font-mono">{row.bookingNumber}</TableCell>
       <TableCell className="truncate font-medium">{row.companyName}</TableCell>
@@ -257,110 +381,33 @@ function BookingRow({
           {formatTime(row.startAt)} - {formatTime(row.endAt)}
         </span>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {parts.minutes === null ? NONE : formatHours(parts.minutes)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {parts.roomPriceOre === null ? NONE : formatOre(parts.roomPriceOre)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.bookingStatus === "cancelled" || row.discountPercent === 0
-          ? bookingsCopy.noDiscount
-          : `${row.discountPercent} %`}
-      </TableCell>
-      <TableCell className="text-right font-medium tabular-nums">
-        {parts.memberPriceOre === null ? NONE : formatOre(parts.memberPriceOre)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {parts.addOnsOre === null || parts.addOnsOre === 0
-          ? NONE
-          : formatOre(parts.addOnsOre)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {parts.feeOre === 0 ? NONE : formatOre(parts.feeOre)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.manualAmounts.length === 0
-          ? copy.manualAmounts.none
-          : formatOre(row.manualAmountsOre)}
-      </TableCell>
-      <TableCell className="text-right font-medium tabular-nums">
-        {formatOre(parts.basisOre)}
-      </TableCell>
+      {/* The add-ons indicator: "Ja" when the booking carries add-ons —
+          the exact lines live in the detail sheet's price panel. */}
       <TableCell>
-        <div className="flex flex-col items-start gap-1">
-          <InvoicingStatusBadge status={row.invoicingStatus} />
-          {row.bookingStatus === "cancelled" ? (
-            <BookingStatusBadge status={row.bookingStatus} />
-          ) : null}
-          {invoicedLine ? (
-            <span className="text-muted-foreground text-xs">
-              {invoicedLine}
-            </span>
-          ) : null}
-        </div>
+        {row.addOns.length === 0 ? NONE : bookingsCopy.columns.addOnsYes}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-right font-medium tabular-nums">
+        {amountOre === null ? NONE : formatOre(amountOre)}
+      </TableCell>
+      <TableCell className="text-right" onClick={stopRowClick}>
         {/* A manual amount documents a held meeting (#16), so a cancelled
             booking — cancelled before it began, its basis the fee alone —
-            gets no edit button: the sheet's first setting has nothing to
+            gets no edit item: the sheet's first setting has nothing to
             offer it. */}
-        {row.bookingStatus === "cancelled" ? null : (
-          <BookingEditSheet
-            bookingId={row.bookingId}
-            bookingNumber={row.bookingNumber}
-            manualAmounts={row.manualAmounts}
-          />
-        )}
+        <RowActionsMenu
+          bookingId={row.bookingId}
+          bookingNumber={row.bookingNumber}
+          canEdit={row.bookingStatus !== "cancelled"}
+          ended={ended}
+          invoicingStatus={row.invoicingStatus}
+          moving={moving}
+          onDetail={onDetail}
+          onEdit={onEdit}
+          onInvoice={onInvoice}
+          onMove={onMove}
+        />
       </TableCell>
     </TableRow>
-  );
-}
-
-function Breakdown({
-  entries,
-  title,
-}: {
-  entries: Array<{
-    bookingCount: number;
-    label: string;
-    minutes: number;
-    basisOre: number;
-  }>;
-  title: string;
-}) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <h3 className="font-medium text-sm">{title}</h3>
-      <Table className="table-fixed">
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-2/5" />
-            <TableHead className="text-right">
-              {copy.breakdown.bookings}
-            </TableHead>
-            <TableHead className="text-right">{copy.breakdown.hours}</TableHead>
-            <TableHead className="text-right">{copy.breakdown.total}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entries.map((entry) => (
-            <TableRow key={entry.label}>
-              <TableCell className="truncate">{entry.label}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {entry.bookingCount}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatHours(entry.minutes)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatOre(entry.basisOre)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
   );
 }
 
@@ -369,7 +416,7 @@ export function AdminBookingsTable({
   rows,
 }: {
   params: AdminViewParams;
-  rows: AdminOverviewRow[];
+  rows: AdminBookingRow[];
 }) {
   const router = useRouter();
   const now = useMemo(() => new Date(), []);
@@ -380,81 +427,204 @@ export function AdminBookingsTable({
     [rows, params.sort, params.sortDir]
   );
   const visible = slicePage(sorted, paged.page, paged.pageSize);
-  const totals = useMemo(() => adminTotals(rows), [rows]);
-  const byCompany = useMemo(() => breakdownAdminRows(rows, "company"), [rows]);
-  const byRoom = useMemo(() => breakdownAdminRows(rows, "room"), [rows]);
 
   // The selection holds booking ids; a fresh row set (a filter, a mark, a
   // period change) starts a new selection. The trigger is the id list, not
   // the rows identity: a sort re-reads the same rows and must keep the
   // ticks. The reset runs at render time when the key changes — React's
   // documented pattern for resetting state on a prop change.
-  const rowKey = rows
-    .map((entry) =>
-      entry.kind === "booking" ? entry.row.bookingId : entry.row.houseEventId
-    )
-    .join("\n");
+  const rowKey = rows.map((row) => row.bookingId).join("\n");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  // The anchor for shift-click ranges: the last clicked row. A fresh row
+  // set (a filter, a mark, a period change) starts both over.
+  const [anchorId, setAnchorId] = useState<string | null>(null);
   const [keyRead, setKeyRead] = useState(rowKey);
   if (rowKey !== keyRead) {
     setKeyRead(rowKey);
     setSelected(new Set());
+    setAnchorId(null);
   }
 
-  // Only rows the action accepts participate: ended and still un-invoiced.
-  const selectable = useMemo(
-    () =>
-      sorted.filter(
-        (entry): entry is AdminOverviewRow & { kind: "booking" } =>
-          entry.kind === "booking" && bookingIsInvoicable(entry.row, now)
-      ),
-    [sorted, now]
-  );
+  // Every booking participates — a future one too, so the admin can take
+  // it out of the basis before it is held.
   const allSelected =
-    selectable.length > 0 &&
-    selectable.every((entry) => selected.has(entry.row.bookingId));
-  const someSelected = selectable.some((entry) =>
-    selected.has(entry.row.bookingId)
+    sorted.length > 0 && sorted.every((row) => selected.has(row.bookingId));
+  const someSelected = sorted.some((row) => selected.has(row.bookingId));
+  // The ticked rows decide which bulk action can run — the same rules the
+  // server re-checks: the invoice mark needs every row ended and open for
+  // an invoice, un-invoicing every row invoiced or refused, refusing any
+  // row not already refused, a future booking included.
+  const selectedEntries = useMemo(
+    () => sorted.filter((row) => selected.has(row.bookingId)),
+    [sorted, selected]
+  );
+  const allowance = useMemo(
+    () => invoicingActionAllowance(selectedEntries, now),
+    [selectedEntries, now]
   );
 
-  const toggle = useCallback((bookingId: string): void => {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(bookingId)) {
-        next.delete(bookingId);
-      } else {
-        next.add(bookingId);
-      }
-      return next;
-    });
-  }, []);
+  // A plain click toggles one row and becomes the anchor. With shift held
+  // it adds the range from the anchor to the clicked row and never
+  // unticks; without an anchor on this page it falls back to the plain
+  // toggle.
+  const toggle = useCallback(
+    (bookingId: string, shiftKey: boolean): void => {
+      const visibleIds = visible.map((row) => row.bookingId);
+      setSelected((current) => {
+        const range = shiftKey
+          ? shiftRangeIds(visibleIds, anchorId, bookingId)
+          : null;
+        if (range) {
+          return new Set([...current, ...range]);
+        }
+        const next = new Set(current);
+        if (next.has(bookingId)) {
+          next.delete(bookingId);
+        } else {
+          next.add(bookingId);
+        }
+        return next;
+      });
+      setAnchorId(bookingId);
+    },
+    [anchorId, visible]
+  );
   const toggleAll = useCallback((): void => {
     setSelected(() =>
-      allSelected
-        ? new Set()
-        : new Set(selectable.map((entry) => entry.row.bookingId))
+      allSelected ? new Set() : new Set(sorted.map((row) => row.bookingId))
     );
-  }, [allSelected, selectable]);
+  }, [allSelected, sorted]);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [refusing, startRefusing] = useTransition();
-  const refuse = useCallback((): void => {
-    startRefusing(async () => {
-      const result = await markBookingsNotInvoicable([...selected]);
-      if (result.status === "success") {
+  // Shift-click extends the browser's own text selection from the last
+  // pressed tick across the range, so the row text lights up alongside
+  // the ticks. Cancelling that mousedown default keeps the highlight off
+  // while the click still toggles the checkbox.
+  const stopShiftTextSelect = useCallback((event: MouseEvent): void => {
+    if (
+      event.shiftKey &&
+      event.target instanceof Element &&
+      event.target.closest('[data-slot="checkbox"]') !== null
+    ) {
+      event.preventDefault();
+    }
+  }, []);
+
+  // The row-scoped overlays (detail sheet, edit sheet) share one state:
+  // the overlay content stays set after close — the exit animation plays
+  // over it — and a new open replaces it. `overlayOpen` drives the mount.
+  const [overlay, setOverlay] = useState<Overlay | null>(null);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const detailRow = useMemo(
+    () =>
+      bookingRowById(
+        rows,
+        overlay?.kind === "detail" ? overlay.bookingId : null
+      ),
+    [rows, overlay]
+  );
+  const editRow = useMemo(
+    () =>
+      bookingRowById(rows, overlay?.kind === "edit" ? overlay.bookingId : null),
+    [rows, overlay]
+  );
+  // The invoice dialog: one instance for the bulk mark and the ⋯ menu's
+  // single-row mark. `dialogIds` is set on open only, so its identity —
+  // and the dialog's reset effect — stays put while it is open. The
+  // dialog labels each per-booking field with its booking number and each
+  // company field with the company, so the ids ride with the frozen rows.
+  const [dialogIds, setDialogIds] = useState<string[] | null>(null);
+  const dialogBookings = useMemo(
+    () =>
+      (dialogIds ?? NO_IDS).map((bookingId) => {
+        const row = bookingRowById(rows, bookingId);
+        return {
+          bookingId,
+          bookingNumber: row?.bookingNumber ?? "",
+          companyId: row?.companyId ?? "",
+          companyName: row?.companyName ?? "",
+        };
+      }),
+    [dialogIds, rows]
+  );
+  // One status move for the row menu and the bulk header: the row menu
+  // passes the one booking and keeps the selection, the bulk header the
+  // whole selection and clears it.
+  const [moving, startMoving] = useTransition();
+  const move = useCallback(
+    (
+      bookingIds: string[],
+      target: "not_invoiced" | "not_invoicable",
+      clear = false
+    ): void => {
+      startMoving(async () => {
+        const result = await setBookingsInvoicingStatus(bookingIds, target);
+        if (result.status === "success") {
+          toast.add({
+            title:
+              target === "not_invoiced"
+                ? copy.markInvoiced.notInvoicedSaved(bookingIds.length)
+                : copy.markInvoiced.notInvoicableSaved,
+            type: "success",
+          });
+          if (clear) {
+            setSelected(new Set());
+          }
+          router.refresh();
+          return;
+        }
         toast.add({
-          title: copy.markInvoiced.notInvoicableSaved,
-          type: "success",
+          title:
+            target === "not_invoiced"
+              ? copy.markInvoiced.notInvoicedFailed(bookingIds.length)
+              : result.error,
+          type: "error",
         });
-        setSelected(new Set());
-        router.refresh();
-        return;
-      }
-      toast.add({ title: result.error, type: "error" });
-    });
-  }, [router, selected]);
-  const openDialog = useCallback((): void => setDialogOpen(true), []);
+      });
+    },
+    [router]
+  );
+  const openOverlay = useCallback(
+    (bookingId: string, kind: Overlay["kind"]): void => {
+      setOverlay({ bookingId, kind });
+      setOverlayOpen(true);
+    },
+    []
+  );
+  const openDetail = useCallback(
+    (bookingId: string): void => openOverlay(bookingId, "detail"),
+    [openOverlay]
+  );
+  const openEdit = useCallback(
+    (bookingId: string): void => openOverlay(bookingId, "edit"),
+    [openOverlay]
+  );
+  const closeOverlay = useCallback((open: boolean): void => {
+    if (!open) {
+      setOverlayOpen(false);
+    }
+  }, []);
+  const closeDialog = useCallback((open: boolean): void => {
+    if (!open) {
+      setDialogIds(null);
+    }
+  }, []);
+  const openBulkDialog = useCallback(
+    (): void => setDialogIds([...selected]),
+    [selected]
+  );
+  const openRowInvoice = useCallback(
+    (bookingId: string): void => setDialogIds([bookingId]),
+    []
+  );
   const clearSelection = useCallback((): void => setSelected(new Set()), []);
+  const moveSelectedNotInvoiced = useCallback(
+    (): void => move([...selected], "not_invoiced", true),
+    [move, selected]
+  );
+  const moveSelectedNotInvoicable = useCallback(
+    (): void => move([...selected], "not_invoicable", true),
+    [move, selected]
+  );
 
   if (rows.length === 0) {
     return (
@@ -473,37 +643,26 @@ export function AdminBookingsTable({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* The bulk action bar (#9): the page's primary button, enabled when
-          every selected row is ended and un-invoiced. */}
-      <Card className="flex-row flex-wrap items-center justify-between gap-3 p-3">
-        <p className="text-sm">
-          {selectionCount === 0
-            ? copy.selection.none
-            : copy.selection.selected(selectionCount)}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={selectionCount === 0 || refusing}
-            onClick={refuse}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {copy.markInvoiced.notInvoicableButton}
-          </Button>
-          <Button
-            disabled={selectionCount === 0 || refusing}
-            onClick={openDialog}
-            size="sm"
-            type="button"
-          >
-            {copy.markInvoiced.button}
-          </Button>
-        </div>
-      </Card>
-
       <Card className="min-w-0 gap-0 py-0">
-        <Table className="min-w-[92rem] table-fixed">
+        <Table
+          className="min-w-[58rem] table-fixed"
+          onMouseDownCapture={stopShiftTextSelect}
+        >
+          {/* The column grid stated once, up front: table-fixed takes the
+              widths from the cols instead of whichever header row renders
+              first, so the swap between the column titles and the bulk
+              actions cannot shift the columns. */}
+          <colgroup>
+            <col className="w-10" />
+            <col className="w-36" />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col className="w-14" />
+          </colgroup>
           <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
           <TableHeader>
             <TableRow>
@@ -515,93 +674,110 @@ export function AdminBookingsTable({
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              {COLUMNS.map((column) => (
-                <SortHead column={column} key={column.key} params={params} />
-              ))}
-              <TableHead className="w-36" />
+              {selectionCount > 0 ? (
+                // The bulk header: the actions stand where the column
+                // titles were, and swap back when the selection clears.
+                <TableHead colSpan={COLUMNS.length + 1}>
+                  {/* Left-aligned: the actions start right after the sticky
+                      checkbox column, reachable even at phone width. */}
+                  <div className="flex items-center gap-2">
+                    <p className="whitespace-nowrap text-sm">
+                      {copy.selection.selected(selectionCount)}
+                    </p>
+                    <Button
+                      disabled={moving || !allowance.canInvoice}
+                      onClick={openBulkDialog}
+                      size="sm"
+                      type="button"
+                    >
+                      {copy.markInvoiced.button}
+                    </Button>
+                    <Button
+                      disabled={moving || !allowance.canNotInvoiced}
+                      onClick={moveSelectedNotInvoiced}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {copy.markInvoiced.notInvoicedButton}
+                    </Button>
+                    <Button
+                      disabled={moving || !allowance.canNotInvoicable}
+                      onClick={moveSelectedNotInvoicable}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {copy.markInvoiced.notInvoicableButton}
+                    </Button>
+                    <Button
+                      aria-label={copy.selection.clear}
+                      onClick={clearSelection}
+                      size="icon-sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <XIcon aria-hidden="true" />
+                    </Button>
+                  </div>
+                </TableHead>
+              ) : (
+                <>
+                  {COLUMNS.map((column) => (
+                    <SortHead
+                      column={column}
+                      key={column.key}
+                      params={params}
+                    />
+                  ))}
+                  <TableHead className="w-14" />
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((entry) =>
-              entry.kind === "booking" ? (
-                <BookingRow
-                  entry={entry}
-                  key={entry.row.bookingId}
-                  now={now}
-                  selected={selected.has(entry.row.bookingId)}
-                  toggle={toggle}
-                />
-              ) : (
-                <HouseEventRow entry={entry} key={entry.row.houseEventId} />
-              )
-            )}
+            {visible.map((row) => (
+              <BookingRow
+                key={row.bookingId}
+                moving={moving}
+                now={now}
+                onDetail={openDetail}
+                onEdit={openEdit}
+                onInvoice={openRowInvoice}
+                onMove={move}
+                row={row}
+                selected={selected.has(row.bookingId)}
+                toggle={toggle}
+              />
+            ))}
           </TableBody>
-          <TableFooter>
-            <TableRow className="bg-muted/50 font-medium hover:bg-transparent">
-              {/* The totals of the filtered set (#9): every column sums
-                  down its rows, so the footer is the invoice basis of the
-                  period. */}
-              <TableCell colSpan={4}>
-                {`${copy.totals.basis} (${totals.bookingCount} ${copy.totals.bookings.toLowerCase()})`}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatHours(totals.minutes)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatOre(totals.roomPriceOre)}
-              </TableCell>
-              <TableCell />
-              <TableCell className="text-right tabular-nums">
-                {formatOre(totals.memberPriceOre)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {totals.addOnsOre === 0 ? NONE : formatOre(totals.addOnsOre)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {totals.feeOre === 0 ? NONE : formatOre(totals.feeOre)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {totals.manualAmountsOre === 0
-                  ? NONE
-                  : formatOre(totals.manualAmountsOre)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatOre(totals.basisOre)}
-              </TableCell>
-              <TableCell
-                className="text-right text-muted-foreground text-xs"
-                colSpan={2}
-              >
-                {bookingsCopy.allPricesExclVat}
-              </TableCell>
-            </TableRow>
-          </TableFooter>
         </Table>
         <CardFooter className="px-2 py-1">
-          <TablePagination
-            note={bookingsCopy.allPricesExclVat}
-            paged={paged}
-            totalItems={rows.length}
-          />
+          <TablePagination paged={paged} totalItems={rows.length} />
         </CardFooter>
       </Card>
 
-      {/* The per-company and per-room breakdowns (#9). */}
-      <Card className="gap-4 p-4">
-        <CardHeader className="p-0">
-          <CardTitle className="text-base">{copy.breakdown.title}</CardTitle>
-        </CardHeader>
-        <div className="flex flex-col gap-6 md:flex-row">
-          <Breakdown entries={byCompany} title={copy.breakdown.byCompany} />
-          <Breakdown entries={byRoom} title={copy.breakdown.byRoom} />
-        </div>
-      </Card>
-
       <MarkInvoicedDialog
-        bookingIds={[...selected]}
+        bookings={dialogBookings}
         onDone={clearSelection}
-        onOpenChange={setDialogOpen}
-        open={dialogOpen}
+        onOpenChange={closeDialog}
+        open={dialogIds !== null}
+      />
+      <BookingDetailSheet
+        onOpenChange={closeOverlay}
+        open={overlayOpen && overlay?.kind === "detail"}
+        row={detailRow}
+      />
+      <BookingEditSheet
+        bookingId={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        bookingNumber={editRow?.bookingNumber ?? ""}
+        // Fresh form per booking: the manual-amount form bakes the booking
+        // id in at init, so a reused instance would post to the previous
+        // booking's id.
+        key={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        manualAmounts={editRow?.manualAmounts ?? EMPTY_MANUAL_AMOUNTS}
+        onOpenChange={closeOverlay}
+        open={overlayOpen && overlay?.kind === "edit"}
       />
     </div>
   );

@@ -27,7 +27,7 @@ const booking = {
 const earlyMorning = new Date("2026-09-16T04:00:00Z"); // 06:00 local
 
 const slotAt = (cells: GridCell[], row: number) =>
-  cells.find((cell) => cell.kind === "slot" && cell.row === row);
+  cells.find((cell) => cell.kind === "slot" && cell.firstRow === row);
 
 describe("gridSpan", () => {
   it("places a period on its 30-minute rows counted from 09:00", () => {
@@ -92,11 +92,13 @@ describe("dayGridColumn", () => {
   });
 
   it("fills every other row with a slot, in row order", () => {
-    const rows = cells.map((cell) =>
-      cell.kind === "slot" ? cell.row : cell.firstRow
-    );
+    const slotCells = cells.filter((cell) => cell.kind === "slot");
+    const rows = slotCells.map((cell) => cell.firstRow);
     expect(rows).toEqual([...rows].sort((a, b) => a - b));
-    expect(cells.filter((cell) => cell.kind === "slot")).toHaveLength(
+    // The cells tile the free rows exactly once: disjoint first rows whose
+    // spans sum to the free row count — a duplicate would double-cover.
+    expect(new Set(rows).size).toBe(slotCells.length);
+    expect(slotCells.reduce((n, cell) => n + cell.rowSpan, 0)).toBe(
       GRID_ROW_COUNT - 5
     );
   });
@@ -128,8 +130,25 @@ describe("dayGridColumn", () => {
       specialDays: [],
       weekly,
     });
-    expect(slotAt(afternoon, 8)).toMatchObject({ status: "past" });
-    expect(slotAt(afternoon, 9)).toMatchObject({ status: "available" });
+    // The passed morning is one spanned block (09:00 through 13:00), the
+    // buffer's continuous look; an available slot never merges.
+    expect(slotAt(afternoon, 0)).toMatchObject({
+      firstRow: 0,
+      rowSpan: 9,
+      status: "past",
+    });
+    expect(slotAt(afternoon, 9)).toMatchObject({
+      rowSpan: 1,
+      status: "available",
+    });
+    // The blocks tile the grid exactly once — no overlapping duplicates.
+    const slotCells = afternoon.filter((cell) => cell.kind === "slot");
+    expect(new Set(slotCells.map((cell) => cell.firstRow)).size).toBe(
+      slotCells.length
+    );
+    expect(slotCells.reduce((n, cell) => n + cell.rowSpan, 0)).toBe(
+      GRID_ROW_COUNT
+    );
   });
 
   it("shows the buffer of an entry that ended just before 09:00", () => {
@@ -220,9 +239,10 @@ describe("gridRows", () => {
       rowSpan: 4,
     };
     const slot: GridCell = {
+      firstRow: 2,
       kind: "slot",
       label: "10:00",
-      row: 2,
+      rowSpan: 1,
       status: "available",
     };
     const rows = gridRows([[entry], [slot]]);

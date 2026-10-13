@@ -3,39 +3,54 @@
 // guards: the list reads every confirmed and cancelled booking in the
 // period — the two statuses a basis can exist for; a pending hold has no
 // frozen snapshot yet and an expired hold never happened, so neither is a
-// row, but the hold still blocks its room and shows on the calendar. The
-// calendar reads the same window with the live statuses. House Events ride
-// along in both, as "Ikke fakturerbar" — they are not bookings and never
-// enter the basis (CONTEXT.md "House Event").
+// row, but the hold still blocks its room and shows on the calendar.
+// The calendar reads the same window with the live statuses.
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import type {
   AdminBookingRow,
-  AdminHouseEventRow,
+  AdminBookingState,
   AdminMembership,
-  AdminOverviewRow,
 } from "@/lib/domain/admin-bookings";
 import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
 import { periodUtcWindow } from "@/lib/domain/periods";
 import type { BookingDetail, DayEntry } from "@/lib/notice-board/data";
 import type { Database } from "@/lib/supabase/database.types";
+import { selectedCompanyIds } from "./admin-company-filter";
 import { adminDisplayNames } from "./data";
+import {
+  adminBookingStatesFilter,
+  adminCalendarStateCuts,
+  outstandingInvoicesFilter,
+} from "./filters";
 
 type Client = SupabaseClient<Database>;
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
 /** The filters the URL carries; both views read the same set (#9). An
  * empty list selects everything — the multi-select's no-selection state.
- * The list reads the set without a period and shows every booking; the
- * calendar always narrows to its month window. */
+ * The optional period range is the filter row's date picker, shown on the
+ * list view only: bookings starting within it, absent meaning no date
+ * filter — the default row set is every booking. The calendar reads no
+ * range; it narrows to its month window (fromDate/toDate, the stepper's)
+ * alone. The booking-state buckets cut on `now`, the read instant the
+ * page injects. Both reads apply them, but the calendar reads no
+ * cancelled bookings, so an Aflyste-only selection empties the month
+ * view by design (deliberate, not a list-only filter like the date
+ * range). The worklist toggle (?worklist=1, the sidebar badge's set)
+ * IS a list tool like the date range: the calendar ignores it. */
 export interface AdminOverviewFilter {
+  bookingStates: AdminBookingState[];
   companyIds: string[];
   fromDate?: string;
-  includeHouseEvents: boolean;
   invoicingStatuses: BookingInvoicingStatus[];
   memberships: AdminMembership[];
+  now: Date;
+  periodFrom?: string;
+  periodTo?: string;
   roomIds: string[];
   toDate?: string;
+  worklist: boolean;
 }
 
 /** What the filter selects offer: every company and every room. */
@@ -58,21 +73,6 @@ function rowsOrThrow<T>(
   return result.data ?? [];
 }
 
-// A House Event is no company's row and never invoicable (CONTEXT.md
-// "House Event"): it leaves the set with a company or membership filter,
-// with the hide filter (#9), and with an invoicing-status filter it cannot
-// answer to — its own status is "not_invoicable", so the filter keeps it
-// only when that status is among the selected.
-function houseEventsShown(filter: AdminOverviewFilter): boolean {
-  return (
-    filter.includeHouseEvents &&
-    filter.companyIds.length === 0 &&
-    filter.memberships.length === 0 &&
-    (filter.invoicingStatuses.length === 0 ||
-      filter.invoicingStatuses.includes("not_invoicable"))
-  );
-}
-
 // A name embed the foreign keys guarantee but that RLS could still hide:
 // a row without the name it must render fails loudly.
 function requiredName(
@@ -88,8 +88,15 @@ function requiredName(
 
 interface AdminBookingQueryRow {
   booking_addon_total_ore: number;
+  booking_addons: Array<{
+    addons: { addon_name: string } | null;
+    booking_addon_addon_id: string;
+    booking_addon_quantity: number;
+    booking_addon_total_ore: number;
+  }> | null;
   booking_cancellation_fee_ore: number | null;
   booking_cancellation_fee_waived: boolean;
+  booking_cancelled_at: string | null;
   booking_discount_percent: number;
   booking_end_at: string;
   booking_id: string;
@@ -140,12 +147,19 @@ function toAdminBookingRow(
     note: amount.manual_amount_note,
   }));
   return {
+    addOns: (row.booking_addons ?? []).map((line) => ({
+      addonId: line.booking_addon_addon_id,
+      name: line.addons?.addon_name ?? null,
+      quantity: line.booking_addon_quantity,
+      totalOre: line.booking_addon_total_ore,
+    })),
     addonTotalOre: row.booking_addon_total_ore,
     bookingId: row.booking_id,
     bookingNumber: row.booking_number,
     bookingStatus: row.booking_status,
     cancellationFeeOre: row.booking_cancellation_fee_ore,
     cancellationFeeWaived: row.booking_cancellation_fee_waived,
+    cancelledAt: row.booking_cancelled_at,
     companyId: row.companies?.company_id ?? "",
     companyName,
     discountPercent: row.booking_discount_percent,
@@ -166,11 +180,43 @@ function toAdminBookingRow(
   };
 }
 
-// One row per booking, in start order. The period is optional: the list
-// shows every booking, the calendar narrows to its window. The period
-// filter reads the Copenhagen wall clock (ADR-0021) through the UTC
-// window; company, room and invoicing status are the SQL filters.
-async function listAdminBookings(
+// The Bookingstatus buckets on a bookings query (#9): one bucket chains
+// as plain filters — the PostgREST or-list parses a lone and(...) as a
+// parse error — several buckets ride the or-list lib/bookings/filters.ts
+// builds. Cancelled is its own bucket; the time buckets are confirmed
+// bookings that have (not) finished, cut on the end instant (see
+// adminBookingStatesFilter). An empty selection applies nothing.
+function withBookingStates<
+  Q extends {
+    eq: (column: string, value: string) => Q;
+    gte: (column: string, value: string) => Q;
+    lt: (column: string, value: string) => Q;
+    or: (condition: string) => Q;
+  },
+>(query: Q, states: readonly AdminBookingState[], nowIso: string): Q {
+  if (states.length === 0) {
+    return query;
+  }
+  if (states.length === 1) {
+    const [state] = states;
+    if (state === "cancelled") {
+      return query.eq("booking_status", "cancelled");
+    }
+    const timeBounded = query.eq("booking_status", "confirmed");
+    return state === "upcoming"
+      ? timeBounded.gte("booking_end_at", nowIso)
+      : timeBounded.lt("booking_end_at", nowIso);
+  }
+  return query.or(adminBookingStatesFilter(states, nowIso));
+}
+
+// One row per booking, in start order — the admin overview's rows. The
+// period is optional: the list shows every booking, the calendar narrows
+// to its window. The period filter reads the Copenhagen wall clock
+// (ADR-0021) through the UTC window; company, room and invoicing status
+// are the SQL filters. The options carry the membership → company-ids
+// resolution (see selectedCompanyIds).
+export async function listAdminBookings(
   supabase: Client,
   filter: AdminOverviewFilter & { options: AdminFilterOptions }
 ): Promise<AdminBookingRow[]> {
@@ -178,9 +224,13 @@ async function listAdminBookings(
   let query = supabase
     .from("bookings")
     .select(
-      "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)"
+      "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)"
     )
     .in("booking_status", ["confirmed", "cancelled"])
+    .order("booking_addon_addon_id", {
+      ascending: true,
+      referencedTable: "booking_addons",
+    })
     .order("booking_start_at")
     .order("manual_amount_created_at", {
       ascending: true,
@@ -194,17 +244,27 @@ async function listAdminBookings(
       .lt("booking_start_at", window.endUtc.toISOString());
   }
 
+  // The filter row's date range: bookings starting within it. Absent —
+  // no range picked — and the list keeps every booking.
+  if (filter.periodFrom && filter.periodTo) {
+    const range = periodUtcWindow(filter.periodFrom, filter.periodTo);
+    query = query
+      .gte("booking_start_at", range.startUtc.toISOString())
+      .lt("booking_start_at", range.endUtc.toISOString());
+  }
+
   // Company and membership type intersect: the booking's company must
   // answer to both filters. A membership filter is the resolved id list,
   // not an embedded-column filter — PostgREST mangles the embed when it
   // filters on companies.company_membership_status (verified locally —
-  // rows come back with `companies: null`).
+  // rows come back with `companies: null`). Null resolution = no filter;
+  // an active filter with no ids matches nothing.
   const companyIds = selectedCompanyIds(filter, options);
-  if (filter.companyIds.length > 0 && companyIds.length === 0) {
-    // The chosen companies hold no chosen membership type: nothing matches.
+  if (companyIds !== null && companyIds.length === 0) {
+    // An active company-ish filter that resolves to no ids: nothing matches.
     return [];
   }
-  if (companyIds.length > 0) {
+  if (companyIds !== null) {
     query = query.in("booking_company_id", companyIds);
   }
   if (filter.roomIds.length > 0) {
@@ -212,6 +272,26 @@ async function listAdminBookings(
   }
   if (filter.invoicingStatuses.length > 0) {
     query = query.in("booking_invoicing_status", filter.invoicingStatuses);
+  }
+
+  // The Bookingstatus buckets: cancelled, or confirmed with the start
+  // (not) passed — the split splitBookingOverview makes. The list carries
+  // only confirmed and cancelled rows, so the buckets partition it.
+  query = withBookingStates(
+    query,
+    filter.bookingStates,
+    filter.now.toISOString()
+  );
+
+  // The sidebar badge's worklist (?worklist=1): ended bookings without an
+  // invoice — confirmed as a whole, cancelled only with a payable fee —
+  // the set outstandingInvoicesFilter splits and the badge counts. ANDed
+  // with the other filters; the calendar applies nothing.
+  if (filter.worklist) {
+    query = query
+      .eq("booking_invoicing_status", "not_invoiced")
+      .lt("booking_end_at", filter.now.toISOString())
+      .or(outstandingInvoicesFilter());
   }
 
   const bookings = rowsOrThrow<AdminBookingQueryRow>(
@@ -227,87 +307,6 @@ async function listAdminBookings(
     )
   );
   return bookings.map((booking) => toAdminBookingRow(booking, adminNames));
-}
-
-interface AdminHouseEventQueryRow {
-  house_event_description: string;
-  house_event_end_at: string;
-  house_event_id: string;
-  house_event_rooms: Array<{
-    rooms: { room_id: string; room_name: string } | null;
-  }> | null;
-  house_event_start_at: string;
-  house_event_title: string | null;
-}
-
-// One row per event, the rooms it blocks joined into the row — an event
-// spans rooms the way its sheet shows them (lib/notice-board/data.ts).
-function toAdminHouseEventRow(
-  row: AdminHouseEventQueryRow
-): AdminHouseEventRow {
-  const roomNames = (row.house_event_rooms ?? []).flatMap((entry) =>
-    entry.rooms ? [entry.rooms.room_name] : []
-  );
-  return {
-    description: row.house_event_description,
-    endAt: row.house_event_end_at,
-    houseEventId: row.house_event_id,
-    roomNames,
-    startAt: row.house_event_start_at,
-    title: row.house_event_title,
-  };
-}
-
-async function listAdminHouseEvents(
-  supabase: Client,
-  filter: AdminOverviewFilter
-): Promise<AdminHouseEventRow[]> {
-  let query = supabase
-    .from("house_events")
-    .select(
-      "house_event_description, house_event_end_at, house_event_id, house_event_rooms(rooms(room_id, room_name)), house_event_start_at, house_event_title"
-    )
-    .order("house_event_start_at");
-
-  if (filter.fromDate && filter.toDate) {
-    const window = periodUtcWindow(filter.fromDate, filter.toDate);
-    query = query
-      .lt("house_event_start_at", window.endUtc.toISOString())
-      .gt("house_event_end_at", window.startUtc.toISOString());
-  }
-
-  if (filter.roomIds.length > 0) {
-    // The room filter reads the embedded rooms (see
-    // listAdminCalendarEntries): an event keeping at least one matching
-    // room stays and shows only those rooms.
-    query = query.in("house_event_rooms.rooms.room_id", filter.roomIds);
-  }
-
-  return rowsOrThrow<AdminHouseEventQueryRow>(
-    await query,
-    "admin house events"
-  ).map(toAdminHouseEventRow);
-}
-
-/** The overview rows for the filters: every booking when the filter
- * carries no period, the period's otherwise. The options carry the
- * membership → company-ids resolution (see membershipCompanyIds). */
-export async function listAdminOverviewRows(
-  supabase: Client,
-  filter: AdminOverviewFilter & { options: AdminFilterOptions }
-): Promise<AdminOverviewRow[]> {
-  const [bookings, events] = await Promise.all([
-    listAdminBookings(supabase, filter),
-    houseEventsShown(filter) ? listAdminHouseEvents(supabase, filter) : [],
-  ]);
-  const eventRows: AdminOverviewRow[] = events.map((row) => ({
-    kind: "house_event" as const,
-    row,
-  }));
-  return [
-    ...bookings.map((row) => ({ kind: "booking" as const, row })),
-    ...eventRows,
-  ];
 }
 
 /** The companies and rooms the filter selects offer (catalogue-sized). */
@@ -335,36 +334,6 @@ export async function listAdminFilterOptions(
   };
 }
 
-/**
- * The company ids a membership filter selects, resolved from the options:
- * PostgREST cannot filter on an embedded column without mangling the embed
- * (rows come back with `companies: null`), so the membership filter is an
- * id list on the owning column. Several selected types union.
- */
-export function membershipCompanyIds(
-  options: AdminFilterOptions,
-  memberships: readonly AdminMembership[]
-): string[] {
-  const wanted = new Set(memberships);
-  return options.companies
-    .filter((company) => wanted.has(company.membershipStatus))
-    .map((company) => company.companyId);
-}
-
-// The company ids the two company-ish filters select together: the picked
-// companies and the picked membership types intersect — a booking's
-// company must answer to both (an empty list selects everything).
-function selectedCompanyIds(
-  filter: AdminOverviewFilter,
-  options: AdminFilterOptions
-): string[] {
-  if (filter.memberships.length === 0) {
-    return filter.companyIds;
-  }
-  const allowed = new Set(membershipCompanyIds(options, filter.memberships));
-  return filter.companyIds.filter((companyId) => allowed.has(companyId));
-}
-
 // ---------------------------------------------------------------------------
 // The calendar's entries (#9): the same filters, the live statuses — a
 // pending hold blocks its room, a cancelled booking does not. The row shape
@@ -387,20 +356,8 @@ interface CalendarBookingQueryRow {
   rooms: { room_id: string; room_name: string } | null;
 }
 
-interface CalendarEventQueryRow {
-  house_event_description: string;
-  house_event_end_at: string;
-  house_event_id: string;
-  house_event_rooms: Array<{
-    rooms: { room_id: string; room_name: string } | null;
-  }> | null;
-  house_event_start_at: string;
-  house_event_title: string | null;
-}
-
-// The instant window the calendar shows: entries OVERLAP it, so an event
-// that started the evening before still blocks the morning (the day grid
-// widens by the buffer, lib/notice-board/data.ts).
+// The instant window the calendar shows: entries OVERLAP it, so a booking
+// that started the evening before still shows on the next morning's cell.
 export function calendarUtcWindow(
   fromDate: string,
   toDate: string
@@ -408,7 +365,7 @@ export function calendarUtcWindow(
   return periodUtcWindow(fromDate, toDate);
 }
 
-/** Every live booking and House Event touching the window, per room. */
+/** Every live booking touching the window, per room. */
 export async function listAdminCalendarEntries(
   supabase: Client,
   filter: AdminOverviewFilter & {
@@ -421,6 +378,7 @@ export async function listAdminCalendarEntries(
   const window = calendarUtcWindow(filter.fromDate, filter.toDate);
   const fromIso = window.startUtc.toISOString();
   const toIso = window.endUtc.toISOString();
+  const nowIso = filter.now.toISOString();
 
   let bookingsQuery = supabase
     .from("bookings")
@@ -435,14 +393,14 @@ export async function listAdminCalendarEntries(
     .limit(1000);
   // Company and membership type intersect, resolved to id lists before the
   // query (the same rule the list uses — the embed itself cannot be
-  // trusted under an embedded-column filter).
+  // trusted under an embedded-column filter). Null resolution = no filter;
+  // an active filter with no ids matches nothing.
   const companyIds = selectedCompanyIds(filter, options);
-  const companyFilterActive = filter.companyIds.length > 0;
-  if (companyFilterActive && companyIds.length === 0) {
-    // The chosen companies hold no chosen membership type: nothing matches.
+  if (companyIds !== null && companyIds.length === 0) {
+    // The active company-ish filter resolves to no ids: nothing matches.
     return [];
   }
-  if (companyIds.length > 0) {
+  if (companyIds !== null) {
     bookingsQuery = bookingsQuery.in("booking_company_id", companyIds);
   }
   if (filter.roomIds.length > 0) {
@@ -454,33 +412,20 @@ export async function listAdminCalendarEntries(
       filter.invoicingStatuses
     );
   }
+  // The Bookingstatus buckets, on the calendar's own terms: the time cuts
+  // ride the entries' starts and OR together (lib/bookings/filters.ts);
+  // an Aflyste-only selection returns no cuts — the calendar reads no
+  // cancelled bookings, so the month view is empty.
+  if (filter.bookingStates.length > 0) {
+    const cuts = adminCalendarStateCuts(filter.bookingStates, nowIso);
+    if (cuts === "") {
+      return [];
+    }
+    bookingsQuery = bookingsQuery.or(cuts);
+  }
   const bookings = rowsOrThrow<CalendarBookingQueryRow>(
     await bookingsQuery,
     "calendar bookings"
-  );
-
-  let eventsQuery = supabase
-    .from("house_events")
-    .select(
-      "house_event_description, house_event_end_at, house_event_id, house_event_rooms(rooms(room_id, room_name)), house_event_start_at, house_event_title"
-    )
-    .lt("house_event_start_at", toIso)
-    .gt("house_event_end_at", fromIso)
-    .order("house_event_start_at")
-    .limit(1000);
-  if (filter.roomIds.length > 0) {
-    // The room filter reads the embedded rooms: an event keeping at least
-    // one matching room stays and shows only those rooms. Filtered through
-    // the rooms embed — house_event_rooms has no room_id of its own
-    // (ADR-0018: the FK keeps the rooms prefix).
-    eventsQuery = eventsQuery.in(
-      "house_event_rooms.rooms.room_id",
-      filter.roomIds
-    );
-  }
-  const events = rowsOrThrow<CalendarEventQueryRow>(
-    await eventsQuery,
-    "calendar house events"
   );
 
   // The display name from the options catalogue, not the embed: under a
@@ -489,7 +434,7 @@ export async function listAdminCalendarEntries(
     options.companies.map((company) => [company.companyId, company.displayName])
   );
 
-  const bookingEntries: AdminCalendarEntry[] = bookings.flatMap((row) => {
+  return bookings.flatMap((row) => {
     if (!row.rooms) {
       return [];
     }
@@ -510,35 +455,6 @@ export async function listAdminCalendarEntries(
       },
     ];
   });
-
-  // An event is one entry per room it blocks, the way the day grid and the
-  // notice board place it (lib/notice-board/grid.ts).
-  const eventEntries: AdminCalendarEntry[] = houseEventsShown(filter)
-    ? events.flatMap((row) =>
-        (row.house_event_rooms ?? []).flatMap((entry) =>
-          entry.rooms
-            ? [
-                {
-                  bookingInvoicingStatus: null,
-                  bookingStatus: null,
-                  companyId: null,
-                  companyName: null,
-                  description: row.house_event_description,
-                  endAt: new Date(row.house_event_end_at),
-                  id: row.house_event_id,
-                  kind: "house_event" as const,
-                  roomId: entry.rooms.room_id,
-                  roomName: entry.rooms.room_name,
-                  startAt: new Date(row.house_event_start_at),
-                  title: row.house_event_title,
-                },
-              ]
-            : []
-        )
-      )
-    : [];
-
-  return [...bookingEntries, ...eventEntries];
 }
 
 // The detail lines the calendar's sheets show for an admin (#12): the same

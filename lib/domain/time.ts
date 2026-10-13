@@ -85,6 +85,21 @@ export function cphToUtc(date: string, time: string): Date {
   return new Date(naive - cphOffsetMinutes(new Date(guess)) * MS_PER_MINUTE);
 }
 
+/** Whether the period is exactly one Copenhagen wall-clock day — the House
+ * Event form's "Hele dagen" sends 00:00/24:00, which is this span. Reading
+ * the wall clock instead of the millisecond span keeps it true across a
+ * DST boundary inside the day. */
+export function isFullDayPeriod(
+  startAt: Date | string,
+  endAt: Date | string
+): boolean {
+  const start = cphWallClock(new Date(startAt));
+  const end = cphWallClock(new Date(endAt));
+  return (
+    start.hour === 0 && start.minute === 0 && end.hour === 0 && end.minute === 0
+  );
+}
+
 // Calendar months ahead, clamped to the last day of a shorter month.
 export function addMonths(instant: Date, months: number): Date {
   const result = new Date(instant.getTime());

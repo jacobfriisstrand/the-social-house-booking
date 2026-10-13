@@ -7,11 +7,7 @@
 // array-index keys.
 import { cphToUtc } from "@/lib/domain/time";
 import type { BookingDetail } from "@/lib/notice-board/data";
-import {
-  bookingView,
-  type GridEntryView,
-  houseEventView,
-} from "@/lib/notice-board/view";
+import { bookingView, type GridEntryView } from "@/lib/notice-board/view";
 import type { AdminCalendarEntry } from "./admin-data";
 
 export interface AdminCalendarBlock {
@@ -24,19 +20,9 @@ export interface AdminCalendarCell {
   date: string;
 }
 
-// Every room a House Event blocks, by event id, for its sheet.
-function eventRoomNames(entries: AdminCalendarEntry[]): Map<string, string[]> {
-  const names = new Map<string, string[]>();
-  for (const entry of entries) {
-    if (entry.kind === "house_event") {
-      names.set(entry.id, [...(names.get(entry.id) ?? []), entry.roomName]);
-    }
-  }
-  return names;
-}
-
 /** The view shows per date: the entries whose instant range touches the
- * Copenhagen day, so an event that started the evening before still shows. */
+ * Copenhagen day, so a booking that started the evening before still
+ * shows. */
 export function buildAdminCalendarCells({
   dates,
   details,
@@ -46,7 +32,6 @@ export function buildAdminCalendarCells({
   details: Map<string, BookingDetail>;
   entries: AdminCalendarEntry[];
 }): AdminCalendarCell[] {
-  const roomNames = eventRoomNames(entries);
   return dates.map((date) => {
     const dayStart = cphToUtc(date, "00:00").getTime();
     const dayEnd = cphToUtc(date, "24:00").getTime();
@@ -61,10 +46,7 @@ export function buildAdminCalendarCells({
     return {
       blocks: cellEntries.map((entry) => ({
         key: `${entry.roomId}:${entry.id}`,
-        view:
-          entry.kind === "booking"
-            ? bookingView(entry, details.get(entry.id))
-            : houseEventView(entry, roomNames.get(entry.id) ?? []),
+        view: bookingView(entry, details.get(entry.id)),
       })),
       date,
     };

@@ -63,7 +63,9 @@ select lives_ok(
   'delete from public.manual_amounts where manual_amount_id = ''88888888-8888-8888-8888-888888888002''',
   'admin removes a manual amount');
 select is(
-  (select count(*) from public.manual_amounts),
+  (select count(*) from public.manual_amounts
+   where manual_amount_booking_id in (
+     '66666666-6666-6666-6666-666666666001', '66666666-6666-6666-6666-666666666002')),
   1::bigint,
   'admin delete removes only that amount');
 

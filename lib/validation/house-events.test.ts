@@ -8,7 +8,7 @@ const valid = {
   endTime: "14:00",
   roomIds: ["00000000-0000-0000-0000-0000000000c2"],
   startTime: "12:00",
-  title: "",
+  title: "3 Days of Design",
 };
 
 const errorsOf = (values: Record<string, unknown>) => {
@@ -19,8 +19,14 @@ const errorsOf = (values: Record<string, unknown>) => {
 };
 
 describe("houseEventFormSchema", () => {
-  it("accepts an event without a title on a seeded room id", () => {
+  it("accepts an event with a title on a seeded room id", () => {
     expect(errorsOf(valid)).toEqual([]);
+  });
+
+  it("refuses an empty title", () => {
+    expect(errorsOf({ ...valid, title: "  " })).toEqual([
+      messages.houseEvents.errors.titleRequired,
+    ]);
   });
 
   it("refuses an end that is not after the start", () => {

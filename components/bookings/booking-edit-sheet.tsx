@@ -167,18 +167,27 @@ export function BookingEditSheet({
   bookingId,
   bookingNumber,
   manualAmounts,
+  open,
+  onOpenChange,
 }: {
   bookingId: string;
   bookingNumber: string;
   manualAmounts: ManualAmountEntry[];
+  // Controlled when open is given — the ⋯ menu opens the sheet — with its
+  // own trigger button otherwise.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
+  const controlled = open !== undefined;
   return (
-    <Sheet>
-      <SheetTrigger
-        render={<Button size="sm" type="button" variant="outline" />}
-      >
-        {admin.editLabel}
-      </SheetTrigger>
+    <Sheet {...(controlled ? { onOpenChange, open } : {})}>
+      {controlled ? null : (
+        <SheetTrigger
+          render={<Button size="sm" type="button" variant="outline" />}
+        >
+          {admin.editLabel}
+        </SheetTrigger>
+      )}
       <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{admin.editTitle}</SheetTitle>

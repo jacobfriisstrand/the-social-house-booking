@@ -4,6 +4,7 @@
 // injected, so the defaults are testable.
 
 import type {
+  AdminBookingState,
   AdminMembership,
   AdminSortKey,
 } from "@/lib/domain/admin-bookings";
@@ -21,20 +22,29 @@ export type InvoicingStatusParam = BookingInvoicingStatus;
 
 export type MembershipParam = AdminMembership;
 
+export type BookingStateParam = AdminBookingState;
+
 export type AdminSortDir = "asc" | "desc";
 
 export interface AdminViewParams {
+  bookingStates: BookingStateParam[];
   companyIds: string[];
   focusDate: string;
   fromDate: string;
-  includeHouseEvents: boolean;
   invoicingStatuses: InvoicingStatusParam[];
   memberships: MembershipParam[];
+  // The filter row's date range, absent when no range is picked — the
+  // bookings' start dates the row set narrows to.
+  periodFrom?: string;
+  periodTo?: string;
   roomIds: string[];
   sort: AdminSortKey;
   sortDir: AdminSortDir;
   toDate: string;
   view: AdminViewKind;
+  // The sidebar badge's worklist (?worklist=1): presence-only, the value
+  // is not read. A list tool — the calendar applies nothing.
+  worklist: boolean;
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -77,6 +87,11 @@ const STATUSES: readonly InvoicingStatusParam[] = [
   "not_invoicable",
 ];
 const MEMBERSHIPS: readonly MembershipParam[] = ["member", "external"];
+const STATES: readonly BookingStateParam[] = [
+  "cancelled",
+  "finished",
+  "upcoming",
+];
 
 // A filter list keeps only the values the filter knows; a typo'd value is
 // no filter at all, not a filter that matches nothing.
@@ -121,6 +136,21 @@ export function parseAdminViewParams(
     ? (viewParam as AdminViewKind)
     : "list";
 
+  // The filter row's date range: both ends, or one standing for the single
+  // day; reversed ends swap like the view's window above. Absent means no
+  // date filter — the default row set is every booking.
+  let periodFrom = isoDate(searchParams.periodFrom);
+  let periodTo = isoDate(searchParams.periodTo);
+  if (periodFrom && !periodTo) {
+    periodTo = periodFrom;
+  }
+  if (!periodFrom && periodTo) {
+    periodFrom = periodTo;
+  }
+  if (periodFrom && periodTo && periodFrom > periodTo) {
+    [periodFrom, periodTo] = [periodTo, periodFrom];
+  }
+
   const sortParam = first(searchParams.sort);
   const sort: AdminSortKey = ADMIN_SORT_KEYS.includes(sortParam as AdminSortKey)
     ? (sortParam as AdminSortKey)
@@ -137,19 +167,21 @@ export function parseAdminViewParams(
   );
 
   return {
+    bookingStates: knownValues(multi(searchParams.state), STATES),
     companyIds: multi(searchParams.company),
     focusDate,
     fromDate,
-    // The House Events filter hides them; they show by default (DESIGN.md
-    // "Bookinger (admin)").
-    includeHouseEvents: first(searchParams.houseEvents) !== "hide",
     invoicingStatuses: knownValues(multi(searchParams.status), STATUSES),
     memberships: knownValues(multi(searchParams.membership), MEMBERSHIPS),
+    periodFrom,
+    periodTo,
     roomIds: multi(searchParams.room),
     sort,
     sortDir,
     toDate,
     view,
+    // Presence-only: ?worklist=1 or a bare ?worklist both turn it on.
+    worklist: searchParams.worklist !== undefined,
   };
 }
 
@@ -179,14 +211,25 @@ export function adminViewHref(
   for (const membership of next.memberships) {
     search.append("membership", membership);
   }
-  if (!next.includeHouseEvents) {
-    search.set("houseEvents", "hide");
+  for (const state of next.bookingStates) {
+    search.append("state", state);
+  }
+  // The date range rides only when picked; a clear (the values undefined)
+  // drops the params and the row set goes back to every booking.
+  if (next.periodFrom !== undefined) {
+    search.set("periodFrom", next.periodFrom);
+  }
+  if (next.periodTo !== undefined) {
+    search.set("periodTo", next.periodTo);
   }
   if (next.sort !== "date") {
     search.set("sort", next.sort);
   }
   if (next.sortDir !== "asc") {
     search.set("dir", next.sortDir);
+  }
+  if (next.worklist) {
+    search.set("worklist", "1");
   }
   return `/admin/bookings?${search.toString()}`;
 }

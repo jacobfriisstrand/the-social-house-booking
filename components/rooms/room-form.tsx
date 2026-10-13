@@ -221,7 +221,7 @@ function AddonRow({ addon, control }: AddonRowProps) {
       ) : (
         switchButton
       )}
-      <FieldLabel className="font-normal" htmlFor={switchId} required>
+      <FieldLabel className="font-normal" htmlFor={switchId}>
         {addon.name}
         <span className="text-muted-foreground text-xs">
           {addonPriceLabel(addon)}
@@ -441,7 +441,7 @@ function ActiveField({ control, initial }: ActiveFieldProps) {
         id="room-is-active"
         onCheckedChange={field.onChange}
       />
-      <FieldLabel className="font-normal" htmlFor="room-is-active" required>
+      <FieldLabel className="font-normal" htmlFor="room-is-active">
         {messages.rooms.activeLabel}
       </FieldLabel>
     </Field>

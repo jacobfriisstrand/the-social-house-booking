@@ -28,6 +28,7 @@ type BookingRow = Pick<
   | "booking_booker_name"
   | "booking_cancellation_fee_ore"
   | "booking_cancellation_fee_waived"
+  | "booking_cancelled_at"
   | "booking_discount_percent"
   | "booking_end_at"
   | "booking_expected_total_ore"
@@ -58,7 +59,7 @@ type BookingRow = Pick<
 };
 
 const BOOKING_COLUMNS =
-  "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
+  "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
 
 function rowsOrThrow<T>(
   result: { data: T[] | null; error: PostgrestError | null },
@@ -112,6 +113,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
       booking.booking_cancellation_fee_ore,
       booking.booking_cancellation_fee_waived
     ),
+    cancelledAt: booking.booking_cancelled_at,
     endAt: booking.booking_end_at,
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
@@ -286,9 +288,11 @@ function toOutstandingInvoiceRow(
   };
 }
 
-// The sidebar badge on the admin Bookinger item: how many ended bookings
-// still wait for an invoice, across every month (lib/bookings/filters.ts
-// carries the rule). RLS lets the admin session count them all.
+// The sidebar badge on the admin Bookinger item: every invoiceable booking
+// that has ended and still waits for an invoice. The status split
+// (confirmed, or cancelled with a payable fee) holds
+// (lib/bookings/filters.ts); the end instant chains on the query. RLS lets
+// the admin session count them all.
 export async function countOutstandingInvoices(
   supabase: SupabaseClient<Database>,
   now = new Date()

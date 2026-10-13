@@ -1,11 +1,11 @@
 -- Invoicing status integrity (#9): only an admin changes
--- booking_invoicing_status; a booking whose end time has not passed can be
--- neither invoiced nor refused; every actual change writes one
--- invoicing_events row in the same transaction. Enforced by the triggers
--- on public.bookings (schemas/bookings.sql).
+-- booking_invoicing_status; a booking whose end time has not passed cannot
+-- be invoiced, but it can be refused (not invoicable) at once; every
+-- actual change writes one invoicing_events row in the same transaction.
+-- Enforced by the triggers on public.bookings (schemas/bookings.sql).
 
 begin;
-select plan(11);
+select plan(14);
 
 -- Fixtures: one admin, one company, one room, one ended and one future
 -- confirmed booking.
@@ -30,19 +30,21 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111201","r
 select throws_ok(
   'update public.bookings set booking_invoicing_status = ''invoiced'' where booking_id = ''66666666-6666-6666-6666-666666666202''',
   'P0001',
-  'a booking can first be marked invoiced or not invoicable after its end time',
+  'a booking can first be marked invoiced after its end time',
   'a future booking cannot be marked invoiced');
 
-select throws_ok(
+-- A future booking can be taken out of the basis at once: the admin
+-- refuses it before it is held.
+select lives_ok(
   'update public.bookings set booking_invoicing_status = ''not_invoicable'' where booking_id = ''66666666-6666-6666-6666-666666666202''',
-  'P0001',
-  'a booking can first be marked invoiced or not invoicable after its end time',
-  'a future booking cannot be marked not invoicable');
+  'a future booking can be marked not invoicable');
 
 select is(
-  (select count(*) from public.invoicing_events where invoicing_event_booking_id = '66666666-6666-6666-6666-666666666202'),
-  0::bigint,
-  'a refused change writes no audit row');
+  (select invoicing_event_from_status::text || '>' || invoicing_event_to_status::text
+   from public.invoicing_events
+   where invoicing_event_booking_id = '66666666-6666-6666-6666-666666666202'),
+  'not_invoiced>not_invoicable',
+  'the refused future booking writes its audit row');
 
 select lives_ok(
   'update public.bookings set booking_invoicing_status = ''not_invoicable'' where booking_id = ''66666666-6666-6666-6666-666666666201''',
@@ -85,6 +87,31 @@ select is(
    where booking_id = '66666666-6666-6666-6666-666666666201'),
   true,
   'the action sets invoiced_by, the audit names the same admin');
+
+-- The widened refusal: an invoiced booking can still be refused. The
+-- trigger clears the invoice columns; the trail keeps the values it had.
+select lives_ok(
+  'update public.bookings set booking_invoicing_status = ''not_invoicable'' where booking_id = ''66666666-6666-6666-6666-666666666201''',
+  'an invoiced booking can be marked not invoicable');
+
+select is(
+  (select exists(
+     select 1
+     from public.invoicing_events
+     where invoicing_event_booking_id = '66666666-6666-6666-6666-666666666201'
+       and invoicing_event_from_status = 'invoiced'
+       and invoicing_event_to_status = 'not_invoicable'
+   )),
+  true,
+  'refusing an invoiced booking writes its own audit row');
+
+select is(
+  (select booking_invoice_number is null
+     and booking_invoice_date is null
+   from public.bookings
+   where booking_id = '66666666-6666-6666-6666-666666666201'),
+  true,
+  'refusing an invoiced booking clears its invoice columns');
 
 -- Company session: owns its booking row, but not the invoicing status.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111202","role":"authenticated"}';

@@ -238,6 +238,10 @@ export const messages = {
   },
   bookings: {
     admin: {
+      actions: {
+        details: "Vis detaljer",
+        open: (bookingNumber: string) => `Handlinger for ${bookingNumber}`,
+      },
       breakdown: {
         bookings: "Bookinger",
         byCompany: "Pr. virksomhed",
@@ -247,8 +251,8 @@ export const messages = {
         total: "Total ekskl. moms",
       },
       calendar: {
-        legendBooking: "Booking",
-        legendHouseEvent: "House Event",
+        more: (count: number) => `${count} flere`,
+        showHiddenOn: (date: string) => `Vis de skjulte poster den ${date}`,
       },
       columns: {
         company: "Virksomhed",
@@ -258,31 +262,33 @@ export const messages = {
         roomRent: "Lokaleleje",
         roomRentAfterDiscount: "Efter rabat",
         total: "Total ekskl. moms",
+        totalPrice: "Total pris (Efter rabat)",
       },
       editLabel: "Rediger",
       editTitle: "Rediger booking",
       emptyDescription: "Bookinger i den valgte periode vises her.",
       emptyTitle: "Ingen bookinger",
       filters: {
+        bookingState: "Bookingstatus",
+        bookingStateAll: "Alle bookinger",
+        bookingStateFinished: "Afsluttede",
         company: "Virksomhed",
         companyAll: "Alle virksomheder",
-        hideHouseEvents: "Skjul House Events",
         membership: "Virksomhedstype",
-        membershipAll: "Alle",
+        membershipAll: "Medlemsstatus",
         membershipExternal: "Eksterne",
         membershipMember: "Medlemmer",
         next: "Næste",
+        period: "Periode",
+        periodAll: "Alle datoer",
         previous: "Forrige",
         reset: "Nulstil filtre",
         room: "Lokale",
         roomAll: "Alle lokaler",
         status: "Faktureringsstatus",
         statusAll: "Alle statuser",
-        today: "I dag",
-      },
-      houseEventRow: {
-        company: "The Social House",
-        noNumber: "-",
+        thisMonth: "Denne måned",
+        worklist: "Faktureringsklar",
       },
       manualAmounts: {
         addButton: "Tilføj beløb",
@@ -322,6 +328,9 @@ export const messages = {
       },
       markInvoiced: {
         button: "Markér som faktureret",
+        companyBookings: (name: string, count: number) =>
+          `${name} (${count} ${count === 1 ? "booking" : "bookinger"})`,
+        companyNumber: "Ét nummer pr. firma",
         date: "Fakturadato",
         errors: {
           alreadyMarked:
@@ -337,36 +346,35 @@ export const messages = {
         notInvoicableSentence:
           "Bookingerne får statussen Ikke fakturerbar og kommer ikke med i fakturagrundlaget.",
         notInvoicableTitle: "Markér som ikke fakturerbar?",
+        notInvoicedButton: "Markér som ikke faktureret",
+        notInvoicedFailed: (count: number) =>
+          count === 1
+            ? "Bookingen kunne ikke markeres som ikke faktureret. Prøv igen."
+            : "Bookingerne kunne ikke markeres som ikke faktureret. Prøv igen.",
+        notInvoicedSaved: (count: number) =>
+          count === 1
+            ? "Bookingen er markeret som ikke faktureret"
+            : "Bookingerne er markeret som ikke faktureret",
         number: "Fakturanummer",
-        saved: "Bookingerne er markeret som faktureret",
+        saved: (count: number) =>
+          count === 1
+            ? "Bookingen er markeret som faktureret"
+            : "Bookingerne er markeret som faktureret",
         sentence: (count: number) =>
-          `${count} bookinger markeres som faktureret.`,
+          count === 1
+            ? "1 booking markeres som faktureret."
+            : `${count} bookinger markeres som faktureret.`,
         submit: "Markér som faktureret",
         submitting: "Markerer …",
         title: "Markér som faktureret",
       },
       selection: {
         clear: "Fravælg alle",
-        none: "Vælg bookinger for at markere dem",
-        reasons: {
-          future: "Er ikke slut endnu",
-          invoiced: "Allerede faktureret",
-          not_invoicable: "Ikke fakturerbar",
-        },
         selectAll: "Vælg alle",
         selected: (count: number) => `${count} valgt`,
         selectRow: (bookingNumber: string) => `Vælg ${bookingNumber}`,
       },
       tableCaption: "Bookinger til fakturering",
-      totals: {
-        addOns: "Tilkøb",
-        basis: "Fakturagrundlag ekskl. moms",
-        bookings: "Bookinger",
-        fees: "Afbestillingsgebyrer",
-        hours: "Bookede timer",
-        manualAmounts: "Manuelt beløb",
-        roomRent: "Lokaleleje efter rabat",
-      },
       view: {
         list: "Liste",
         month: "Måned",
@@ -375,6 +383,7 @@ export const messages = {
     allPricesExclVat: "Alle priser ekskl. moms",
     columns: {
       addOns: "Tilkøb",
+      addOnsYes: "Ja",
       booker: "Booker",
       bookingNumber: "Bookingnummer",
       cancellationFee: "Afbestillingsgebyr",
@@ -691,6 +700,7 @@ export const messages = {
       company: "Virksomhed",
       date: "Dato",
       description: "Forklaring",
+      fullDay: "Hele dagen",
       houseEventTitle: "House Event",
       internalNote: "Intern note",
       participants: "Deltagere",
@@ -710,10 +720,11 @@ export const messages = {
     },
   },
   // House Events (admin, #12, Bilag 1 "Kalender og opslagstavle"): date,
-  // time, the rooms it blocks, an optional title and a short explanation.
-  // Title and explanation are member-visible. An event may not overlap a
-  // booking, buffer included (decided in #12).
+  // full day or a time span, the rooms it blocks, a title and a short
+  // explanation. Title and explanation are member-visible. An event may
+  // not overlap a booking, buffer included (decided in #12).
   houseEvents: {
+    clearAll: "Fravælg alle",
     columns: {
       date: "Dato",
       rooms: "Lokaler",
@@ -747,12 +758,14 @@ export const messages = {
       roomsRequired: "Vælg mindst ét lokale.",
       saveFailed: "House Eventet kunne ikke gemmes. Prøv igen.",
       timeRequired: "Vælg et tidspunkt.",
+      titleRequired: "Skriv en titel.",
       tooLong: "Teksten er for lang.",
     },
     fields: {
       date: "Dato",
       description: "Kort forklaring",
       end: "Slut",
+      fullDay: "Hele dagen",
       rooms: "Lokaler",
       start: "Start",
       title: "Titel",
@@ -760,6 +773,7 @@ export const messages = {
     keep: "Fortryd",
     saved: "House Eventet er gemt",
     saving: "Gemmer …",
+    selectAll: "Vælg alle",
     submit: "Gem",
     textSection: "Tekst til medlemmerne",
     whenSection: "Tidspunkt og lokaler",
@@ -1051,6 +1065,8 @@ export const messages = {
     statistics: "Statistik",
     terms: "Betingelser",
     toggleSidebar: "Vis eller skjul sidepanel",
+    worklistBadge: "Vis bookinger der kan faktureres",
+    worklistBadgeTooltip: "Bookinger der kan faktureres",
   },
   // Statistik (admin, #10, ADR-0014): the monthly booking economy across
   // every company. Only held bookings count; the rest of the month is

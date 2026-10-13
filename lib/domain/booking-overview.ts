@@ -43,6 +43,9 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   bookerName: string;
   bookingNumber: string;
   cancellationFeeOre: number | null;
+  // The instant the cancellation flow froze (null on a live booking); the
+  // detail sheet shows it on a cancelled row.
+  cancelledAt: string | null;
   endAt: string;
   invoicingStatus: BookingInvoicingStatus;
   // The fee as it stands at load, for the cancel flow (#5): set only for a

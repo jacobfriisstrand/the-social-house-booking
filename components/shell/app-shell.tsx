@@ -38,6 +38,7 @@ import { toast } from "@/components/ui/toast";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
@@ -69,20 +70,14 @@ function CloseMobileSidebarOnNavigate() {
   return null;
 }
 
-// Every shell link is a gated dynamic route: prefetching them all on render
-// makes each page load SSR the whole sidebar server-side (six extra renders
-// right after login, on routes the user has not clicked). They fetch on
-// click instead.
-// Count badges are the shared Badge (DESIGN.md "Badges"): the member's
-// list counts sit on the muted outline chip, the admin worklist wears the
-// warning tint. Zero counts hide the badge entirely.
-const badgeByTone = {
-  neutral: {
-    className: "justify-center bg-muted px-1.5 tabular-nums",
-    variant: "outline",
-  },
-  warning: { variant: "warning" },
-} as const;
+// Badges that deep-link into their set: the admin invoicing worklist
+// rides the Bookinger page's ?worklist=1 (a list-only filter there).
+// Derived from the href, not passed per call site — ShellNavLinkItem is
+// the only badge renderer, so a nav group added later cannot drop the
+// link.
+function badgeLinkFor(href: string): string | undefined {
+  return href === "/admin/bookings" ? "/admin/bookings?worklist=1" : undefined;
+}
 
 function ShellNavLinkItem({
   badge,
@@ -108,13 +103,46 @@ function ShellNavLinkItem({
           {link.label}
         </span>
       </SidebarMenuButton>
-      {/* Zero counts hide the badge: an empty worklist says nothing. */}
-      {badge ? (
-        <SidebarMenuBadge {...badgeByTone[link.badgeTone ?? "neutral"]}>
-          {badge}
-        </SidebarMenuBadge>
-      ) : null}
+      {/* Zero counts hide the badge: an empty worklist says nothing. A
+        linked badge (the admin worklist) opens its filtered set. */}
+      <ShellNavBadge badge={badge} badgeLink={badgeLinkFor(link.href)} />
     </SidebarMenuItem>
+  );
+}
+
+// The nav badge beside a menu item. The linked variant (the admin
+// worklist) renders the badge as its own anchor through Badge's render
+// prop — it keeps its absolute placement beside the menu button and
+// gains hover and focus states from the badge's anchor styles.
+function ShellNavBadge({
+  badge,
+  badgeLink,
+}: {
+  badge?: number;
+  badgeLink?: string;
+}) {
+  if (!badge) {
+    return null;
+  }
+  if (!badgeLink) {
+    return <SidebarMenuBadge variant="default">{badge}</SidebarMenuBadge>;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <SidebarMenuBadge
+            aria-label={messages.shell.worklistBadge}
+            className="pointer-events-auto"
+            render={<Link href={badgeLink} />}
+            variant="default"
+          >
+            {badge}
+          </SidebarMenuBadge>
+        }
+      />
+      <TooltipContent>{messages.shell.worklistBadgeTooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -369,29 +397,31 @@ export function AppShell({
   const [searchOpen, setSearchOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <CloseMobileSidebarOnNavigate />
-      <ShellSidebar
-        badgeCounts={badgeCounts}
-        isAdmin={isAdmin}
-        onOpenSearch={openSearch}
-      />
-      <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
-      {/* min-w-0: the inset is a flex item next to the sidebar, and a page
-          whose content has a minimum width (a wide table) must not widen
-          it past the viewport; the content scrolls inside instead. */}
-      <SidebarInset className="min-w-0">
-        {/* From tablet up the column is exactly the viewport: title, panel
-            and footer line stay in view and the panel scrolls inside
-            (DESIGN.md "Shell"). Phone keeps the document scroll. No left
-            padding from tablet up: the sidebar's own padding is the gutter,
-            so the menu sits centred between the screen edge and the
-            content. */}
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
-          {children}
-          <ShellFooter terms={terms} wifi={wifi} />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <TooltipProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <CloseMobileSidebarOnNavigate />
+        <ShellSidebar
+          badgeCounts={badgeCounts}
+          isAdmin={isAdmin}
+          onOpenSearch={openSearch}
+        />
+        <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
+        {/* min-w-0: the inset is a flex item next to the sidebar, and a page
+            whose content has a minimum width (a wide table) must not widen
+            it past the viewport; the content scrolls inside instead. */}
+        <SidebarInset className="min-w-0">
+          {/* From tablet up the column is exactly the viewport: title, panel
+              and footer line stay in view and the panel scrolls inside
+              (DESIGN.md "Shell"). Phone keeps the document scroll. No left
+              padding from tablet up: the sidebar's own padding is the gutter,
+              so the menu sits centred between the screen edge and the
+              content. */}
+          <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
+            {children}
+            <ShellFooter terms={terms} wifi={wifi} />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

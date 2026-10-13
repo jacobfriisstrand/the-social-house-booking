@@ -49,10 +49,12 @@ select is(
   'booking entry carries Display name only');
 select is((select count(*) from public.calendar_entries where calendar_entry_kind = 'house_event' and house_event_title = 'Strategy day'), 1::bigint, 'house event entry carries its title');
 select is(
-  (select house_event_description from public.calendar_entries where calendar_entry_kind = 'house_event'),
+  (select house_event_description from public.calendar_entries
+    where calendar_entry_kind = 'house_event'
+      and calendar_entry_id = '99999999-9999-9999-9999-999999999001'),
   'Internal strategy day',
   'house event entry carries its short explanation (member-visible, #12)');
-select is((select calendar_entry_id from public.calendar_entries where calendar_entry_kind = 'house_event'), '99999999-9999-9999-9999-999999999001', 'house event id is exposed for calendar joins');
+select is((select calendar_entry_id from public.calendar_entries where calendar_entry_kind = 'house_event' and calendar_entry_id = '99999999-9999-9999-9999-999999999001'), '99999999-9999-9999-9999-999999999001', 'house event id is exposed for calendar joins');
 select is((
   select count(*) from information_schema.columns
   where table_schema = 'public' and table_name = 'calendar_entries'

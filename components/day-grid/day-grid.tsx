@@ -55,6 +55,14 @@ const ROW_CLASS = "h-9 hover:bg-transparent";
 // A block fills its cell, spanned rows included, with a small inset.
 const BLOCK_CELL_CLASS = "relative border-l p-0";
 const BLOCK_CLASS = "absolute inset-0.5 rounded-lg border";
+// Everything the room is not available in — the buffer and the past,
+// closed and blocked slots — wears the muted block with a diagonal hatch,
+// the drawn "closed off" mark. The hatch takes muted-foreground, not
+// `muted`: muted lines on the muted fill would vanish.
+const MUTED_BLOCK_CLASS = cn(
+  BLOCK_CLASS,
+  "bg-muted [background-image:repeating-linear-gradient(45deg,color-mix(in_oklab,var(--muted-foreground)_25%,transparent)_0_1px,transparent_1px_7px)]"
+);
 
 function RoomHeader({ column }: { column: DayGridColumn }) {
   return (
@@ -109,7 +117,7 @@ function EntryCell({
 function BufferCell({ cell }: { cell: Extract<GridCell, { kind: "buffer" }> }) {
   return (
     <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
-      <div className={cn(BLOCK_CLASS, "bg-secondary")}>
+      <div className={MUTED_BLOCK_CLASS}>
         <span className="sr-only">{copy.buffer}</span>
       </div>
     </TableCell>
@@ -132,7 +140,7 @@ function SlotCell({
     [cell.label, column, onBook]
   );
   return (
-    <TableCell className={BLOCK_CELL_CLASS}>
+    <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
       {cell.status === "available" ? (
         <button
           aria-label={copy.slotLabel(roomName ?? "", cell.label)}
@@ -140,7 +148,17 @@ function SlotCell({
           onClick={book}
           type="button"
         />
-      ) : null}
+      ) : (
+        // Not bookable (past, closed, blocked): the same small inset and
+        // rounded block as the buffer — one look for everything the room
+        // is not available in — and labelled like the dialog's disabled
+        // start options, so an empty-looking cell never looks clickable.
+        <div className={MUTED_BLOCK_CLASS}>
+          <span className="sr-only">
+            {messages.booking.dialog.slotStatus[cell.status]}
+          </span>
+        </div>
+      )}
     </TableCell>
   );
 }

@@ -1,28 +1,28 @@
 // The admin booking overview's math (#9): row parts from the frozen
 // snapshot (ADR-0005, ADR-0007), the cancelled row's fee-only basis
-// (ADR-0006), the totals that sum every column down its rows, the
-// per-company and per-room breakdowns, sorting, and invoicability after
-// the end time.
+// (ADR-0006), the totals that sum every column down its rows, sorting,
+// and which invoicing actions a selection allows.
 import { describe, expect, it } from "vitest";
-import type { AdminOverviewRow } from "./admin-bookings";
 import {
   adminRowParts,
   adminTotals,
-  bookingIsInvoicable,
-  bookingNotInvoicableReason,
   breakdownAdminRows,
+  invoicingActionAllowance,
+  shiftRangeIds,
   sortAdminRows,
 } from "./admin-bookings";
 
 const booking = (
   overrides: Partial<Parameters<typeof adminRowParts>[0]> = {}
 ) => ({
+  addOns: [],
   addonTotalOre: 0,
   bookingId: "b1",
   bookingNumber: "B-2610-0001",
   bookingStatus: "confirmed" as const,
   cancellationFeeOre: null,
   cancellationFeeWaived: false,
+  cancelledAt: null,
   companyId: "c1",
   companyName: "Rituals",
   discountPercent: 0,
@@ -38,24 +38,6 @@ const booking = (
   roomPriceOre: 100_000,
   startAt: "2026-10-01T09:00:00Z",
   ...overrides,
-});
-
-const houseEvent = (overrides = {}): AdminOverviewRow => ({
-  kind: "house_event",
-  row: {
-    description: "Team day",
-    endAt: "2026-10-02T16:00:00Z",
-    houseEventId: "h1",
-    roomNames: ["Biblioteket"],
-    startAt: "2026-10-02T09:00:00Z",
-    title: "Sommerfest",
-    ...overrides,
-  },
-});
-
-const bookingRow = (overrides = {}): AdminOverviewRow => ({
-  kind: "booking",
-  row: booking(overrides),
 });
 
 describe("adminRowParts", () => {
@@ -117,15 +99,14 @@ describe("adminRowParts", () => {
 describe("adminTotals", () => {
   it("sums every column down its rows, cancelled rows' snapshot excluded", () => {
     const totals = adminTotals([
-      bookingRow({ discountPercent: 50 }),
-      bookingRow({
+      booking({ discountPercent: 50 }),
+      booking({
         bookingId: "b2",
         bookingStatus: "cancelled",
         cancellationFeeOre: 50_000,
         endAt: "2026-10-02T11:00:00Z",
         startAt: "2026-10-02T09:00:00Z",
       }),
-      houseEvent(),
     ]);
     expect(totals.bookingCount).toBe(2);
     expect(totals.roomPriceOre).toBe(100_000);
@@ -135,21 +116,21 @@ describe("adminTotals", () => {
     expect(totals.basisOre).toBe(100_000);
   });
 
-  it("returns zeros for an empty or event-only set", () => {
+  it("returns zeros for an empty set", () => {
     expect(adminTotals([]).basisOre).toBe(0);
-    expect(adminTotals([houseEvent()]).bookingCount).toBe(0);
+    expect(adminTotals([]).bookingCount).toBe(0);
   });
 });
 
 describe("breakdownAdminRows", () => {
   it("groups by company and by room, labels sorted in Danish", () => {
     const rows = [
-      bookingRow({
+      booking({
         companyName: "Rituals",
         roomId: "r1",
         roomName: "Room of Power",
       }),
-      bookingRow({
+      booking({
         bookingId: "b2",
         companyId: "c2",
         companyName: "Nordic Events",
@@ -159,7 +140,7 @@ describe("breakdownAdminRows", () => {
         roomName: "Biblioteket",
         startAt: "2026-10-02T09:00:00Z",
       }),
-      bookingRow({
+      booking({
         bookingId: "b3",
         endAt: "2026-10-03T10:00:00Z",
         roomId: "r1",
@@ -185,46 +166,38 @@ describe("breakdownAdminRows", () => {
     expect(
       byRoom.find((entry) => entry.label === "Room of Power")?.minutes
     ).toBe(180);
-    // House Events enter no breakdown.
-    expect(breakdownAdminRows([...rows, houseEvent()], "room")).toHaveLength(2);
   });
 });
 
 describe("sortAdminRows", () => {
   it("sorts by date by default with ties in start order", () => {
     const rows = [
-      bookingRow({
+      booking({
         bookingId: "late",
         endAt: "2026-10-03T11:00:00Z",
         startAt: "2026-10-03T09:00:00Z",
       }),
-      bookingRow({ bookingId: "early" }),
+      booking({ bookingId: "early" }),
     ];
     const sorted = sortAdminRows(rows, "date", "asc");
-    expect(
-      sorted.map((entry) =>
-        entry.kind === "booking" ? entry.row.bookingId : ""
-      )
-    ).toEqual(["early", "late"]);
+    expect(sorted.map((row) => row.bookingId)).toEqual(["early", "late"]);
   });
 
   it("sorts numbers with nulls last in both directions", () => {
     const rows = [
-      bookingRow({ bookingId: "event-sort" }),
-      houseEvent(),
-      bookingRow({ bookingId: "big", manualAmountsOre: 5000 }),
+      booking({ bookingId: "cancelled", bookingStatus: "cancelled" }),
+      booking({ bookingId: "big", manualAmountsOre: 5000 }),
     ];
     const asc = sortAdminRows(rows, "manualAmounts", "asc");
-    expect(asc[0]?.kind).toBe("booking");
-    expect(asc.at(-1)?.kind).toBe("house_event");
+    expect(asc.map((row) => row.bookingId)).toEqual(["big", "cancelled"]);
     const desc = sortAdminRows(rows, "manualAmounts", "desc");
-    expect(desc[0]?.kind).toBe("booking");
+    expect(desc.map((row) => row.bookingId)).toEqual(["big", "cancelled"]);
   });
 
   it("sorts text columns in Danish", () => {
     const rows = [
-      bookingRow({ bookingId: "a", companyName: "Rituals" }),
-      bookingRow({
+      booking({ bookingId: "a", companyName: "Rituals" }),
+      booking({
         bookingId: "b",
         companyId: "c2",
         companyName: "Nordic Events",
@@ -232,97 +205,126 @@ describe("sortAdminRows", () => {
       }),
     ];
     expect(
-      sortAdminRows(rows, "company", "asc")[0]?.kind === "booking" &&
-        (
-          sortAdminRows(rows, "company", "asc")[0] as {
-            row: { companyName: string };
-          }
-        ).row.companyName
-    ).toBe("Nordic Events");
+      sortAdminRows(rows, "company", "asc").map((row) => row.companyName)
+    ).toEqual(["Nordic Events", "Rituals"]);
   });
 
   it("sorts a cancelled row's null discount last", () => {
     const rows = [
-      bookingRow({ bookingStatus: "cancelled", discountPercent: 50 }),
-      bookingRow({ discountPercent: 50 }),
+      booking({ bookingStatus: "cancelled", discountPercent: 50 }),
+      booking({ discountPercent: 50 }),
     ];
     const sorted = sortAdminRows(rows, "discount", "asc");
-    expect(sorted[0]?.kind === "booking" && sorted[0].row.bookingStatus).toBe(
-      "confirmed"
-    );
+    expect(sorted[0]?.bookingStatus).toBe("confirmed");
   });
 });
 
-describe("bookingIsInvoicable", () => {
+describe("invoicingActionAllowance", () => {
   const now = new Date("2026-10-02T12:00:00Z");
+  const ended = "2026-10-02T12:00:00Z";
+  const future = "2026-10-02T12:00:01Z";
 
-  it("allows an ended booking that still waits for its invoice", () => {
+  it("allows the invoice mark on ended, open bookings only", () => {
     expect(
-      bookingIsInvoicable(
-        { endAt: "2026-10-02T12:00:00Z", invoicingStatus: "not_invoiced" },
+      invoicingActionAllowance(
+        [
+          { endAt: ended, invoicingStatus: "not_invoiced" },
+          { endAt: ended, invoicingStatus: "not_invoicable" },
+        ],
         now
-      )
+      ).canInvoice
     ).toBe(true);
-  });
-
-  it("refuses a booking whose end time has not passed", () => {
     expect(
-      bookingIsInvoicable(
-        { endAt: "2026-10-02T12:00:01Z", invoicingStatus: "not_invoiced" },
+      invoicingActionAllowance(
+        [{ endAt: future, invoicingStatus: "not_invoiced" }],
         now
-      )
+      ).canInvoice
+    ).toBe(false);
+    expect(
+      invoicingActionAllowance(
+        [{ endAt: ended, invoicingStatus: "invoiced" }],
+        now
+      ).canInvoice
     ).toBe(false);
   });
 
-  it("refuses an already invoiced or already refused booking", () => {
+  it("allows un-invoicing invoiced and refused bookings only", () => {
     expect(
-      bookingIsInvoicable(
-        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "invoiced" },
+      invoicingActionAllowance(
+        [
+          { endAt: ended, invoicingStatus: "invoiced" },
+          { endAt: future, invoicingStatus: "not_invoicable" },
+        ],
         now
-      )
-    ).toBe(false);
+      ).canNotInvoiced
+    ).toBe(true);
     expect(
-      bookingIsInvoicable(
-        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "not_invoicable" },
+      invoicingActionAllowance(
+        [
+          { endAt: ended, invoicingStatus: "invoiced" },
+          { endAt: ended, invoicingStatus: "not_invoiced" },
+        ],
         now
-      )
+      ).canNotInvoiced
     ).toBe(false);
+  });
+
+  it("allows refusing anything not already refused, future included", () => {
+    expect(
+      invoicingActionAllowance(
+        [
+          { endAt: future, invoicingStatus: "not_invoiced" },
+          { endAt: ended, invoicingStatus: "invoiced" },
+        ],
+        now
+      ).canNotInvoicable
+    ).toBe(true);
+    expect(
+      invoicingActionAllowance(
+        [{ endAt: ended, invoicingStatus: "not_invoicable" }],
+        now
+      ).canNotInvoicable
+    ).toBe(false);
+  });
+
+  it("allows nothing on an empty selection", () => {
+    expect(invoicingActionAllowance([], now)).toEqual({
+      canInvoice: false,
+      canNotInvoicable: false,
+      canNotInvoiced: false,
+    });
   });
 });
 
-describe("bookingNotInvoicableReason", () => {
-  const now = new Date("2026-10-02T12:00:00Z");
+describe("shiftRangeIds", () => {
+  const page = ["b1", "b2", "b3", "b4", "b5"];
 
-  it("gives null for an ended booking that still waits for its invoice", () => {
-    expect(
-      bookingNotInvoicableReason(
-        { endAt: "2026-10-02T12:00:00Z", invoicingStatus: "not_invoiced" },
-        now
-      )
-    ).toBe(null);
+  it("selects first through fifth on a downward shift", () => {
+    expect(shiftRangeIds(page, "b1", "b5")).toEqual([
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "b5",
+    ]);
   });
 
-  it("says a booking that has not ended is in the future", () => {
-    expect(
-      bookingNotInvoicableReason(
-        { endAt: "2026-10-02T12:00:01Z", invoicingStatus: "not_invoiced" },
-        now
-      )
-    ).toBe("future");
+  it("selects upward too — the range runs anchor to click in page order", () => {
+    expect(shiftRangeIds(page, "b5", "b2")).toEqual(["b2", "b3", "b4", "b5"]);
   });
 
-  it("carries the row's status when it is already invoiced or refused", () => {
-    expect(
-      bookingNotInvoicableReason(
-        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "invoiced" },
-        now
-      )
-    ).toBe("invoiced");
-    expect(
-      bookingNotInvoicableReason(
-        { endAt: "2026-10-01T09:00:00Z", invoicingStatus: "not_invoicable" },
-        now
-      )
-    ).toBe("not_invoicable");
+  it("keeps ticks outside the range — a range add, not a replace", () => {
+    // b4 ticked before the shift-click on b2 from anchor b5.
+    expect(shiftRangeIds(["b1", "b2", "b4", "b5"], "b5", "b2")).toEqual([
+      "b2",
+      "b4",
+      "b5",
+    ]);
+  });
+
+  it("reads as a plain toggle without an anchor on this page", () => {
+    expect(shiftRangeIds(page, null, "b3")).toBeNull();
+    expect(shiftRangeIds(page, "b9", "b3")).toBeNull();
+    expect(shiftRangeIds(page, "b3", "b3")).toBeNull();
   });
 });

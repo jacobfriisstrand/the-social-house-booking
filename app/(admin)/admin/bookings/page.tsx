@@ -8,9 +8,9 @@ import { buildAdminCalendarCells } from "@/lib/bookings/admin-calendar";
 import {
   type AdminOverviewFilter,
   listAdminBookingDetails,
+  listAdminBookings,
   listAdminCalendarEntries,
   listAdminFilterOptions,
-  listAdminOverviewRows,
 } from "@/lib/bookings/admin-data";
 import { parseAdminViewParams } from "@/lib/bookings/admin-view-params";
 import { cphDate } from "@/lib/domain/opening-hours";
@@ -39,11 +39,15 @@ export default async function AdminBookingsPage({
   const supabase = await createClient();
 
   const filter: AdminOverviewFilter = {
+    bookingStates: params.bookingStates,
     companyIds: params.companyIds,
-    includeHouseEvents: params.includeHouseEvents,
     invoicingStatuses: params.invoicingStatuses,
     memberships: params.memberships,
+    now,
+    periodFrom: params.periodFrom,
+    periodTo: params.periodTo,
     roomIds: params.roomIds,
+    worklist: params.worklist,
   };
 
   const options = await listAdminFilterOptions(supabase);
@@ -87,7 +91,7 @@ export default async function AdminBookingsPage({
     );
   }
 
-  const rows = await listAdminOverviewRows(supabase, {
+  const rows = await listAdminBookings(supabase, {
     ...filter,
     options,
   });

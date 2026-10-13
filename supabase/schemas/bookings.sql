@@ -469,12 +469,13 @@ create trigger booking_addons_sync_totals
 -- ---------------------------------------------------------------------------
 -- Invoicing status (#9, ADR-0014): only an admin changes
 -- booking_invoicing_status — a company owns its booking row but not its
--- place in the invoice basis. A booking whose end time has not passed can
--- be neither invoiced nor refused: it becomes invoicable after its end
--- time, and a cancellation fee is settled before that by the cancellation
--- flow (#5). Every actual status change is mirrored into invoicing_events
--- (invoicing_events.sql) inside the same transaction, so the bulk update
--- of the invoicing view leaves one audit row per booking.
+-- place in the invoice basis. Marking a booking invoiced waits for its end
+-- time (ADR-0014: a future booking is expected value, not an invoice);
+-- refusing it (not invoicable) may happen at once, so an admin can take a
+-- future booking out of the basis before it is held. Every actual status
+-- change is mirrored into invoicing_events (invoicing_events.sql) inside
+-- the same transaction, so the bulk update of the invoicing view leaves
+-- one audit row per booking.
 
 create or replace function public.enforce_invoicing_status_change()
 returns trigger
@@ -490,11 +491,11 @@ begin
       raise exception 'only an admin can change the invoicing status'
         using errcode = '42501';
     end if;
-    if new.booking_invoicing_status in ('invoiced', 'not_invoicable')
+    if new.booking_invoicing_status = 'invoiced'
       and new.booking_end_at > now()
     then
       raise exception
-        'a booking can first be marked invoiced or not invoicable after its end time'
+        'a booking can first be marked invoiced after its end time'
         using errcode = 'P0001';
     end if;
   end if;

@@ -17,10 +17,10 @@ const parse = (params: Record<string, string | string[]>) =>
 describe("parseAdminViewParams", () => {
   it("defaults to the current month, the list view, and today's focus", () => {
     expect(parse({})).toEqual({
+      bookingStates: [],
       companyIds: [],
       focusDate: TODAY,
       fromDate: "2026-10-01",
-      includeHouseEvents: true,
       invoicingStatuses: [],
       memberships: [],
       roomIds: [],
@@ -28,6 +28,7 @@ describe("parseAdminViewParams", () => {
       sortDir: "asc",
       toDate: "2026-10-31",
       view: "list",
+      worklist: false,
     });
   });
 
@@ -36,17 +37,19 @@ describe("parseAdminViewParams", () => {
       company: "c1",
       dir: "desc",
       from: "2026-09-01",
-      houseEvents: "hide",
       room: "r1",
       sort: "total",
+      state: "upcoming",
       status: "invoiced",
       to: "2026-09-30",
       view: "month",
+      worklist: "1",
     });
     expect(params.companyIds).toEqual(["c1"]);
     expect(params.roomIds).toEqual(["r1"]);
     expect(params.invoicingStatuses).toEqual(["invoiced"]);
-    expect(params.includeHouseEvents).toBe(false);
+    expect(params.bookingStates).toEqual(["upcoming"]);
+    expect(params.worklist).toBe(true);
     expect(params.view).toBe("month");
     expect(params.sort).toBe("total");
     expect(params.sortDir).toBe("desc");
@@ -57,12 +60,14 @@ describe("parseAdminViewParams", () => {
       company: ["c1", "c2"],
       membership: ["member", "external"],
       room: ["r1", "r2"],
+      state: ["upcoming", "finished"],
       status: ["invoiced", "not_invoiced"],
     });
     expect(params.companyIds).toEqual(["c1", "c2"]);
     expect(params.roomIds).toEqual(["r1", "r2"]);
     expect(params.invoicingStatuses).toEqual(["invoiced", "not_invoiced"]);
     expect(params.memberships).toEqual(["member", "external"]);
+    expect(params.bookingStates).toEqual(["upcoming", "finished"]);
   });
 
   it("swaps a reversed period instead of matching nothing forever", () => {
@@ -78,12 +83,14 @@ describe("parseAdminViewParams", () => {
       from: "01/09/2026",
       membership: ["vip", "member"],
       sort: "vibes",
+      state: ["ghost", "cancelled"],
       status: ["maybe", "invoiced"],
       view: "year",
     });
     expect(params.companyIds).toEqual(["ghost"]);
     expect(params.invoicingStatuses).toEqual(["invoiced"]);
     expect(params.memberships).toEqual(["member"]);
+    expect(params.bookingStates).toEqual(["cancelled"]);
     expect(params.view).toBe("list");
     expect(params.sort).toBe("date");
     expect(params.sortDir).toBe("asc");
@@ -105,6 +112,30 @@ describe("parseAdminViewParams", () => {
     expect(params.fromDate).toBe("2026-01-01");
     expect(params.toDate).toBe("2026-01-31");
   });
+
+  it("reads the date range, one date standing for the single day", () => {
+    const range = parse({ periodFrom: "2026-10-05", periodTo: "2026-10-09" });
+    expect(range.periodFrom).toBe("2026-10-05");
+    expect(range.periodTo).toBe("2026-10-09");
+    const single = parse({ periodFrom: "2026-10-05" });
+    expect(single.periodFrom).toBe("2026-10-05");
+    expect(single.periodTo).toBe("2026-10-05");
+    const reversed = parse({
+      periodFrom: "2026-10-09",
+      periodTo: "2026-10-05",
+    });
+    expect(reversed.periodFrom).toBe("2026-10-05");
+    expect(reversed.periodTo).toBe("2026-10-09");
+    const absent = parse({});
+    expect(absent.periodFrom).toBeUndefined();
+    expect(absent.periodTo).toBeUndefined();
+  });
+
+  it("drops a garbage date range instead of filtering nothing forever", () => {
+    const params = parse({ periodFrom: "05/10/2026", periodTo: "10/10/2026" });
+    expect(params.periodFrom).toBeUndefined();
+    expect(params.periodTo).toBeUndefined();
+  });
 });
 
 describe("adminViewHref", () => {
@@ -118,16 +149,31 @@ describe("adminViewHref", () => {
   it("keeps the filters through a view switch", () => {
     const base = parse({
       company: ["c1", "c2"],
-      houseEvents: "hide",
+      state: "cancelled",
       status: "not_invoiced",
       view: "list",
+      worklist: "1",
     });
     const href = adminViewHref(base, { view: "month" });
     expect(href).toContain("company=c1");
     expect(href).toContain("company=c2");
     expect(href).toContain("status=not_invoiced");
-    expect(href).toContain("houseEvents=hide");
+    expect(href).toContain("state=cancelled");
+    expect(href).toContain("worklist=1");
     expect(href).toContain("view=month");
+  });
+
+  it("carries the date range only when picked, and drops it on a clear", () => {
+    const picked = adminViewHref(
+      parse({ periodFrom: "2026-10-05", periodTo: "2026-10-09" })
+    );
+    expect(picked).toContain("periodFrom=2026-10-05");
+    expect(picked).toContain("periodTo=2026-10-09");
+    const cleared = adminViewHref(parse({ periodFrom: "2026-10-05" }), {
+      periodFrom: undefined,
+      periodTo: undefined,
+    });
+    expect(cleared).not.toContain("period");
   });
 });
 

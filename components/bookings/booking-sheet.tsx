@@ -177,6 +177,13 @@ function BookingSheetDetails({
                 : formatOre(booking.cancellationFeeOre)
             }
           />
+          {booking.bookingStatus === "cancelled" &&
+          booking.cancelledAt !== null ? (
+            <DetailRow
+              label={copy.cancelledAt}
+              value={`${formatDate(booking.cancelledAt)} · ${formatTime(booking.cancelledAt)}`}
+            />
+          ) : null}
         </dl>
         <PriceOverview model={booking.price} />
         {booking.bookingStatus === "confirmed" ? <CancellationRules /> : null}
