@@ -58,6 +58,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -68,10 +69,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
-import {
-  type AdminViewParams,
-  adminViewHref,
-} from "@/lib/bookings/admin-view-params";
+import type { AdminViewParams } from "@/lib/bookings/admin-view-params";
 import { setBookingsInvoicingStatus } from "@/lib/bookings/invoicing-actions";
 import {
   type AdminBookingRow,
@@ -153,17 +151,18 @@ const COLUMNS: ColumnDef[] = [
 
 function SortHead({
   column,
+  onParamChange,
   params,
 }: {
   column: ColumnDef;
+  onParamChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
 }) {
-  const router = useRouter();
   const active = params.sort === column.key;
   const nextDir = active && params.sortDir === "asc" ? "desc" : "asc";
   const toggle = useCallback(() => {
-    router.push(adminViewHref(params, { sort: column.key, sortDir: nextDir }));
-  }, [router, params, column.key, nextDir]);
+    onParamChange({ sort: column.key, sortDir: nextDir });
+  }, [onParamChange, column.key, nextDir]);
   let Icon = ArrowUpDownIcon;
   if (active) {
     Icon = params.sortDir === "asc" ? ArrowUpIcon : ArrowDownIcon;
@@ -411,10 +410,46 @@ function BookingRow({
   );
 }
 
+// While the rows re-read, the table keeps its shape: the plain column
+// headers (a sort would only queue another re-read), one skeleton row per
+// row on the stale page — at least four, so an empty set still shows
+// movement — and the pagination footer, whose counts are stale but hold
+// the card's height. Bars are uniform: the colgroup owns the widths.
+function SkeletonRow() {
+  return (
+    <TableRow className="h-12">
+      <TableCell>
+        <Skeleton className="size-4" />
+      </TableCell>
+      {COLUMNS.map((column) => (
+        <TableCell
+          className={column.align === "right" ? "text-right" : undefined}
+          key={column.key}
+        >
+          <Skeleton
+            className={cn("h-4 w-3/4", column.align === "right" && "ml-auto")}
+          />
+        </TableCell>
+      ))}
+      <TableCell className="text-right">
+        <Skeleton className="ml-auto size-6" />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function AdminBookingsTable({
+  loading,
+  onParamChange,
   params,
   rows,
 }: {
+  // True while a filter, sort or view change re-reads the rows: skeleton
+  // rows instead of the stale ones, the empty state waits.
+  loading: boolean;
+  // The view's URL write — sort heads included, so a sort rides the same
+  // transition and the skeletons and params accumulate in one place.
+  onParamChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
   rows: AdminBookingRow[];
 }) {
@@ -626,6 +661,64 @@ export function AdminBookingsTable({
     [move, selected]
   );
 
+  // While the rows re-read: the column headers (plain, not sortable — a
+  // sort would only queue another re-read), one skeleton row per row on
+  // the stale page (at least four, so an empty set still shows movement),
+  // the pagination footer so the card's height holds, and a status line
+  // announcing the wait the way the day grid's spinner does.
+  if (loading) {
+    const skeletonKeys = Array.from(
+      { length: Math.max(visible.length, 4) },
+      (_, index) => `skeleton-row-${index}`
+    );
+    return (
+      <Card className="min-w-0 gap-0 py-0">
+        <p className="sr-only" role="status">
+          {messages.common.loading}
+        </p>
+        <Table aria-busy className="min-w-[58rem] table-fixed">
+          <colgroup>
+            <col className="w-10" />
+            <col className="w-36" />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col className="w-14" />
+          </colgroup>
+          <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="sticky left-0 z-10 w-10" />
+              {COLUMNS.map((column) => (
+                <TableHead
+                  className={cn(
+                    column.width,
+                    column.align === "right" && "text-right"
+                  )}
+                  key={column.key}
+                >
+                  {column.label}
+                </TableHead>
+              ))}
+              <TableHead className="w-14" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {skeletonKeys.map((key) => (
+              <SkeletonRow key={key} />
+            ))}
+          </TableBody>
+        </Table>
+        <CardFooter className="px-2 py-1">
+          <TablePagination paged={paged} totalItems={rows.length} />
+        </CardFooter>
+      </Card>
+    );
+  }
+
   if (rows.length === 0) {
     return (
       <Card className="py-0">
@@ -727,6 +820,7 @@ export function AdminBookingsTable({
                     <SortHead
                       column={column}
                       key={column.key}
+                      onParamChange={onParamChange}
                       params={params}
                     />
                   ))}

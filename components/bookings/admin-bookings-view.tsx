@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 // (admin-bookings-table.tsx); the calendar's month grid and its stepper are
 // admin-calendar-grid.tsx.
 import type * as React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import type { DateRange } from "react-day-picker";
 import { da } from "react-day-picker/locale";
 import { Button } from "@/components/ui/button";
@@ -335,42 +335,52 @@ export function AdminBookingsView({
   // the fresh props clear it. Every control below reads `view`, the
   // merged params, not the raw props.
   const paramsKey = adminViewHref(params);
-  const [pending, setPending] = useState<Partial<AdminViewParams>>({});
+  const [paramsOverlay, setParamsOverlay] = useState<Partial<AdminViewParams>>(
+    {}
+  );
   const [paramsRead, setParamsRead] = useState(paramsKey);
   if (paramsKey !== paramsRead) {
     // Fresh server params: they carry what the pushes asked for.
     setParamsRead(paramsKey);
-    setPending({});
+    setParamsOverlay({});
   }
-  const view: AdminViewParams = { ...params, ...pending };
+  const view: AdminViewParams = { ...params, ...paramsOverlay };
+
+  // Every URL write is a transition: the server re-read swaps the content
+  // in place, and while it is on the way `loading` swaps the views' rows
+  // and month cells for skeletons — loading.tsx does not fire for a
+  // search-param change.
+  const [loading, startLoading] = useTransition();
 
   const update = useCallback(
     (changes: Partial<AdminViewParams>) => {
       // The merged overlay stands in until the props catch up, so a rapid
       // second control (or a second tick on the same one) accumulates
       // instead of clobbering.
-      const merged = { ...pending, ...changes };
-      setPending(merged);
-      router.push(adminViewHref({ ...params, ...merged }));
+      const merged = { ...paramsOverlay, ...changes };
+      setParamsOverlay(merged);
+      startLoading(() => router.push(adminViewHref({ ...params, ...merged })));
     },
-    [params, pending, router]
+    [params, paramsOverlay, router]
   );
 
   const resetFilters = useCallback(() => {
-    setPending({});
-    router.push(
-      adminViewHref({
-        ...params,
-        bookingStates: [],
-        companyIds: [],
-        invoicingStatuses: [],
-        memberships: [],
-        periodFrom: undefined,
-        periodTo: undefined,
-        roomIds: [],
-        worklist: false,
-        ...windowAround(today),
-      })
+    setParamsOverlay({});
+    startLoading(() =>
+      router.push(
+        adminViewHref({
+          ...params,
+          bookingStates: [],
+          companyIds: [],
+          invoicingStatuses: [],
+          memberships: [],
+          periodFrom: undefined,
+          periodTo: undefined,
+          roomIds: [],
+          worklist: false,
+          ...windowAround(today),
+        })
+      )
     );
   }, [params, router, today]);
 
@@ -543,18 +553,29 @@ export function AdminBookingsView({
           </ToggleGroupItem>
         </ToggleGroup>
       </Card>
-      {calendar ? (
+      {/* The branch reads the overlay's view, not the props: a toggle flips
+          view.view at once while calendar/rows stay stale for the round
+          trip, and the pending surface must be the one being switched TO —
+          cell skeletons for the month, row skeletons for the list. */}
+      {view.view === "month" ? (
         <AdminCalendarGrid
           calendar={calendar}
+          loading={loading}
           // The grid is built from the focus date; a custom Fra/Til
           // period can span months, so the title reads the focus date,
           // not the period's first day.
           monthLabel={formatMonthYear(view.focusDate)}
+          onPeriodChange={update}
           params={view}
           today={today}
         />
       ) : (
-        <AdminBookingsTable params={view} rows={rows} />
+        <AdminBookingsTable
+          loading={loading}
+          onParamChange={update}
+          params={view}
+          rows={rows}
+        />
       )}
     </>
   );

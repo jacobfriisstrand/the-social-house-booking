@@ -126,7 +126,7 @@ Login is outside the shell: a centred white card on the background with the logo
 
 **Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card, except the framed sections on Hjem.
 
-**Loading.** Every page that reads server data shows the shadcn `Spinner` while it loads, never a frozen screen (#15). Navigating to a page: the shell stays, the title row keeps the sidebar toggle, and the panel shows the spinner in its middle (`loading.tsx` per shell group, `PageLoading`). Changing a filter or day in the URL on the same page keeps the current content at 50 % opacity with the spinner over it (a transition with `data-pending`, as on Hjem). Forms show it in the submit button.
+**Loading.** Every page that reads server data shows a loading state while it loads, never a frozen screen (#15). Navigating to a page: the shell stays, the title row keeps the sidebar toggle, and the panel shows the spinner in its middle (`loading.tsx` per shell group, `PageLoading`). Changing a filter, sort, view or month in the URL on the admin booking overview swaps the content for skeletons while the server re-reads (2026-10-13): skeleton rows in the list, skeleton cells in the month grid; the filter row and the stepper stay live, and the empty state waits until the read lands. Elsewhere on the same page (the day grid on Hjem, Statistik's figures) the current content keeps 50 % opacity with the spinner over it (a transition with `data-pending`). Forms show the spinner in the submit button.
 
 **Empty state.** A white bordered card, `py-16`, centred: card-title line, one body sentence, optional secondary button. "Ingen kommende bookinger" / "Du har ingen kommende bookinger lige nu."
 
