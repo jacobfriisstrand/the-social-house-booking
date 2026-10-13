@@ -6,7 +6,14 @@
 // in the way the panel lists them and saves nothing (decided in #12). One
 // schema with the server action (lib/validation/house-events.ts).
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useActionState, useCallback, useEffect } from "react";
+import {
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   type Control,
   type UseFormReturn,
@@ -21,6 +28,7 @@ import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { TimeSelect } from "@/components/rooms/time-select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -58,6 +66,14 @@ const TIME_ITEMS = timeOptions(
   GRID_START_MINUTES,
   GRID_END_MINUTES
 ).map((time) => ({ label: time, value: time }));
+
+// "Hele dagen": the whole Copenhagen day blocked — 00:00 to next-day
+// midnight, the same midnight convention the opening hours accept
+// ("24:00", Postgres `time` accepts it).
+const FULL_DAY = { endTime: "24:00", startTime: "00:00" };
+const isFullDay = (values: HouseEventFormValues): boolean =>
+  values.startTime === FULL_DAY.startTime &&
+  values.endTime === FULL_DAY.endTime;
 
 const EMPTY_EVENT: HouseEventFormValues = {
   date: "",
@@ -152,10 +168,39 @@ function RoomsField({
       ),
     [onChange, value]
   );
+  const allIds = useMemo(() => rooms.map((room) => room.roomId), [rooms]);
+  const allChecked =
+    allIds.length > 0 && allIds.every((id) => value.includes(id));
+  const selectAll = useCallback(() => onChange(allIds), [allIds, onChange]);
+  const clearAll = useCallback(() => onChange([]), [onChange]);
   return (
     <FieldSet data-invalid={fieldState.invalid}>
-      <FieldLegend className="flex gap-2" required variant="label">
+      <FieldLegend
+        className="flex flex-wrap items-center justify-between gap-2"
+        required
+        variant="label"
+      >
         {copy.fields.rooms}
+        <span className="flex gap-2">
+          <Button
+            disabled={allChecked}
+            onClick={selectAll}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            {copy.selectAll}
+          </Button>
+          <Button
+            disabled={value.length === 0}
+            onClick={clearAll}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            {copy.clearAll}
+          </Button>
+        </span>
       </FieldLegend>
       <div className="grid gap-3 sm:grid-cols-2">
         {rooms.map((room) => (
@@ -240,6 +285,19 @@ function HouseEventForm({
     defaultValues: initial,
     resolver: zodResolver(houseEventFormSchema),
   });
+  // Hele dagen: not a field of the schema — the toggle decides whether
+  // the two time selects show, and writes the day-span times so the
+  // resolver validates the values the submit will actually send (a
+  // submit-time override would never run: the resolver fails first).
+  const [fullDay, setFullDay] = useState(isFullDay(initial));
+  const toggleFullDay = useCallback(
+    (checked: boolean): void => {
+      setFullDay(checked);
+      form.setValue("startTime", checked ? FULL_DAY.startTime : "");
+      form.setValue("endTime", checked ? FULL_DAY.endTime : "");
+    },
+    [form]
+  );
   useSaveResult(state, form, onSaved);
   const submit = form.handleSubmit((values) =>
     startTransition(() => formAction(values))
@@ -254,18 +312,33 @@ function HouseEventForm({
         <CardContent>
           <FieldGroup>
             <DateField control={form.control} />
-            <div className="grid grid-cols-2 gap-4">
-              <TimeField
-                control={form.control}
-                label={copy.fields.start}
-                name="startTime"
+            <Field orientation="horizontal">
+              <Checkbox
+                checked={fullDay}
+                id="house-event-full-day"
+                onCheckedChange={toggleFullDay}
               />
-              <TimeField
-                control={form.control}
-                label={copy.fields.end}
-                name="endTime"
-              />
-            </div>
+              <FieldLabel
+                className="font-normal"
+                htmlFor="house-event-full-day"
+              >
+                {copy.fields.fullDay}
+              </FieldLabel>
+            </Field>
+            {fullDay ? null : (
+              <div className="grid grid-cols-2 gap-4">
+                <TimeField
+                  control={form.control}
+                  label={copy.fields.start}
+                  name="startTime"
+                />
+                <TimeField
+                  control={form.control}
+                  label={copy.fields.end}
+                  name="endTime"
+                />
+              </div>
+            )}
             <RoomsField control={form.control} rooms={rooms} />
           </FieldGroup>
         </CardContent>
@@ -281,7 +354,6 @@ function HouseEventForm({
               label={copy.fields.title}
               maxLength={120}
               name="title"
-              required={false}
             />
             <TextareaField
               control={form.control}

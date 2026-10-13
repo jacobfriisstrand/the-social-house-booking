@@ -36,7 +36,7 @@ insert into public.notices (notice_title, notice_body, notice_is_active, notice_
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 
-select is((select count(*) from public.notices), 2::bigint, 'company reads the notices that are on and not past their end');
+select is((select count(*) from public.notices), 5::bigint, 'company reads the notices that are on and not past their end (2 fixture + 3 seed)');
 select is(
   (select count(*) from public.notices where notice_title in ('Elevatoren', 'Kladde')),
   0::bigint,
@@ -61,7 +61,7 @@ select throws_ok(
 
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
-select is((select count(*) from public.notices), 4::bigint, 'admin reads every notice, off and ended ones too');
+select is((select count(*) from public.notices), 9::bigint, 'admin reads every notice, off and ended ones too (4 fixture + 5 seed)');
 select is((select count(*) from public.terms_versions where terms_version_id in ('BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB01', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBB02')), 2::bigint, 'admin reads drafts too');
 select is((select count(*) from public.terms_acceptances), 2::bigint, 'admin reads all acceptances');
 select lives_ok(

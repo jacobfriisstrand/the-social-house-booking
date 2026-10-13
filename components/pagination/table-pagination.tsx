@@ -1,12 +1,10 @@
 "use client";
 
 // The footer of every paginated table, drawn after the shadcn "icons only"
-// example (2026-09-29, sides swapped back the same day): the rows-per-page
-// field on the left, and the "Viser X–Y af Z" summary with the icon
-// Previous/Next on the right — the summary carries the position, since
-// there are no page-number buttons. A caller may pass a note (the
-// "Alle priser ekskl. moms" line); it sits directly above the arrows.
-// Renders nothing for an empty list.
+// example: three zones — the "Viser X–Y af Z" summary with the icon-only
+// Previous/Next centred (the note sits directly above them), and the
+// rows-per-page field (20/40/60/80, 20 default, a new size restarts at
+// page 1) on the right. Renders nothing for an empty list.
 import { useCallback, useId } from "react";
 import type { PagedList } from "@/components/pagination/use-table-pagination";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -74,53 +72,61 @@ export function TablePagination({
   }
 
   return (
-    <div className="flex flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <Field className="w-fit" orientation="horizontal">
-        <FieldLabel htmlFor={selectId}>{copy.rowsPerPage}</FieldLabel>
-        <Select
-          items={sizeItems}
-          onValueChange={handleSizeChange}
-          value={String(paged.pageSize)}
-        >
-          <SelectTrigger className="w-16" id={selectId} size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            <SelectGroup>
-              {sizeItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </Field>
-      <div className="flex flex-col items-end gap-1">
-        {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
-        <div className="flex items-center gap-3">
-          <p aria-live="polite" className="text-muted-foreground text-xs">
-            {copy.summary(from, to, totalItems)}
+    <div className="flex flex-1 flex-col items-center justify-between gap-x-4 gap-y-2 md:flex-row md:justify-end">
+      {/* Inboard of the pager: the note above the rows-per-page field. */}
+      <div className="flex flex-col items-center gap-1 md:items-end">
+        {note ? (
+          <p className="text-muted-foreground text-xs max-md:order-last">
+            {note}
           </p>
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  aria-label={copy.previous}
-                  disabled={page <= 1}
-                  onClick={handlePrevious}
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  aria-label={copy.next}
-                  disabled={page >= lastPage}
-                  onClick={handleNext}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+        ) : null}
+        <Field className="w-fit" orientation="horizontal">
+          <FieldLabel className="font-normal text-xs" htmlFor={selectId}>
+            {copy.rowsPerPage}
+          </FieldLabel>
+          <Select
+            items={sizeItems}
+            onValueChange={handleSizeChange}
+            value={String(paged.pageSize)}
+          >
+            <SelectTrigger className="w-16" id={selectId} size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectGroup>
+                {sizeItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      {/* The summary and the arrows, outermost at the right edge. */}
+      <div className="flex items-center gap-3">
+        <p aria-live="polite" className="text-muted-foreground text-xs">
+          {copy.summary(from, to, totalItems)}
+        </p>
+        <Pagination className="mx-0 w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                aria-label={copy.previous}
+                disabled={page <= 1}
+                onClick={handlePrevious}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                aria-label={copy.next}
+                disabled={page >= lastPage}
+                onClick={handleNext}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

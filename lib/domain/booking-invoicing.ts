@@ -13,20 +13,6 @@ import type {
 } from "./booking-overview";
 import { payableCancellationFeeOre } from "./cancellation";
 
-export interface OutstandingInvoiceRow {
-  basisOre: number;
-  bookingEndAt: string;
-  bookingId: string;
-  bookingNumber: string;
-  bookingStartAt: string;
-  bookingStatus: BookingOverviewStatus;
-  companyName: string;
-  // The booking's manual amounts (ADR-0010) as the sheet shows them,
-  // oldest first, the creator's display name included when known.
-  manualAmounts: ManualAmountEntry[];
-  roomName: string;
-}
-
 // One booking's manual amounts (ADR-0010) as one sum for its own column
 // (DESIGN.md "Bookinger (admin)"), kept apart from the auto-computed
 // basis the total shows. Amounts integer øre, excl. VAT (ADR-0019,

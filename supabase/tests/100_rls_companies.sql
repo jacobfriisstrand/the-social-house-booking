@@ -50,7 +50,7 @@ select is((select count(*) from public.companies), 1::bigint, 'other company see
 
 -- Admin session.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
-select is((select count(*) from public.companies), 4::bigint, 'admin sees all companies (2 fixture + 2 seed)');
+select is((select count(*) from public.companies), 7::bigint, 'admin sees all companies (2 fixture + 5 seed)');
 select is((select count(*) from public.admins), 2::bigint, 'admin reads the admins registry (fixture + seed)');
 select lives_ok(
   'insert into public.companies (company_auth_user_id, company_email, company_display_name) values (''11111111-1111-1111-1111-111111111001'', ''hq@tsh.test'', ''TSH HQ'')',

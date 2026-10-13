@@ -465,3 +465,95 @@ create trigger booking_addons_sync_totals
   after insert or update or delete on public.booking_addons
   for each row
   execute function public.sync_booking_addon_totals();
+
+-- ---------------------------------------------------------------------------
+-- Invoicing status (#9, ADR-0014): only an admin changes
+-- booking_invoicing_status — a company owns its booking row but not its
+-- place in the invoice basis. Marking a booking invoiced waits for its end
+-- time (ADR-0014: a future booking is expected value, not an invoice);
+-- refusing it (not invoicable) may happen at once, so an admin can take a
+-- future booking out of the basis before it is held. Every actual status
+-- change is mirrored into invoicing_events (invoicing_events.sql) inside
+-- the same transaction, so the bulk update of the invoicing view leaves
+-- one audit row per booking.
+
+create or replace function public.enforce_invoicing_status_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- The guard binds user sessions, not maintenance paths: a trigger has no
+  -- `to authenticated` clause, so the roles seed, migrations and the
+  -- service key run as (postgres, service_role) are exempted here, the way
+  -- RLS exempts them by scoping its policies to authenticated.
+  if current_user = 'authenticated' then
+    if (auth.jwt() ->> 'app_role') is distinct from 'admin' then
+      raise exception 'only an admin can change the invoicing status'
+        using errcode = '42501';
+    end if;
+    if new.booking_invoicing_status = 'invoiced'
+      and new.booking_end_at > now()
+    then
+      raise exception
+        'a booking can first be marked invoiced after its end time'
+        using errcode = 'P0001';
+    end if;
+  end if;
+  -- The who/when of the invoice are maintained here, not by the writer:
+  -- an action only supplies date and number, and every path that marks a
+  -- booking invoiced records the same audit. A writer that already carried
+  -- the values (seed fixtures) keeps them. Leaving 'invoiced' clears both,
+  -- so the columns always read the current state while the trail keeps
+  -- every past one.
+  if new.booking_invoicing_status = 'invoiced' then
+    if new.booking_invoiced_at is null then
+      new.booking_invoiced_at := now();
+      new.booking_invoiced_by := auth.uid();
+    end if;
+  else
+    new.booking_invoice_date := null;
+    new.booking_invoice_number := null;
+    new.booking_invoiced_at := null;
+    new.booking_invoiced_by := null;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger bookings_invoicing_status_guard
+  before update of booking_invoicing_status
+  on public.bookings
+  for each row
+  when (old.booking_invoicing_status is distinct from new.booking_invoicing_status)
+  execute function public.enforce_invoicing_status_change();
+
+create or replace function public.record_invoicing_event()
+returns trigger
+language plpgsql
+as $$
+begin
+  insert into public.invoicing_events (
+    invoicing_event_booking_id,
+    invoicing_event_from_status,
+    invoicing_event_to_status,
+    invoicing_event_invoice_date,
+    invoicing_event_invoice_number,
+    invoicing_event_changed_by
+  ) values (
+    new.booking_id,
+    old.booking_invoicing_status,
+    new.booking_invoicing_status,
+    new.booking_invoice_date,
+    new.booking_invoice_number,
+    auth.uid()
+  );
+  return null;
+end;
+$$;
+
+create trigger bookings_invoicing_event
+  after update of booking_invoicing_status
+  on public.bookings
+  for each row
+  when (old.booking_invoicing_status is distinct from new.booking_invoicing_status)
+  execute function public.record_invoicing_event();

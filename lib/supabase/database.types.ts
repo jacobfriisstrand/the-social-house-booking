@@ -517,6 +517,47 @@ export type Database = {
         }
         Relationships: []
       }
+      invoicing_events: {
+        Row: {
+          invoicing_event_booking_id: string
+          invoicing_event_changed_at: string
+          invoicing_event_changed_by: string | null
+          invoicing_event_from_status: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id: string
+          invoicing_event_invoice_date: string | null
+          invoicing_event_invoice_number: string | null
+          invoicing_event_to_status: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Insert: {
+          invoicing_event_booking_id: string
+          invoicing_event_changed_at?: string
+          invoicing_event_changed_by?: string | null
+          invoicing_event_from_status: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id?: string
+          invoicing_event_invoice_date?: string | null
+          invoicing_event_invoice_number?: string | null
+          invoicing_event_to_status: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Update: {
+          invoicing_event_booking_id?: string
+          invoicing_event_changed_at?: string
+          invoicing_event_changed_by?: string | null
+          invoicing_event_from_status?: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id?: string
+          invoicing_event_invoice_date?: string | null
+          invoicing_event_invoice_number?: string | null
+          invoicing_event_to_status?: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoicing_events_invoicing_event_booking_id_fkey"
+            columns: ["invoicing_event_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       manual_amounts: {
         Row: {
           manual_amount_amount_ore: number

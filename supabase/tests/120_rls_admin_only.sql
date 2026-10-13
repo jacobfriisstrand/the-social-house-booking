@@ -43,7 +43,7 @@ insert into public.verification_codes (verification_code_id, verification_code_b
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 
-select is((select count(*) from public.rooms), 4::bigint, 'company reads rooms incl. deactivated (2 fixture + 2 seed)');
+select is((select count(*) from public.rooms), 12::bigint, 'company reads rooms incl. deactivated (2 fixture + 10 seed)');
 select is((select count(*) from public.room_images), 1::bigint, 'company reads room images');
 select throws_ok(
   'insert into public.rooms (room_name, room_capacity, room_hourly_price_ore) values (''X'', 1, 1::bigint)',
@@ -53,14 +53,14 @@ select lives_ok(
   'update public.rooms set room_is_active = false where room_id = ''44444444-4444-4444-4444-444444444001''',
   'company room update is silently scoped to zero rows');
 select is((select count(*) from public.addons), 5::bigint, 'company reads active add-ons (#7: fixture + 4 seed)');
-select is((select count(*) from public.room_addons), 7::bigint, 'company reads room add-on links (#7: fixture + 6 seed)');
+select is((select count(*) from public.room_addons), 27::bigint, 'company reads room add-on links (#7: fixture + 26 seed)');
 select is((select count(*) from public.house_events), 0::bigint, 'house_events are admin-only on the base table');
 select is((select count(*) from public.house_event_rooms), 0::bigint, 'house_event_rooms are admin-only');
 select is((select count(*) from public.verification_codes), 0::bigint, 'verification_codes are admin-only');
 
 -- Admin session: full management rights.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
-select is((select count(*) from public.house_events), 1::bigint, 'admin manages house_events');
+select is((select count(*) from public.house_events), 6::bigint, 'admin manages house_events (1 fixture + 5 seed)');
 select is((select count(*) from public.addons), 5::bigint, 'admin manages addons (1 fixture + 4 seed)');
 select is((select room_is_active from public.rooms where room_id = '44444444-4444-4444-4444-444444444001'), true, 'company could not deactivate a room');
 select lives_ok(

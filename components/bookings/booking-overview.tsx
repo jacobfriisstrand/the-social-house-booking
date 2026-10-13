@@ -58,7 +58,12 @@ export function BookingStatusBadge({
   return <Badge variant="success">{copy.status.confirmed}</Badge>;
 }
 
-function InvoicingStatusBadge({ status }: { status: BookingInvoicingStatus }) {
+// The invoicing status badge, shared with the admin Bookinger table.
+export function InvoicingStatusBadge({
+  status,
+}: {
+  status: BookingInvoicingStatus;
+}) {
   if (status === "invoiced") {
     return <Badge variant="success">{copy.invoicing.invoiced}</Badge>;
   }

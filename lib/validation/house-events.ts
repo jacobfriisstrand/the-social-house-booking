@@ -23,7 +23,11 @@ export const houseEventFormSchema = z
     houseEventId: z.guid().optional(),
     roomIds: z.array(z.guid()).min(1, errors.roomsRequired),
     startTime: wallClock,
-    title: z.string().trim().max(120, errors.tooLong),
+    title: z
+      .string()
+      .trim()
+      .min(1, errors.titleRequired)
+      .max(120, errors.tooLong),
   })
   .refine((values) => values.endTime > values.startTime, {
     message: errors.endAfterStart,

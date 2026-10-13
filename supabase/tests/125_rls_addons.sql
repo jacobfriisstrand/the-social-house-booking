@@ -38,8 +38,8 @@ select is(
   (select count(*) from public.addons where addon_id = '55555555-5555-5555-5555-555555555002'),
   0::bigint,
   'company cannot read an inactive add-on');
-select is((select count(*) from public.room_addons), 8::bigint,
-  'company reads the room add-on links (2 fixture + 6 seed; the flow filters active ones)');
+select is((select count(*) from public.room_addons), 28::bigint,
+  'company reads the room add-on links (2 fixture + 26 seed; the flow filters active ones)');
 select throws_ok(
   'insert into public.addons (addon_name, addon_price_ore, addon_pricing_model) values (''X'', 1, ''fixed'')',
   '42501', null,

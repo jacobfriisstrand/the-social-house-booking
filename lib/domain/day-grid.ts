@@ -45,7 +45,7 @@ export interface GridSpan {
 export type GridCell =
   | ({ entryId: string; kind: "entry" } & GridSpan)
   | ({ kind: "buffer" } & GridSpan)
-  | { kind: "slot"; label: string; row: number; status: StartSlotStatus };
+  | ({ kind: "slot"; label: string; status: StartSlotStatus } & GridSpan);
 
 interface RoomDay {
   entries: GridEntry[];
@@ -72,8 +72,7 @@ export function gridSpan(date: string, period: Period): GridSpan | null {
 const spanRows = (span: GridSpan): number[] =>
   Array.from({ length: span.rowSpan }, (_, index) => span.firstRow + index);
 
-const firstRowOf = (cell: GridCell): number =>
-  cell.kind === "slot" ? cell.row : cell.firstRow;
+const firstRowOf = (cell: GridCell): number => cell.firstRow;
 
 // Claims the span's rows when none is taken yet. Live periods never overlap
 // (Postgres), so a refusal only guards against off-grid times.
@@ -126,10 +125,41 @@ export function dayGridColumn({
     specialDays,
     weekly,
   });
-  for (const [row, slot] of slots.entries()) {
-    if (!taken.has(row)) {
-      cells.push({ kind: "slot", label: slot.label, row, status: slot.status });
+  for (let row = 0; row < slots.length; row += 1) {
+    if (taken.has(row)) {
+      continue;
     }
+    const slot = slots[row];
+    if (slot.status === "available") {
+      cells.push({
+        firstRow: row,
+        kind: "slot",
+        label: slot.label,
+        rowSpan: 1,
+        status: slot.status,
+      });
+      continue;
+    }
+    // Not bookable: the run of same-status rows becomes one spanned
+    // block — the buffer's continuous look for a passed morning or a
+    // closed stretch; screen readers hear the reason once per run. The
+    // loop jumps past the run's rows, so it emits exactly one cell.
+    let last = row;
+    while (
+      last + 1 < slots.length &&
+      !taken.has(last + 1) &&
+      slots[last + 1].status === slot.status
+    ) {
+      last += 1;
+    }
+    cells.push({
+      firstRow: row,
+      kind: "slot",
+      label: slot.label,
+      rowSpan: last - row + 1,
+      status: slot.status,
+    });
+    row = last;
   }
   return cells.sort((a, b) => firstRowOf(a) - firstRowOf(b));
 }

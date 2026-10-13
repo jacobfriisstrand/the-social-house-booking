@@ -44,8 +44,20 @@ select throws_ok(
   $$select public.save_house_event(p_description := 'Product launch', p_start_at := timestamptz '2026-10-01 11:00+02', p_end_at := timestamptz '2026-10-01 12:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002', '44444444-4444-4444-4444-444444444001']::uuid[], p_title := 'Launch')$$,
   '23P01', null,
   'an event on a booked room (incl. its buffer) is refused');
-select is((select count(*) from public.house_events), 0::bigint, 'a refused save leaves no event behind');
-select is((select count(*) from public.house_event_rooms), 0::bigint, 'a refused save leaves no rooms behind');
+select is(
+  (select count(*) from public.house_events where house_event_id not in (
+    '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000ab',
+    '00000000-0000-0000-0000-0000000000ac', '00000000-0000-0000-0000-0000000000ad',
+    '00000000-0000-0000-0000-0000000000ae')),
+  0::bigint,
+  'a refused save leaves no event behind (the seed''s own events aside)');
+select is(
+  (select count(*) from public.house_event_rooms where house_event_room_event_id not in (
+    '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000ab',
+    '00000000-0000-0000-0000-0000000000ac', '00000000-0000-0000-0000-0000000000ad',
+    '00000000-0000-0000-0000-0000000000ae')),
+  0::bigint,
+  'a refused save leaves no rooms behind (the seed''s own links aside)');
 
 -- A free period on both rooms is saved with both rooms.
 select lives_ok(
@@ -62,7 +74,10 @@ select lives_ok(
   $$select public.save_house_event(p_description := 'Moved', p_start_at := timestamptz '2026-10-01 10:00+02', p_end_at := timestamptz '2026-10-01 11:00+02', p_room_ids := array['44444444-4444-4444-4444-444444444002']::uuid[], p_title := 'Launch', p_house_event_id := (select house_event_id from public.house_events where house_event_title = 'Launch'))$$,
   'an edit that drops a room can move into that room''s booked time');
 select is(
-  (select array_agg(her.house_event_room_room_id) from public.house_event_rooms her),
+  (select array_agg(her.house_event_room_room_id)
+   from public.house_event_rooms her
+   join public.house_events he on he.house_event_id = her.house_event_room_event_id
+   where he.house_event_title = 'Launch'),
   array['44444444-4444-4444-4444-444444444002']::uuid[],
   'the edit keeps only the rooms it was given');
 

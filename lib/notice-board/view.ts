@@ -7,6 +7,7 @@
 // decided by what the data layer could read (lib/notice-board/data.ts).
 import type { RoomStatus } from "@/lib/domain/day-grid";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
+import { isFullDayPeriod } from "@/lib/domain/time";
 import { formatDate, formatTime } from "@/lib/format";
 import { messages } from "@/messages/da";
 import type { BookingDetail, DayEntry } from "./data";
@@ -27,6 +28,7 @@ export interface GridEntryView {
   kind: "booking" | "house_event";
   name: string;
   price: PriceOverviewModel | null;
+  roomName: string;
   time: string;
 }
 
@@ -38,7 +40,9 @@ const STATUS_LABEL = {
 } as const;
 
 const timeRange = (entry: DayEntry): string =>
-  `${formatTime(entry.startAt)} - ${formatTime(entry.endAt)}`;
+  isFullDayPeriod(entry.startAt, entry.endAt)
+    ? sheet.fullDay
+    : `${formatTime(entry.startAt)} - ${formatTime(entry.endAt)}`;
 
 const whenLines = (entry: DayEntry): DetailLine[] => [
   { label: sheet.date, value: formatDate(entry.startAt) },
@@ -101,6 +105,7 @@ export function bookingView(
     kind: "booking",
     name,
     price: detail?.kind === "admin" ? detail.price : null,
+    roomName: entry.roomName,
     time: timeRange(entry),
   };
 }
@@ -127,6 +132,7 @@ export function houseEventView(
     kind: "house_event",
     name,
     price: null,
+    roomName: entry.roomName,
     time: timeRange(entry),
   };
 }

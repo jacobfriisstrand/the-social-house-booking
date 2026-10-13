@@ -176,7 +176,7 @@ const block = (col, from, to, tone, title, sub) => {
   const styles = {
     primary: `background: ${T.primary}; border: 1px solid ${T.primaryEdge}; color: ${T.fg};`,
     info: `background: ${T.info}; border: 1px solid ${T.info}; color: #ffffff;`,
-    buffer: `background: ${T.muted}; border: 1px solid ${T.border};`,
+    buffer: `background: ${T.muted}; border: 1px solid ${T.border}; background-image: repeating-linear-gradient(45deg, rgba(87, 87, 87, 0.25) 0 1px, transparent 1px 7px);`,
   };
   const text =
     tone === "buffer"
@@ -279,7 +279,6 @@ const rowsData = [
   ["B-2609-011", "Rituals", "The Loft", "01/09/2026", "09:00 - 13:00", "4,0", "4.000,00", "-2.000,00", "1.200,00", "0,00", "3.200,00", ["Ikke faktureret", "warning"], false],
   ["B-2609-009", "Kontrapunkt", "Room of Relations", "01/09/2026", "13:00 - 15:00", "2,0", "1.000,00", "-250,00", "0,00", "0,00", "750,00", ["Faktureret", "success"], false],
   ["B-2608-097", "Bæredygtig Byg", "Room of Conversation", "31/08/2026", "10:00 - 11:00", "1,0", "500,00", "0,00", "0,00", "500,00", "500,00", ["Aflyst", "destructive"], false],
-  ["HE-2609-002", "The Social House", "The Loft", "02/09/2026", "12:00 - 14:00", "2,0", "0,00", "0,00", "0,00", "0,00", "0,00", ["Ikke fakturerbar", "muted"], false],
   ["B-2608-091", "Nordic Wool", "Room of Serenity", "28/08/2026", "09:00 - 12:00", "3,0", "1.500,00", "-375,00", "105,00", "0,00", "1.230,00", ["Faktureret", "success"], false],
   ["B-2608-088", "Kontrapunkt", "Room of Exploration", "27/08/2026", "13:00 - 17:00", "4,0", "6.400,00", "-1.600,00", "400,00", "0,00", "5.200,00", ["Faktureret", "success"], false],
 ];
@@ -303,7 +302,7 @@ const tr = (r) => {
   return `<tr style="background: ${r[12] ? T.muted : T.card};">${cells.map((c, i) => td(c, i, cols[i][1])).join("")}</tr>`;
 };
 const totals = `<tr style="background: ${T.muted};">${[
-  "", "", `<span style="font-weight: 500;">I alt, 8 bookinger</span>`, "", "", "19,0", "17.400,00", "-5.825,00", "1.775,00", "500,00", `<span style="font-weight: 500;">13.350,00</span>`, `<span style="font-size: 12px; color: ${T.mutedFg};">ekskl. moms</span>`,
+  "", "", `<span style="font-weight: 500;">I alt, 7 bookinger</span>`, "", "", "17,0", "17.400,00", "-5.825,00", "1.775,00", "500,00", `<span style="font-weight: 500;">13.350,00</span>`, `<span style="font-size: 12px; color: ${T.mutedFg};">ekskl. moms</span>`,
 ].map((c, i) => `<td class="num" style="text-align: ${cols[i][1]}; ${cellPad} font-size: 14px; height: ${s(12)}; white-space: nowrap;">${c}</td>`).join("")}</tr>`;
 
 const filters = `
@@ -318,7 +317,6 @@ const filters = `
   ${select("Alle lokaler", 160)}
   ${select("Alle statusser", 160)}
   ${select("Medlemmer og eksterne", 200)}
-  <label style="display: flex; align-items: center; gap: ${s(2)}; font-size: 14px; color: ${T.fg};">${checkbox(false)}Skjul House Events</label>
 </div>`;
 
 const table = card(
