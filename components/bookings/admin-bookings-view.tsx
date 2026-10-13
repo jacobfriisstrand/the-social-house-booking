@@ -81,15 +81,20 @@ function FilterMultiSelect({
     summary = copy.selection.selected(value.length);
   }
   const clear = useCallback(() => onChange([]), [onChange]);
-  // The x sits inside the trigger, beside the chevron. Base UI toggles the
-  // popup in the trigger's own click handler, so the click stops here. The
-  // span is not focusable — no second focus stop inside a button — so
-  // keyboard users clear by unticking (ponytail: clear-on-Escape inside
-  // the open popup would close that gap).
+  // The x sits inside the trigger, beside the chevron. The select opens on
+  // mousedown (Base UI's useClick with event: 'mousedown'), so the press
+  // itself must stop before it reaches the trigger — by the time the click
+  // fires, the popup is already open. preventDefault keeps the press from
+  // moving focus into the trigger. The span is not focusable — no second
+  // focus stop inside a button — so keyboard users clear by unticking
+  // (ponytail: clear-on-Escape inside the open popup would close that gap).
+  const onClearPress = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
   const onClearClick = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
-      event.preventDefault();
       clear();
     },
     [clear]
@@ -110,6 +115,7 @@ function FilterMultiSelect({
             aria-hidden="true"
             className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onClearClick}
+            onMouseDown={onClearPress}
           >
             <XIcon className="size-3.5" />
           </span>
