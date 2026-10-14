@@ -57,9 +57,9 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 
 ## Netlify specifics
 
-- Next.js runs through Netlify's Next runtime; no `output: 'export'`, no custom server.
+- Next.js runs through the Netlify Next runtime; no `output: 'export'`, no custom server.
 - `.nvmrc` pins Node 24 for build and functions.
-- The only custom function is `netlify/functions/send-reminders.mts` (scheduled, production only). Everything else is Next.
+- Two scheduled functions, production only, both just POST a job route with `JOB_SECRET`: `netlify/functions/send-reminders.mts` (`@hourly`) and `netlify/functions/sync-calendar.mts` (`*/5 * * * *`, `docs/agents/outlook-sync.md`). Everything else is Next.
 - `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload. `SENTRY_WEBHOOK_SECRET` and `GITHUB_ISSUES_TOKEN` are production context only: the Sentry webhook points at the production URL (`stack.md`).
 
 ## First-time setup of a cloud environment (once, by a human)
@@ -74,11 +74,12 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 
 Found while testing #11 and #88 on 2026-10-07; do these in order when production opens to members.
 
-1. **Turn off Netlify visitor protection on production** (Site configuration → Access & security → Visitor access). While it is on, every request without a Netlify login gets `401` and a "Login Redirect" page — including the three machine callers of the site, which therefore cannot work yet:
+1. **Turn off Netlify visitor protection on production** (Site configuration → Access & security → Visitor access). While it is on, every request without a Netlify login gets `401` and a "Login Redirect" page — including the four machine callers of the site, which therefore cannot work yet:
    - the hourly job: `netlify/functions/send-reminders.mts` POSTs `${NEXT_PUBLIC_SITE_URL}/api/jobs/send-reminders` over the public URL, so every scheduled run fails with `responded 401` and no reminder (Mail 5) is sent and no stale hold is released;
+   - the Outlook sync job: `netlify/functions/sync-calendar.mts` POSTs `/api/jobs/sync-calendar` the same way every five minutes, so mirror rows pile up dirty and nothing reaches Outlook;
    - the Resend webhook (`/api/webhooks/resend`): `outbound_email_status` stays `queued`;
    - the Sentry webhook (`/api/webhooks/sentry`): no GitHub issues from Sentry.
-   The develop deploy is protected the same way; there the job is triggered by hand anyway, but its Resend webhook is blocked too.
+   The develop deploy is protected the same way; there the jobs are triggered by hand anyway, but its Resend webhook is blocked too. Hand-triggering the job routes only works against a local `npm run dev` — the protected develop URL 401s machine callers the same way the webhooks do. This is not hypothetical: Resend disabled the develop webhook (`develop--…netlify.app/api/webhooks/resend`) on 2026-10-13 after failures since 2026-10-08, and `outbound_email_status` has stayed `queued` on the development project since. After turning visitor access off, re-enable the endpoint in the Resend dashboard; re-enablement only resumes new events — the queued rows are not retroactively updated.
 2. **Switch Resend to the thesocialhouse.dk account.** Production still sends through the development account (domain `tsh-dev.jacobfri.is`). Replace `RESEND_API_KEY` and `RESEND_FROM` in the Netlify production context and in the production Edge Function secrets (`supabase secrets set --project-ref <prod ref> …`), register the production webhook on the new account (new `RESEND_WEBHOOK_SECRET`), and run the template sync against it (the release workflow does, with the production key).
 3. **Remove `BOOKING_CANCEL_SECRET`** from every Netlify context. Nothing reads it since #88 (ADR-0024).
 4. **Check the job and the webhooks after the next full hour**: the `send-reminders` function log shows a `200` with `{"holdsExpired":…,"reminders":{…}}`, a test mail moves from `queued` to `delivered` in `outbound_emails`, and a test Sentry error opens a GitHub issue.

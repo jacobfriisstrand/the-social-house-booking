@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addMonths,
+  cphStamp,
   cphToUtc,
   cphWallClock,
   hoursBetween,
@@ -153,5 +154,27 @@ describe("addMonths", () => {
     expect(addMonths(new Date("2027-01-31T00:00:00Z"), 1).toISOString()).toBe(
       "2027-02-28T00:00:00.000Z"
     );
+  });
+});
+
+describe("cphStamp", () => {
+  it("stamps a summer instant as Copenhagen wall clock", () => {
+    // UTC 07:30:05 in summer = CEST 09:30:05
+    expect(cphStamp(new Date("2026-07-15T07:30:05Z"))).toEqual({
+      date: "2026-07-15",
+      time: "09:30:05",
+    });
+  });
+
+  it("stamps a winter instant and crosses the date", () => {
+    // UTC 23:30 in winter = CET 00:30 the next day
+    expect(cphStamp(new Date("2026-01-15T23:30:00Z"))).toEqual({
+      date: "2026-01-16",
+      time: "00:30:00",
+    });
+  });
+
+  it("pads single-digit fields", () => {
+    expect(cphStamp(new Date("2026-03-01T01:02:03Z")).time).toBe("02:02:03");
   });
 });

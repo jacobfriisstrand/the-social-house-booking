@@ -31,6 +31,7 @@ Everything below lives in the production Supabase project, `the-social-house-pro
 | Company change requests, `company_change_requests`, `company_change_tokens` | Current and proposed login email, a before-and-after copy of the master data, approval links stored as hashes | Company, contact person | The current login email must approve every change | Server code only. No login can read it. |
 | Terms acceptances, `terms_acceptances` | Company, booking, the accepted version, time of acceptance | Company | Bilag 1 requires the time and the version | The company, its own. Admin. |
 | Email log, `outbound_emails` | Recipient address, type of mail, Resend id, delivery status, error text. The mail body is not stored. | Booker, company, admin | Send each mail once. Show admin which mails failed. | The company, rows linked to it. Admin. |
+| Calendar mirror, `calendar_events` | Sync state for the Outlook mirror: which Microsoft Graph entry belongs to which booking or House Event, and whether it still needs a push. No personal data — the copy of the booking data that Outlook shows lives in Microsoft, not here | No personal data in the row | Operating the one-way Outlook mirror (ADR-0003) | No login. The table is deny-all RLS; only the sync worker's service key touches it. |
 
 Notes on the table:
 
@@ -47,18 +48,20 @@ Notes on the table:
 |---|---|---|---|
 | Supabase | Database, logins, room photo storage, and the `send-email` Edge Function that sends login emails | Everything in section 1 | Project `the-social-house-production`, ref `rukxjslnbhsqdzmeenbn`, on the Pro plan. To confirm: the region. Issue #15 requires an EU region. The repository records no region for production. The setup script only tells whoever creates the development project to pick `eu-central-1`, which is Frankfurt. |
 | Resend | Sends every email, from the platform and from Supabase Auth, and reports delivery status back | Recipient addresses, the company display name, verification codes, cancellation and approval links. Admin mails about new and cancelled bookings carry the booker's name, and the one about a new booking also the booker's email and phone. The admin mail about a completed company carries its login email, contact person's name and phone, and invoice email. | To confirm: the region of the sending domain. To confirm: production sends from `booking@thesocialhouse.dk` at go-live, as `.env.example` says. |
-| Netlify | Hosts the website and runs its server code and the hourly scheduled function | All personal data passes through on its way to and from the database. Netlify sees each visitor's IP address. The platform's own code writes no logs. | To confirm: the functions region and how long Netlify keeps request logs. |
-| Sentry | Collects errors from the browser and the server | Error type and code location, browser, page address, `company_id` and `booking_number`. Before sending, the filter in `lib/sentry/scrub.ts` drops the signed-in identity, cookies and request bodies, and blanks every field named like email, phone, name, practical notes or internal note. | Organisation `the-social-house`, project `tsh-booking`. A repository note in `docs/vendor/sentry/webhooks.md` says the organisation is in Sentry's EU region. To confirm: the production DSN points at the EU region. |
+| Netlify | Hosts the website and runs its server code and the scheduled functions | All personal data passes through on its way to and from the database. Netlify sees each visitor's IP address. The platform's own code writes no logs. | To confirm: the functions region and how long Netlify keeps request logs. |
+| Microsoft | One-way mirror of confirmed bookings and House Events to the shared calendar `booking@thesocialhouse.dk` (ADR-0003, #13). Platform → Microsoft Graph only; nothing is ever read back | The booker's name, work email and mobile, the headcount, the reference, the company display name, the booking number and the names and quantities of purchased add-ons, as text in the calendar entry, so staff can run the meeting. A cancelled booking keeps its entry (marked "Aflyst"), so the booker's details stay in the mailbox after cancellation. Practical notes and internal admin notes are deliberately excluded — practical notes may hold health data | The Social House's Microsoft 365 tenant. To confirm: the region the tenant hosts the mailbox in. The sync runs only while the `OUTLOOK_*` variables are set for the context: production mirrors `booking@thesocialhouse.dk` (the route refuses any other address there); the develop branch deploy and deliberate local tests run the sandbox pair against the developer's own tenant-hosted mailbox. Until a pair is set, nothing reaches Microsoft (docs/agents/outlook-sync.md). |
+| Sentry | Collects errors from the browser and the server | Error type and code location, browser, page address, `company_id` and `booking_number`; the calendar sync job tags its failures with `calendar_event_id` (a mirror-row uuid, no personal data). Before sending, the filter in `lib/sentry/scrub.ts` drops the signed-in identity, cookies and request bodies, and blanks every field named like email, phone, name, practical notes or internal note. | Organisation `the-social-house`, project `tsh-booking`. A repository note in `docs/vendor/sentry/webhooks.md` says the organisation is in Sentry's EU region. To confirm: the production DSN points at the EU region. |
 | GitHub | Source code, issue tracker, automated checks | No personal data by design. Each new Sentry error opens a GitHub issue with the error title and code location. | The repository is public, checked 2026-10-05. Issue titles from Sentry are therefore public too. |
 
 The Sentry filter works on field names. It does not read inside an error message, so code must never put personal data into one. The rule is in `docs/agents/stack.md`.
 
-Two systems are not processors of this platform in v1.0:
+One system is not a processor of this platform in v1.0:
 
 - **e-conomic.** Admin copies invoicing data into e-conomic by hand, as ADR-0001 decides. The platform has no connection to it. What happens to the data in e-conomic belongs in The Social House's own records.
-- **Microsoft Outlook.** Bilag 1 and ADR-0003 describe a one-way sync of bookings to the calendar `booking@thesocialhouse.dk`. It is not built yet. When it is, Microsoft becomes a processor and this document needs a new row.
 
-**Development is separate.** Local development, the `develop` branch and pull-request previews use their own Supabase project, `the-social-house-development`. Every email sent from development goes to the addresses in `EMAIL_REDIRECT_TO`, never to the real recipient. Development should hold test data only.
+Microsoft (the Outlook mirror above) becomes an active processor the moment the `OUTLOOK_*` variables are set for a context. Real booker data reaches Microsoft only through the production pair; the sandbox pair on the develop branch deploy — or deliberately in `.env.local` — mirrors test data into the developer's own tenant-hosted mailbox.
+
+**Development is separate.** Local development, the `develop` branch and pull-request previews use their own Supabase project, `the-social-house-development`. Every email sent from development goes to the addresses in `EMAIL_REDIRECT_TO`, never to the real recipient. The Outlook mirror in development writes test bookings to the developer's own tenant-hosted mailbox, never to the staff calendar. Development should hold test data only.
 
 ## 3. Retention
 
@@ -72,12 +75,13 @@ Nothing in the platform deletes personal data on a schedule. This is what the co
 | Verification codes | Stored as a hash. A code dies after 10 minutes or 5 wrong attempts. The row stays. | No limit, but no personal data in the row |
 | Company change requests | The approval link expires after 30 minutes. The request and its before-and-after copy of the master data stay. | No limit |
 | Email log | Nothing deletes it. | No limit |
+| Calendar mirror, `calendar_events` | The sync worker removes the row once the Outlook entry is gone — right after an expired booking, a hold, or a hard-deleted House Event. A cancelled booking keeps its row and its Outlook entry (marked "Aflyst"), so the booker's details stay in the Microsoft mailbox for as long as the booking row lives. | For confirmed and cancelled bookings: as long as the source booking (no limit). For holds, expired bookings and hard-deleted House Events: only until the entry is removed |
 | Terms acceptances | Nothing deletes them. They are the proof Bilag 1 asks for. | No limit |
 | Manual amounts | Admin can remove one while the booking still waits for its invoice. | No limit otherwise |
 | Login sessions | End when the company or admin signs out. Production signs a login out after 7 days without activity. | Until sign-out or 7 days idle |
 | Supabase backups and Auth audit log, Resend, Netlify and Sentry | Each provider's own rules | To confirm |
 
-The status change from hold to "expired" happens on the next write to the row, or when `expire_stale_holds()` runs. The hourly job is meant to call it through `app/api/jobs/send-reminders`, which is not in the repository yet. Either way, nothing is deleted.
+The status change from hold to "expired" happens on the next write to the row, or when `expire_stale_holds()` runs. The hourly job calls it through `app/api/jobs/send-reminders`. Either way, nothing is deleted.
 
 **The Social House needs to set retention periods.** Our suggestion:
 
@@ -86,7 +90,7 @@ The status change from hold to "expired" happens on the next write to the row, o
 - Delete email log rows and finished change requests after, for example, 12 months.
 - To confirm with The Social House and its accountant: Danish bookkeeping rules may require keeping the invoicing basis for a number of years. That decides how long the amounts and invoice numbers stay.
 
-Any cleanup built later belongs in the existing hourly job. AGENTS.md allows only that one scheduled job.
+Any cleanup built later belongs in the existing hourly job; the calendar sync job mirrors only and must not grow cleanup duties.
 
 ## 4. Export
 
@@ -271,11 +275,11 @@ Each point needs an answer or a decision before go-live.
 5. **Netlify.** To confirm: the functions region and how long request logs are kept.
 6. **Sentry.** To confirm: the production DSN points at Sentry's EU region, and how long Sentry keeps events.
 7. **Public GitHub repository.** To confirm: that error titles from Sentry may appear in public GitHub issues. If not, make the repository private or stop the automatic issues.
-8. **Data processing agreements.** To confirm: The Social House has a data processing agreement with Supabase, Resend, Netlify and Sentry, and knows which account owns each service.
+8. **Data processing agreements.** To confirm: The Social House has a data processing agreement with Supabase, Resend, Netlify, Sentry and Microsoft, and knows which account owns each service.
 9. **Retention periods.** To decide: how long to keep bookings, booker details, expired holds, booking history, the email log, change requests and terms acceptances. To confirm with The Social House and its accountant: what Danish bookkeeping rules require for the invoicing basis.
 10. **Health data in practical notes.** To confirm: the legal basis for storing allergies and accessibility needs, and whether the booking dialog should tell bookers to write only what the meeting needs.
 11. **Internal admin notes.** To decide: is it acceptable that a company can read its own internal notes through the database API? If not, a developer must add column-level protection.
 12. **Closing a company and keeping its bookings.** To decide: is 6.3 good enough, or should the schema let a company exist without a login?
 13. **Access to production.** To confirm: who holds production database access to run the procedures in sections 4 to 6, and where each request and its handling is logged.
-14. **Outlook sync.** When the sync in ADR-0003 is built, Microsoft becomes a processor. Update this document then.
+14. **Microsoft 365.** To confirm: the region the tenant hosts `booking@thesocialhouse.dk` in, that admin consent is granted for the sync app's `Calendars.ReadWrite`, and that the mirror's booker details (name, work email, mobile) in the calendar text are acceptable to staff and bookers. The mirror is active only while the `OUTLOOK_*` variables are set for the context: the production pair on the production context, the sandbox pair on the develop branch deploy (test data into the sandbox mailbox).
 15. **Development data.** To confirm: the development project holds test data only, and no real company or booker data is ever copied into it.

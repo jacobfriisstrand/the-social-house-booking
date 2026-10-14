@@ -56,9 +56,9 @@ The Supabase Send Email Hook is the Edge Function `supabase/functions/send-email
 
 ## The hourly job
 
-There is exactly one scheduled job.
+One of the two scheduled jobs (the other is the Outlook sync, `docs/agents/outlook-sync.md`).
 
-- **Trigger**: `netlify/functions/send-reminders.mts` with `export const config = { schedule: "@hourly" }`. Its only job is `POST ${NEXT_PUBLIC_SITE_URL}/api/jobs/send-reminders` with `Authorization: Bearer ${JOB_SECRET}`. Netlify runs scheduled functions on the **production** deploy only; on `develop`, call the route manually with the secret.
+- **Trigger**: `netlify/functions/send-reminders.mts` with `export const config = { schedule: "@hourly" }`. Its only job is `POST ${NEXT_PUBLIC_SITE_URL}/api/jobs/send-reminders` with `Authorization: Bearer ${JOB_SECRET}`. Netlify runs scheduled functions on the **production** deploy only; on `develop`, call the route by hand — against a local `npm run dev` while visitor protection is on, since the branch deploy 401s machine callers the same way the webhooks do.
 - **Route**: `app/api/jobs/send-reminders/route.ts`, verifies `JOB_SECRET`, then:
   1. Selects `confirmed` bookings with `booking_start_at` in `(now() + 23h, now() + 24h]` that have no `reminder` row in `outbound_emails`, and sends `reminder` for each. Cancelled bookings never match. The unique index makes double runs harmless.
   2. Releases stale holds: `pending_verification` bookings past `booking_hold_expires_at` → `expired`.
