@@ -103,11 +103,14 @@ function RoomInfo({ room }: { room: PublicRoom }) {
         <ExpandableText className="text-sm" text={room.description} />
       ) : null}
       {room.practicalNotes ? (
-        <ExpandableText
-          className="text-muted-foreground text-sm"
-          lines={3}
-          text={room.practicalNotes}
-        />
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium text-lg">
+            {messages.rooms.practicalNotesSection}
+          </h2>
+          <p className="whitespace-pre-line text-muted-foreground text-sm">
+            {room.practicalNotes}
+          </p>
+        </section>
       ) : null}
       <Separator />
       <h2 className="font-medium text-lg">{messages.rooms.addonsSection}</h2>

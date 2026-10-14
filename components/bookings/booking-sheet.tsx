@@ -5,19 +5,12 @@
 // carries the destructive "Aflys booking" flow — the confirm dialog is
 // Platform message 1 with the live fee (#11), and the action recomputes it
 // server-side at the exact confirm moment (#5, ADR-0006).
-import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState } from "react";
+import { CancelConfirmDialog } from "@/components/bookings/cancel-confirm-dialog";
 import { CancellationSummary } from "@/components/bookings/cancellation-summary";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -25,8 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
-import { toast } from "@/components/ui/toast";
 import { cancelOwnBooking } from "@/lib/bookings/cancel-actions";
 import type { BookingOverviewRow } from "@/lib/domain/booking-overview";
 import { formatDate, formatOre, formatTime } from "@/lib/format";
@@ -36,81 +27,32 @@ const copy = messages.bookings.sheet;
 const cancellationCopy = messages.cancellation;
 
 // The confirm dialog is Platform message 1 (DESIGN.md "Confirm before
-// destroying", the cancellation exception): the booking, the live fee, a
-// secondary "Behold bookingen" and a destructive "Bekræft afbooking". It
-// mounts only while confirming, so a refresh or an error cannot leave a
-// dead dialog open behind the sheet.
-// fallow-ignore-next-line complexity
-function CancelConfirmDialog({
+// destroying", the cancellation exception): the booking and its live fee,
+// cancelled under the company's own session.
+function MemberCancelDialog({
   booking,
   onClose,
 }: {
   booking: BookingOverviewRow;
   onClose: () => void;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  // The dialog only closes; opening happens where the button mounts it.
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        onClose();
-      }
-    },
-    [onClose]
+  const cancel = useCallback(
+    () => cancelOwnBooking(booking.bookingId),
+    [booking.bookingId]
   );
-
-  const confirm = useCallback(() => {
-    startTransition(async () => {
-      const result = await cancelOwnBooking(booking.bookingId);
-      if (result.status === "cancelled") {
-        toast.add({
-          title:
-            result.feeOre > 0
-              ? copy.successWithFee(formatOre(result.feeOre))
-              : copy.successWithoutFee,
-          type: "success",
-        });
-      } else {
-        // The slot may have slipped past while the sheet was open; the row's
-        // status is re-read on refresh either way.
-        toast.add({ title: result.error, type: "error" });
-      }
-      router.refresh();
-      onClose();
-    });
-  }, [booking.bookingId, onClose, router]);
-
   return (
-    <Dialog onOpenChange={handleOpenChange} open>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {cancellationCopy.confirmTitle(booking.roomName)}
-          </DialogTitle>
-        </DialogHeader>
-        <CancellationSummary
-          bookingNumber={booking.bookingNumber}
-          endAt={booking.endAt}
-          feeOre={booking.liveCancellationFeeOre ?? 0}
-          startAt={booking.bookingStartAt}
-        />
-        <DialogFooter className="justify-end gap-2">
-          <Button onClick={onClose} type="button" variant="outline">
-            {cancellationCopy.keepBooking}
-          </Button>
-          <Button
-            disabled={pending}
-            onClick={confirm}
-            type="button"
-            variant="destructive"
-          >
-            {pending ? <Spinner aria-hidden="true" /> : null}
-            {pending ? cancellationCopy.confirming : cancellationCopy.confirm}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CancelConfirmDialog
+      cancel={cancel}
+      onClose={onClose}
+      title={cancellationCopy.confirmTitle(booking.roomName)}
+    >
+      <CancellationSummary
+        bookingNumber={booking.bookingNumber}
+        endAt={booking.endAt}
+        feeOre={booking.liveCancellationFeeOre ?? 0}
+        startAt={booking.bookingStartAt}
+      />
+    </CancelConfirmDialog>
   );
 }
 
@@ -236,7 +178,7 @@ export function BookingSheet({
         </SheetContent>
       </Sheet>
       {confirming ? (
-        <CancelConfirmDialog booking={booking} onClose={closeSheet} />
+        <MemberCancelDialog booking={booking} onClose={closeSheet} />
       ) : null}
     </>
   );

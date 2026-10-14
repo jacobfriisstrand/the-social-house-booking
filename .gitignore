@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Local artifact from `netlify serve` edge runtime
 deno.lock
+
+# Demo room photos, downloaded by scripts/seed-room-images.ts
+/supabase/seed-images/

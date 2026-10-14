@@ -3,6 +3,7 @@
 // The notice board's rooms (DESIGN.md "Hjem" 3): a framing card with the
 // section title, the prev/next ghost buttons top right, and a horizontal
 // carousel of room cards. Cards open the room detail page.
+import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures";
 import { RoomCard, type RoomCardRoom } from "@/components/rooms/room-card";
 import {
   Card,
@@ -34,8 +35,14 @@ export function RoomCarousel({
   }
   return (
     // The carousel wraps the card so the header's arrows and the content
-    // share its context. shrink-0: see the notice strip.
-    <Carousel className="shrink-0" opts={{ align: "start" }}>
+    // share its context. shrink-0: see the notice strip. The wheel plugin
+    // adds a sideways trackpad swipe over the list; vertical page scroll
+    // and dragging stay as they were.
+    <Carousel
+      className="shrink-0"
+      opts={{ align: "start" }}
+      plugins={[WheelGesturesPlugin()]}
+    >
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">

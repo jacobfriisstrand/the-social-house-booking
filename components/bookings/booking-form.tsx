@@ -113,7 +113,7 @@ const errorStep = (state: BookingState): number =>
     ? firstStepWithError(Object.keys(state.fieldErrors ?? {}))
     : -1;
 
-const toPeriods = (periods: SerializedPeriod[]): Period[] =>
+export const toPeriods = (periods: SerializedPeriod[]): Period[] =>
   periods.map((period) => ({
     endAt: new Date(period.endAt),
     startAt: new Date(period.startAt),

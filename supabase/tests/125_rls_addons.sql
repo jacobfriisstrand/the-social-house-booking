@@ -38,8 +38,8 @@ select is(
   (select count(*) from public.addons where addon_id = '55555555-5555-5555-5555-555555555002'),
   0::bigint,
   'company cannot read an inactive add-on');
-select is((select count(*) from public.room_addons), 28::bigint,
-  'company reads the room add-on links (2 fixture + 26 seed; the flow filters active ones)');
+select is((select count(*) from public.room_addons), 75::bigint,
+  'company reads the room add-on links (2 fixture + 73 seed; the flow filters active ones)');
 select throws_ok(
   'insert into public.addons (addon_name, addon_price_ore, addon_pricing_model) values (''X'', 1, ''fixed'')',
   '42501', null,
@@ -56,7 +56,7 @@ select is(
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
 
-select is((select count(*) from public.addons), 6::bigint, 'admin reads inactive add-ons too (2 fixture + 4 seed)');
+select is((select count(*) from public.addons), 12::bigint, 'admin reads inactive add-ons too (2 fixture + 10 seed)');
 select lives_ok(
   'update public.addons set addon_price_ore = 23500 where addon_id = ''55555555-5555-5555-5555-555555555001''',
   'admin edits an add-on');

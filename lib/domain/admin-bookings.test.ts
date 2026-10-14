@@ -7,6 +7,7 @@ import {
   adminRowParts,
   adminTotals,
   breakdownAdminRows,
+  canAdminCancel,
   invoicingActionAllowance,
   shiftRangeIds,
   sortAdminRows,
@@ -326,5 +327,22 @@ describe("shiftRangeIds", () => {
     expect(shiftRangeIds(page, null, "b3")).toBeNull();
     expect(shiftRangeIds(page, "b9", "b3")).toBeNull();
     expect(shiftRangeIds(page, "b3", "b3")).toBeNull();
+  });
+});
+
+describe("canAdminCancel", () => {
+  const now = new Date("2026-10-01T08:00:00Z");
+
+  it("allows a confirmed booking that has not started", () => {
+    expect(canAdminCancel(booking(), now)).toBe(true);
+  });
+
+  it("refuses a started or cancelled booking", () => {
+    expect(canAdminCancel(booking(), new Date("2026-10-01T09:00:00Z"))).toBe(
+      false
+    );
+    expect(canAdminCancel(booking({ bookingStatus: "cancelled" }), now)).toBe(
+      false
+    );
   });
 });

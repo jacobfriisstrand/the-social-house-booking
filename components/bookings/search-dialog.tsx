@@ -2,7 +2,9 @@
 
 // "Book lokale" (DESIGN.md "Book lokale", ADR-0009): participants, date,
 // start, end; "Søg" navigates to /rooms with the search in the URL and
-// every room that is free and holds the party comes back. Rendered by the shell, so it owns its two triggers
+// every room that is free and holds the party comes back. It opens on the
+// next slot still ahead, and a start that has passed is refused here
+// before it reaches the search. Rendered by the shell, so it owns its two triggers
 // (text button, icon button on the rail).
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -23,12 +25,16 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { dateToIso } from "@/lib/calendar-date";
 import {
   GRID_END_MINUTES,
   GRID_START_MINUTES,
 } from "@/lib/domain/availability";
 import { bookingHorizonEnd, SLOT_MINUTES } from "@/lib/domain/booking-window";
+import {
+  defaultSearchSlot,
+  searchSlotOn,
+  startsInPast,
+} from "@/lib/domain/search-slot";
 import { timeOptions } from "@/lib/domain/time";
 import { roomSearchQuery } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
@@ -65,15 +71,57 @@ interface SearchValues {
   to: string;
 }
 
+// Start and end side by side; a start that has passed shows its error
+// under both.
+function TimeFields({
+  from,
+  inPast,
+  onFromChange,
+  onToChange,
+  to,
+}: {
+  from: string;
+  inPast: boolean;
+  onFromChange: (from: string) => void;
+  onToChange: (to: string) => void;
+  to: string;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Field data-invalid={inPast}>
+        <FieldLabel>{copy.from}</FieldLabel>
+        <TimeSelect
+          ariaLabel={copy.from}
+          items={startItems}
+          onChange={onFromChange}
+          value={from}
+        />
+      </Field>
+      <Field>
+        <FieldLabel>{copy.to}</FieldLabel>
+        <TimeSelect
+          ariaLabel={copy.to}
+          items={endItems}
+          onChange={onToChange}
+          value={to}
+        />
+      </Field>
+      {inPast ? (
+        <FieldError className="col-span-2">
+          {messages.booking.errors.inPast}
+        </FieldError>
+      ) : null}
+    </div>
+  );
+}
+
 // onSearched closes the dialog: the shell survives the navigation, so the
 // dialog would otherwise stay open over the results.
 function SearchForm({ onSearched }: { onSearched: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState<SearchValues>(() => ({
-    date: dateToIso(new Date()),
-    from: "09:00",
+    ...defaultSearchSlot(new Date()),
     participants: DEFAULT_PARTICIPANTS,
-    to: "10:00",
   }));
   const update = useCallback(
     (patch: Partial<SearchValues>) =>
@@ -86,11 +134,12 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
   const [submitted, setSubmitted] = useState(false);
   const participantCount = Number.parseInt(values.participants, 10);
   const participantsValid = participantCount >= 1;
+  const inPast = startsInPast(values.date, values.from, new Date());
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setSubmitted(true);
-      if (!participantsValid) {
+      if (!participantsValid || inPast) {
         return;
       }
       router.push(
@@ -103,9 +152,13 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
       );
       onSearched();
     },
-    [onSearched, participantCount, participantsValid, router, values]
+    [inPast, onSearched, participantCount, participantsValid, router, values]
   );
-  const setDate = useCallback((date: string) => update({ date }), [update]);
+  // A new date moves the times to that day's first slot still ahead.
+  const setDate = useCallback(
+    (date: string) => update(searchSlotOn(date, new Date())),
+    [update]
+  );
   const setFrom = useCallback((from: string) => update({ from }), [update]);
   const setTo = useCallback((to: string) => update({ to }), [update]);
   const setParticipants = useCallback(
@@ -114,6 +167,7 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
     [update]
   );
   const participantsInvalid = submitted && !participantsValid;
+  const timeInvalid = submitted && inPast;
 
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit}>
@@ -148,26 +202,13 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
             value={values.date}
           />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <FieldLabel>{copy.from}</FieldLabel>
-            <TimeSelect
-              ariaLabel={copy.from}
-              items={startItems}
-              onChange={setFrom}
-              value={values.from}
-            />
-          </Field>
-          <Field>
-            <FieldLabel>{copy.to}</FieldLabel>
-            <TimeSelect
-              ariaLabel={copy.to}
-              items={endItems}
-              onChange={setTo}
-              value={values.to}
-            />
-          </Field>
-        </div>
+        <TimeFields
+          from={values.from}
+          inPast={timeInvalid}
+          onFromChange={setFrom}
+          onToChange={setTo}
+          to={values.to}
+        />
       </FieldGroup>
       <Button size="lg" type="submit">
         {copy.submit}

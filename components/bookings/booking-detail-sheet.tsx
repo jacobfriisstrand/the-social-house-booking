@@ -3,17 +3,20 @@
 // The booking's detail view (#9): what the slimmed table columns used to
 // hold — the dates, the company and membership, the invoice date/number
 // and the full price panel (the same PriceOverview the calendar's entry
-// sheet renders) — one click on the row. Read-only; the actions (invoice,
-// edit) stay in the row's ⋯ menu. A cancelled booking was never served:
-// its basis is the payable fee alone (ADR-0006), which the price panel
-// cannot express, so it gets the fee lines instead. Amounts integer øre,
-// excl. VAT (ADR-0019, ADR-0020).
+// sheet renders) — one click on the row. The invoice and edit actions stay
+// in the row's ⋯ menu; a booking an admin can still cancel also gets the
+// destructive "Aflys booking" at the foot. A cancelled booking was never
+// served: its basis is the payable fee alone (ADR-0006), which the price
+// panel cannot express, so it gets the fee lines instead. Amounts integer
+// øre, excl. VAT (ADR-0019, ADR-0020).
+import { useCallback } from "react";
 import {
   BookingStatusBadge,
   InvoicingStatusBadge,
 } from "@/components/bookings/booking-overview";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { PriceOverview } from "@/components/bookings/price-overview";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +27,7 @@ import {
 import {
   type AdminBookingRow,
   adminRowParts,
+  canAdminCancel,
 } from "@/lib/domain/admin-bookings";
 import { priceOverview } from "@/lib/domain/price-overview";
 import {
@@ -72,11 +76,35 @@ function CancelledPrice({ row }: { row: AdminBookingRow }) {
   );
 }
 
+// The cancel action at the sheet's foot; it opens the confirm dialog.
+function CancelButton({
+  onCancel,
+  row,
+}: {
+  onCancel: (bookingId: string) => void;
+  row: AdminBookingRow;
+}) {
+  const open = useCallback(
+    () => onCancel(row.bookingId),
+    [onCancel, row.bookingId]
+  );
+  if (!canAdminCancel(row, new Date())) {
+    return null;
+  }
+  return (
+    <Button onClick={open} type="button" variant="destructive">
+      {copy.cancel.action}
+    </Button>
+  );
+}
+
 export function BookingDetailSheet({
+  onCancel,
   onOpenChange,
   open,
   row,
 }: {
+  onCancel: (bookingId: string) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   // The picked booking, kept after close so the exit animation plays over
@@ -147,6 +175,7 @@ export function BookingDetailSheet({
               })}
             />
           )}
+          <CancelButton onCancel={onCancel} row={row} />
         </div>
       </SheetContent>
     </Sheet>

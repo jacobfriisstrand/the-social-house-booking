@@ -17,6 +17,7 @@ import {
   ArrowUpDownIcon,
   ArrowUpIcon,
   BanIcon,
+  CalendarXIcon,
   EllipsisIcon,
   FileCheckIcon,
   FileXIcon,
@@ -33,6 +34,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
 import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
 import {
@@ -75,6 +77,7 @@ import {
   type AdminBookingRow,
   type AdminSortKey,
   adminRowParts,
+  canAdminCancel,
   invoicingActionAllowance,
   shiftRangeIds,
   sortAdminRows,
@@ -192,18 +195,63 @@ function SortHead({
   );
 }
 
-// One row's ⋯ menu (#9): the details view, the three invoice actions and
-// the edit sheet in one place — the same actions the bulk header runs,
+// "Aflys booking" at the foot of the ⋯ menu, for a booking an admin can
+// still cancel (canAdminCancel); it opens the confirm dialog.
+function CancelMenuItem({
+  bookingId,
+  canCancel,
+  onCancel,
+}: {
+  bookingId: string;
+  canCancel: boolean;
+  onCancel: (bookingId: string) => void;
+}) {
+  const open = useCallback(() => onCancel(bookingId), [onCancel, bookingId]);
+  if (!canCancel) {
+    return null;
+  }
+  return (
+    <>
+      <MenuSeparator />
+      <MenuItem
+        className="text-destructive data-[highlighted]:text-destructive"
+        onClick={open}
+      >
+        <CalendarXIcon aria-hidden="true" />
+        {copy.cancel.action}
+      </MenuItem>
+    </>
+  );
+}
+
+// The cancel confirm for the picked booking; nothing while none is picked.
+function PickedCancelDialog({
+  bookingId,
+  onClose,
+  rows,
+}: {
+  bookingId: string | null;
+  onClose: () => void;
+  rows: AdminBookingRow[];
+}) {
+  const row = bookingRowById(rows, bookingId);
+  return row ? <AdminCancelDialog onClose={onClose} row={row} /> : null;
+}
+
+// One row's ⋯ menu (#9): the details view, the three invoice actions,
+// the edit sheet and the cancel action in one place — the same actions the bulk header runs,
 // just for the one booking. The item matching the row's current status is
 // absent (it is already there), and marking invoiced stays off until the
 // booking has ended: the dialog carries date and number.
 function RowActionsMenu({
   bookingId,
   bookingNumber,
+  canCancel,
   canEdit,
   ended,
   invoicingStatus,
   moving,
+  onCancel,
   onDetail,
   onEdit,
   onInvoice,
@@ -211,10 +259,12 @@ function RowActionsMenu({
 }: {
   bookingId: string;
   bookingNumber: string;
+  canCancel: boolean;
   canEdit: boolean;
   ended: boolean;
   invoicingStatus: BookingInvoicingStatus;
   moving: boolean;
+  onCancel: (bookingId: string) => void;
   onDetail: (bookingId: string) => void;
   onEdit: (bookingId: string) => void;
   onInvoice: (bookingId: string) => void;
@@ -286,6 +336,11 @@ function RowActionsMenu({
             </MenuItem>
           </>
         ) : null}
+        <CancelMenuItem
+          bookingId={bookingId}
+          canCancel={canCancel}
+          onCancel={onCancel}
+        />
       </MenuContent>
     </Menu>
   );
@@ -294,6 +349,7 @@ function RowActionsMenu({
 function BookingRow({
   row,
   now,
+  onCancel,
   onDetail,
   onEdit,
   onInvoice,
@@ -304,6 +360,7 @@ function BookingRow({
 }: {
   row: AdminBookingRow;
   now: Date;
+  onCancel: (bookingId: string) => void;
   onDetail: (bookingId: string) => void;
   onEdit: (bookingId: string) => void;
   onInvoice: (bookingId: string) => void;
@@ -396,10 +453,12 @@ function BookingRow({
         <RowActionsMenu
           bookingId={row.bookingId}
           bookingNumber={row.bookingNumber}
+          canCancel={canAdminCancel(row, now)}
           canEdit={row.bookingStatus !== "cancelled"}
           ended={ended}
           invoicingStatus={row.invoicingStatus}
           moving={moving}
+          onCancel={onCancel}
           onDetail={onDetail}
           onEdit={onEdit}
           onInvoice={onInvoice}
@@ -633,6 +692,13 @@ export function AdminBookingsTable({
     (bookingId: string): void => openOverlay(bookingId, "edit"),
     [openOverlay]
   );
+  // The booking picked for the cancel confirm, if any.
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const openCancel = useCallback(
+    (bookingId: string): void => setCancelId(bookingId),
+    []
+  );
+  const closeCancel = useCallback((): void => setCancelId(null), []);
   const closeOverlay = useCallback((open: boolean): void => {
     if (!open) {
       setOverlayOpen(false);
@@ -822,6 +888,7 @@ export function AdminBookingsTable({
                 key={row.bookingId}
                 moving={moving}
                 now={now}
+                onCancel={openCancel}
                 onDetail={openDetail}
                 onEdit={openEdit}
                 onInvoice={openRowInvoice}
@@ -845,9 +912,15 @@ export function AdminBookingsTable({
         open={dialogIds !== null}
       />
       <BookingDetailSheet
+        onCancel={openCancel}
         onOpenChange={closeOverlay}
         open={overlayOpen && overlay?.kind === "detail"}
         row={detailRow}
+      />
+      <PickedCancelDialog
+        bookingId={cancelId}
+        onClose={closeCancel}
+        rows={rows}
       />
       <BookingEditSheet
         bookingId={overlay?.kind === "edit" ? overlay.bookingId : ""}

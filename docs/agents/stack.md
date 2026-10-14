@@ -28,7 +28,7 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 | `npm run check` / `npm run fix` | Ultracite lint + format check / apply safe fixes. (Written by `npx ultracite init`.) |
 | `npm test` | `vitest run`. |
 | `npm run db:start` / `npm run db:stop` | Start / stop local Postgres + Auth + Studio in Docker (`supabase start` / `stop`). |
-| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`). This is where the demo logins come from. |
+| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`), then `db:seed-images` uploads demo room photos (`scripts/seed-room-images.ts`, cached in the gitignored `supabase/seed-images/`). This is where the demo logins come from. |
 | `npm run db:test` | Run pgTAP tests in `supabase/tests/` (`supabase test db`). |
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |

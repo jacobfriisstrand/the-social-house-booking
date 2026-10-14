@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { PageHeader, PagePanel } from "@/components/shell/page";
+import { CompanyUsageCard } from "@/components/statistics/company-usage-card";
 import { EconomyCard } from "@/components/statistics/economy-card";
 import { ExpectedCard } from "@/components/statistics/expected-card";
 import { MembershipCard } from "@/components/statistics/membership-card";
 import { MonthControl } from "@/components/statistics/month-control";
+import { RoomUsageCard } from "@/components/statistics/room-usage-card";
 import { StatCard } from "@/components/statistics/stat-card";
 import { YearChartCard } from "@/components/statistics/year-chart-card";
 import {
@@ -12,8 +14,12 @@ import {
   shiftMonth,
   statisticsOverview,
 } from "@/lib/domain/statistics";
+import { companyUsage, roomUsage } from "@/lib/domain/statistics-usage";
 import { formatMonth, formatNumber, formatOre } from "@/lib/format";
-import { listStatisticsBookings } from "@/lib/statistics/data";
+import {
+  listStatisticsBookings,
+  listStatisticsRooms,
+} from "@/lib/statistics/data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
@@ -34,7 +40,8 @@ const roomHours = (stats: MonthStatistics): string =>
 // economy across every company. Four numbers against last month, the
 // invoicing basis month by month and in parts, the member/external split,
 // the year's bookings and cancellations, and what the rest of the month is
-// expected to bring. The layout guards the route (app_role = 'admin');
+// expected to bring, and who used the house: every room's bookings and
+// occupancy, and the companies that booked the most. The layout guards the route (app_role = 'admin');
 // group/statistics lets the month control dim the figures while the next
 // month loads.
 export default async function AdminStatisticsPage({
@@ -46,7 +53,10 @@ export default async function AdminStatisticsPage({
   const now = new Date();
   const month = monthParam.safeParse(maaned).data ?? monthOf(now);
   const supabase = await createClient();
-  const bookings = await listStatisticsBookings(supabase, month);
+  const [bookings, rooms] = await Promise.all([
+    listStatisticsBookings(supabase, month),
+    listStatisticsRooms(supabase),
+  ]);
   const { current, previous, year } = statisticsOverview(bookings, month, now);
   const lastMonth = formatMonth(shiftMonth(month, -1));
   const yearLabel = month.slice(0, 4);
@@ -131,6 +141,15 @@ export default async function AdminStatisticsPage({
             />
             <ExpectedCard stats={current} />
           </div>
+          <RoomUsageCard
+            month={month}
+            rooms={roomUsage(bookings, rooms, month, now)}
+          />
+          <CompanyUsageCard
+            basisOre={current.basisOre}
+            companies={companyUsage(bookings, month, now)}
+            month={month}
+          />
         </div>
       </PagePanel>
     </div>

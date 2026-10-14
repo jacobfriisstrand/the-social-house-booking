@@ -1,3 +1,9 @@
+import {
+  type SortDirection,
+  type SortValue,
+  sortByColumn,
+} from "@/lib/table-sort";
+import { periodUtcWindow } from "./periods";
 import type { PriceOverviewModel } from "./price-overview";
 
 export type BookingOverviewStatus =
@@ -16,6 +22,9 @@ export interface BookingOverviewEntry {
   bookingId: string;
   bookingStartAt: string;
   bookingStatus: BookingOverviewStatus;
+  endAt: string;
+  invoicingStatus: BookingInvoicingStatus;
+  roomId: string;
 }
 
 export interface BookingAddonOverview {
@@ -46,8 +55,6 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   // The instant the cancellation flow froze (null on a live booking); the
   // detail sheet shows it on a cancelled row.
   cancelledAt: string | null;
-  endAt: string;
-  invoicingStatus: BookingInvoicingStatus;
   // The fee as it stands at load, for the cancel flow (#5): set only for a
   // confirmed booking whose start has not passed. The confirm recomputes
   // the fee server-side at the exact moment; this is the number the
@@ -67,71 +74,130 @@ export function addOnsTotalOre(
   return addOns.reduce((total, addOn) => total + addOn.totalOre, 0);
 }
 
-export interface BookingOverviewLists<T extends BookingOverviewEntry> {
-  all: T[];
-  cancelled: T[];
-  past: T[];
-  upcoming: T[];
+/** The booking-state buckets both Bookinger pages filter on (#9): the
+ * cancelled bookings, or a booking that has (not) finished. The cut is the
+ * END instant — "afsluttede" means ended, so a meeting that started but
+ * runs tonight is still kommende. The admin overview's AdminBookingState
+ * is the same three buckets. */
+export type BookingStateBucket = "cancelled" | "finished" | "upcoming";
+
+// An expired hold never became a booking, and a pending verification
+// stops being one when its hold runs out: the overview lists neither.
+function isListed(booking: BookingOverviewEntry, nowMs: number): boolean {
+  if (booking.bookingStatus === "expired") {
+    return false;
+  }
+  return !(
+    booking.bookingStatus === "pending_verification" &&
+    booking.bookingHoldExpiresAt !== null &&
+    Date.parse(booking.bookingHoldExpiresAt) <= nowMs
+  );
 }
 
-// Pending verification belongs with the time-based lists until it expires.
-// Expired holds are not bookings and stay out of the member overview.
-export function splitBookingOverview<T extends BookingOverviewEntry>(
-  bookings: readonly T[],
+/** The bucket a listed booking falls in; null for one the overview never
+ * lists. A standing hold is kommende like a confirmed booking ahead. */
+export function bookingStateBucket(
+  booking: BookingOverviewEntry,
   now: Date
-): BookingOverviewLists<T> {
-  const upcoming: T[] = [];
-  const past: T[] = [];
-  const cancelled: T[] = [];
-  const all: T[] = [];
+): BookingStateBucket | null {
   const nowMs = now.getTime();
-
-  for (const booking of bookings) {
-    if (booking.bookingStatus === "expired") {
-      continue;
-    }
-    if (
-      booking.bookingStatus === "pending_verification" &&
-      booking.bookingHoldExpiresAt !== null &&
-      new Date(booking.bookingHoldExpiresAt).getTime() <= nowMs
-    ) {
-      continue;
-    }
-
-    all.push(booking);
-
-    if (booking.bookingStatus === "cancelled") {
-      cancelled.push(booking);
-      continue;
-    }
-
-    if (new Date(booking.bookingStartAt).getTime() >= nowMs) {
-      upcoming.push(booking);
-    } else {
-      past.push(booking);
-    }
+  if (!isListed(booking, nowMs)) {
+    return null;
   }
+  if (booking.bookingStatus === "cancelled") {
+    return "cancelled";
+  }
+  return Date.parse(booking.endAt) >= nowMs ? "upcoming" : "finished";
+}
 
-  return {
-    all: all.toSorted(
-      (left, right) =>
-        new Date(left.bookingStartAt).getTime() -
-        new Date(right.bookingStartAt).getTime()
-    ),
-    cancelled: cancelled.toSorted(
-      (left, right) =>
-        new Date(right.bookingStartAt).getTime() -
-        new Date(left.bookingStartAt).getTime()
-    ),
-    past: past.toSorted(
-      (left, right) =>
-        new Date(right.bookingStartAt).getTime() -
-        new Date(left.bookingStartAt).getTime()
-    ),
-    upcoming: upcoming.toSorted(
-      (left, right) =>
-        new Date(left.bookingStartAt).getTime() -
-        new Date(right.bookingStartAt).getTime()
-    ),
-  };
+/** The member overview's filter row (DESIGN.md "Bookinger (member)"): the
+ * admin overview's room, invoicing-status, booking-state and date-range
+ * filters. An empty selection is no filter; the range is Copenhagen dates
+ * (ADR-0021). */
+export interface BookingOverviewFilter {
+  bookingStates: readonly BookingStateBucket[];
+  invoicingStatuses: readonly BookingInvoicingStatus[];
+  periodFrom?: string;
+  periodTo?: string;
+  roomIds: readonly string[];
+}
+
+const selects = <T>(selected: readonly T[], value: T): boolean =>
+  selected.length === 0 || selected.includes(value);
+
+function startsWithin(
+  booking: BookingOverviewEntry,
+  range: { endUtc: Date; startUtc: Date } | null
+): boolean {
+  if (range === null) {
+    return true;
+  }
+  const start = Date.parse(booking.bookingStartAt);
+  return start >= range.startUtc.getTime() && start < range.endUtc.getTime();
+}
+
+/** The listed bookings the filter row keeps: in a ticked bucket, invoicing
+ * status and room, starting within the date range — the admin list's rules, in memory, as a
+ * company's own bookings are few. */
+export function filterBookingOverview<T extends BookingOverviewEntry>(
+  bookings: readonly T[],
+  filter: BookingOverviewFilter,
+  now: Date
+): T[] {
+  const range =
+    filter.periodFrom && filter.periodTo
+      ? periodUtcWindow(filter.periodFrom, filter.periodTo)
+      : null;
+  return bookings.filter((booking) => {
+    const bucket = bookingStateBucket(booking, now);
+    return (
+      bucket !== null &&
+      selects(filter.bookingStates, bucket) &&
+      selects(filter.invoicingStatuses, booking.invoicingStatus) &&
+      selects(filter.roomIds, booking.roomId) &&
+      startsWithin(booking, range)
+    );
+  });
+}
+
+/** The member table's sortable columns, one per column (#9's sorting). */
+export type BookingOverviewSortKey =
+  | "addOns"
+  | "booker"
+  | "bookingNumber"
+  | "date"
+  | "discount"
+  | "fee"
+  | "price"
+  | "room"
+  | "status";
+
+const startMs = (row: BookingOverviewRow): number =>
+  Date.parse(row.bookingStartAt);
+
+// Each column sorts by the value its cell shows; a cell showing "-",
+// "Ingen" or "Ingen tilkøb" is null and sorts last.
+const overviewSortValue: Record<
+  BookingOverviewSortKey,
+  (row: BookingOverviewRow) => SortValue
+> = {
+  addOns: (row) =>
+    row.addOns.length === 0 ? null : addOnsTotalOre(row.addOns),
+  booker: (row) => row.bookerName,
+  bookingNumber: (row) => row.bookingNumber,
+  date: startMs,
+  discount: (row) => (row.price.showSavings ? row.price.discountPercent : null),
+  fee: (row) => row.cancellationFeeOre,
+  price: (row) => row.price.totalOre,
+  room: (row) => row.roomName,
+  status: (row) => row.bookingStatus,
+};
+
+/** The member list sorted by a column, by date ascending by default. */
+export function sortBookingOverview(
+  rows: readonly BookingOverviewRow[],
+  sort: BookingOverviewSortKey,
+  direction: SortDirection
+): BookingOverviewRow[] {
+  return sortByColumn(rows, overviewSortValue[sort], direction, startMs);
 }

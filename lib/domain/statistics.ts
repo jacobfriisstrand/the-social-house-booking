@@ -17,11 +17,14 @@ export interface StatisticsBooking {
   addonTotalOre: number;
   cancellationFeeOre: number | null;
   cancellationFeeWaived: boolean;
+  companyId: string;
+  companyName: string;
   endAt: string;
   expectedTotalOre: number;
   invoicingStatus: BookingInvoicingStatus;
   manualAmountsOre: number;
   membership: "external" | "member";
+  roomId: string;
   startAt: string;
   status: "cancelled" | "confirmed";
 }
@@ -145,6 +148,14 @@ const partsTotal = (parts: BasisParts): number =>
   parts.addonsOre +
   parts.cancellationFeesOre +
   parts.manualAmountsOre;
+
+// What a finished booking adds to the month's invoicing basis: its parts,
+// or nothing when it is marked not invoicable.
+export function heldBasisOre(booking: StatisticsBooking): number {
+  return booking.invoicingStatus === "not_invoicable"
+    ? 0
+    : partsTotal(basisParts(booking));
+}
 
 function addAmounts(
   stats: MonthStatistics,
