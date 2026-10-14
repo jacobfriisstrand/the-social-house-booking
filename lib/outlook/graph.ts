@@ -11,6 +11,11 @@
 // for test runs. Locally it is unset, so the route answers 503.
 import type { GraphEventPayload } from "@/lib/domain/outlook-event";
 
+// The production mailbox is fixed by Bilag 1 (ADR-0003). The sync job refuses
+// to run on production against any other address (the guard in route.ts) —
+// a typo in a context variable must never redirect booker data.
+export const OUTLOOK_PROD_MAILBOX = "booking@thesocialhouse.dk";
+
 export interface GraphClientConfig {
   clientId: string;
   clientSecret: string;

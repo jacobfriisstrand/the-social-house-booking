@@ -9,7 +9,7 @@ import { captureException } from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import { isJobAuthorized } from "@/lib/jobs/authorize";
 import type { GraphClientConfig } from "@/lib/outlook/graph";
-import { createGraphClient } from "@/lib/outlook/graph";
+import { createGraphClient, OUTLOOK_PROD_MAILBOX } from "@/lib/outlook/graph";
 import { syncCalendarEvents } from "@/lib/outlook/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -46,6 +46,22 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401 });
   }
   try {
+    // Bilag 1 fixes the production mailbox (ADR-0003): it runs only on
+    // production, and production runs only against it. A wrong value on the
+    // production context, or the production mailbox pointed at a development
+    // context, must stop the mirror loudly rather than move data silently —
+    // so this throws and reaches Sentry. The message names no received
+    // value: Sentry messages become public issue titles
+    // (docs/compliance/gdpr-data-inventory.md) and a wrong mailbox may be a
+    // personal address. Read the value back with netlify env:get instead.
+    const prodMailboxMismatch =
+      (env.APP_ENV === "production") !==
+      (config.mailbox === OUTLOOK_PROD_MAILBOX);
+    if (prodMailboxMismatch) {
+      throw new Error(
+        `OUTLOOK_MAILBOX must be ${OUTLOOK_PROD_MAILBOX} only when APP_ENV is production (Bilag 1)`
+      );
+    }
     return Response.json(await runJob(config));
   } catch (error) {
     captureException(error);
