@@ -42,7 +42,6 @@ export default function PublicLayout({
           alt=""
           className="h-full w-full object-cover"
           height={640}
-          priority
           sizes="50vw"
           src="/hero.jpg"
           width={960}
