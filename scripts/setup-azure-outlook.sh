@@ -351,11 +351,11 @@ if ! command -v curl >/dev/null 2>&1; then
   warn "graph.microsoft.com/v1.0/users/$OUTLOOK_MAILBOX/calendar/events."
 else
   step "Requesting a client-credentials token…"
-  TOKEN_JSON=$(curl -s --max-time 30 \
+  TOKEN_JSON=$(printf '%s' "$OUTLOOK_CLIENT_SECRET" | curl -s --max-time 30 \
     -d grant_type=client_credentials \
     -d client_id="$OUTLOOK_CLIENT_ID" \
-    -d client_secret="$OUTLOOK_CLIENT_SECRET" \
     --data-urlencode "scope=https://graph.microsoft.com/.default" \
+    --data-urlencode "client_secret@-" \
     "https://login.microsoftonline.com/$OUTLOOK_TENANT_ID/oauth2/v2.0/token") || TOKEN_JSON=""
   TOKEN=$(printf '%s' "$TOKEN_JSON" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
   if [[ -z "$TOKEN" ]]; then
@@ -415,6 +415,11 @@ else
       warn "production should mirror booking@thesocialhouse.dk (Bilag 1 fixes it);"
       warn "you are about to write '$OUTLOOK_MAILBOX' there instead."
     fi
+    if [[ "$OUTLOOK_MAILBOX" == "booking@thesocialhouse.dk" && "$ctx" != "production" ]]; then
+      warn "the route refuses the Bilag-1 mailbox outside production — it would"
+      warn "mirror this context's database into the staff calendar. Skipping."
+      continue
+    fi
     netlify_env_one OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" secret "$ctx"
     netlify_env_one OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" secret "$ctx"
     netlify_env_one OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret "$ctx"
@@ -422,9 +427,10 @@ else
   done
   note "The context picks the values up on its next deploy; the job route only"
   note "answers once visitor protection is off (docs/agents/deploy.md go-live"
-  note "item 1). End-to-end before any deploy, locally: copy the four values"
-  note "into .env.local, run npm run dev, POST /api/jobs/sync-calendar with"
-  note "JOB_SECRET — then empty them again so local runs stay inert."
+  note "item 1). End-to-end before any deploy, locally: copy these four"
+  note "sandbox values into .env.local, run npm run dev, POST"
+  note "/api/jobs/sync-calendar with JOB_SECRET — then empty them again so"
+  note "local runs stay inert. Never copy the production pair locally."
 fi
 pause "Netlify write done (or skipped)."
 
