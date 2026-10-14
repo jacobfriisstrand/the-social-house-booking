@@ -15,15 +15,18 @@ export interface GraphEventPayload {
   end: { dateTime: string; timeZone: string };
   isAllDay: boolean;
   location: { displayName: string };
+  showAs: "busy" | "free";
   start: { dateTime: string; timeZone: string };
   subject: string;
 }
 
 export interface OutlookBookingEvent {
+  addons: { name: string; quantity: number }[];
   bookerEmail: string;
   bookerName: string;
   bookerPhone: string;
   bookingNumber: string;
+  cancelled: boolean;
   companyDisplayName: string;
   endAt: Date | string;
   participantCount: number;
@@ -86,18 +89,30 @@ const allDay = (startAt: Date | string) => {
 export function outlookBookingEvent(
   input: OutlookBookingEvent
 ): GraphEventPayload {
+  const items = input.addons.map(({ name, quantity }) => {
+    if (quantity > 1) {
+      return `${name} ×${quantity}`;
+    }
+    return name;
+  });
   const lines = [
     `Booker: ${input.bookerName}`,
     `E-mail: ${input.bookerEmail}`,
     `Telefon: ${input.bookerPhone}`,
     `Deltagere: ${input.participantCount}`,
+    `Bookingnr.: ${input.bookingNumber}`,
     ...(input.reference ? [`Referencenr.: ${input.reference}`] : []),
+    ...(items.length > 0 ? [`Tilkøb: ${items.join(", ")}`] : []),
   ];
   return {
-    subject: `${input.bookingNumber} · ${input.companyDisplayName}`,
+    subject: `${input.cancelled ? "Aflyst: " : ""}${input.roomName} · ${input.companyDisplayName}`,
     ...timed(input.startAt, input.endAt),
     body: { content: lines.join("\n"), contentType: "text" },
     location: { displayName: input.roomName },
+    // Graph's cancel action deletes an attendee-less event outright, so a
+    // cancellation is a patch: an "Aflyst:" subject and a free slot keep the
+    // entry visible and reversible; the room is bookable again.
+    showAs: input.cancelled ? "free" : "busy",
   };
 }
 
@@ -109,5 +124,6 @@ export function outlookHouseEvent(input: OutlookHouseEvent): GraphEventPayload {
       : timed(input.startAt, input.endAt)),
     body: { content: input.description, contentType: "text" },
     location: { displayName: input.roomNames.join(", ") },
+    showAs: "busy",
   };
 }

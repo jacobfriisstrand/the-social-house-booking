@@ -18,6 +18,7 @@ const payload: GraphEventPayload = {
   end: { dateTime: "2026-07-15T11:00:00", timeZone: "Europe/Copenhagen" },
   isAllDay: false,
   location: { displayName: "Room of Power" },
+  showAs: "busy",
   start: { dateTime: "2026-07-15T09:00:00", timeZone: "Europe/Copenhagen" },
   subject: "B-2607-0042 · Rituals",
 };

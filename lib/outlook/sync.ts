@@ -2,9 +2,10 @@
 // drains calendar_events of the rows its triggers marked
 // calendar_event_needs_sync and pushes each one to Microsoft Graph through
 // the injected client. One Graph entry per mirror row, updated in place; a
-// cancelled/expired booking or a tombstoned row (hard-deleted source)
-// removes the Graph entry and the row itself. Outlook is never read back —
-// the only mirror of reality is calendar_events.
+// cancelled booking patches its entry to the Aflyst form and keeps the row,
+// while an expired booking, a hold, or a tombstoned row (hard-deleted
+// source) removes the Graph entry and the row itself. Outlook is never read
+// back — the only mirror of reality is calendar_events.
 //
 // Runs without a session, so the job route passes its service-role client
 // in (allowlist entry 9 in docs/agents/supabase.md). Rows are processed one
@@ -54,6 +55,7 @@ const MIRROR_SELECT = `
   bookings ( booking_booker_email, booking_booker_name, booking_booker_phone,
     booking_number, booking_participant_count, booking_reference,
     booking_start_at, booking_end_at, booking_status,
+    booking_addons ( addons ( addon_name ), booking_addon_quantity ),
     companies ( company_display_name ), rooms ( room_name ) ),
   house_events ( house_event_description, house_event_end_at,
     house_event_start_at, house_event_title,
@@ -159,24 +161,35 @@ async function forget(
 type ClaimedRow = NonNullable<Awaited<ReturnType<typeof claimedRow>>>;
 
 // Null when the row has nothing left to mirror: a tombstone (both sources
-// gone) or a booking that is no longer confirmed.
+// gone), a hold or expired booking, or a cancelled booking whose entry never
+// reached Outlook (nothing to mark). A cancelled booking WITH a stored Graph
+// id patches its entry to the Aflyst form instead — the entry and the row
+// stay, so a later restore patches the same entry back.
 function payloadOf(row: ClaimedRow): GraphEventPayload | null {
   const booking = row.bookings;
   if (booking) {
-    return booking.booking_status === "confirmed"
-      ? outlookBookingEvent({
-          bookerEmail: booking.booking_booker_email,
-          bookerName: booking.booking_booker_name,
-          bookerPhone: booking.booking_booker_phone,
-          bookingNumber: booking.booking_number,
-          companyDisplayName: booking.companies?.company_display_name ?? "",
-          endAt: booking.booking_end_at,
-          participantCount: booking.booking_participant_count,
-          reference: booking.booking_reference,
-          roomName: booking.rooms?.room_name ?? "",
-          startAt: booking.booking_start_at,
-        })
-      : null;
+    const cancelled = booking.booking_status === "cancelled";
+    const hasEntry = row.calendar_event_graph_event_id !== null;
+    if (booking.booking_status !== "confirmed" && !(cancelled && hasEntry)) {
+      return null;
+    }
+    return outlookBookingEvent({
+      addons: (booking.booking_addons ?? []).map((addon) => ({
+        name: addon.addons?.addon_name ?? "",
+        quantity: addon.booking_addon_quantity,
+      })),
+      bookerEmail: booking.booking_booker_email,
+      bookerName: booking.booking_booker_name,
+      bookerPhone: booking.booking_booker_phone,
+      bookingNumber: booking.booking_number,
+      cancelled,
+      companyDisplayName: booking.companies?.company_display_name ?? "",
+      endAt: booking.booking_end_at,
+      participantCount: booking.booking_participant_count,
+      reference: booking.booking_reference,
+      roomName: booking.rooms?.room_name ?? "",
+      startAt: booking.booking_start_at,
+    });
   }
   const houseEvent = row.house_events;
   return houseEvent

@@ -89,18 +89,18 @@ const fakeGraph = (
 ): GraphClient & {
   created: string[];
   deleted: string[];
-  payloads: string[];
+  payloads: { showAs: string; subject: string }[];
 } => {
   const created: string[] = [];
   const deleted: string[] = [];
-  const payloads: string[] = [];
+  const payloads: { showAs: string; subject: string }[] = [];
   let nextId = 1;
   const graph = {
     createEvent: (payload: Parameters<GraphClient["createEvent"]>[0]) => {
       const id = `graph-${nextId}`;
       nextId += 1;
       created.push(id);
-      payloads.push(payload.subject);
+      payloads.push({ showAs: payload.showAs, subject: payload.subject });
       return Promise.resolve(id);
     },
     deleteEvent: (graphEventId: string) => {
@@ -111,7 +111,7 @@ const fakeGraph = (
       _graphEventId: string,
       payload: Parameters<GraphClient["updateEvent"]>[1]
     ) => {
-      payloads.push(payload.subject);
+      payloads.push({ showAs: payload.showAs, subject: payload.subject });
       return Promise.resolve(true);
     },
     ...over,
@@ -162,7 +162,9 @@ describe("syncCalendarEvents", () => {
 
     expect(run).toEqual({ created: 1, failed: 0, removed: 0, updated: 0 });
     expect(graph.created).toEqual(["graph-1"]);
-    expect(graph.payloads).toEqual(["B-2607-0042 · Rituals"]);
+    expect(graph.payloads).toEqual([
+      { showAs: "busy", subject: "Room of Power · Rituals" },
+    ]);
     expect(row.calendar_event_needs_sync).toBe(false);
     expect(row.calendar_event_graph_event_id).toBe("graph-1");
   });
@@ -239,9 +241,41 @@ describe("syncCalendarEvents", () => {
     expect(row.calendar_event_graph_event_id).toBe("graph-1");
   });
 
-  it("removes the entry for a cancelled booking and drops the row", async () => {
+  it("marks a cancelled booking Aflyst and keeps the entry and row", async () => {
     const row = mirrorRow("r1", true, "graph-1", {
       bookings: bookingOf("cancelled"),
+    });
+    const client = fakeClient([row]);
+    const graph = fakeGraph();
+
+    const run = await syncCalendarEvents(client, graph);
+
+    expect(run.updated).toBe(1);
+    expect(graph.deleted).toEqual([]);
+    expect(graph.payloads).toEqual([
+      { showAs: "free", subject: "Aflyst: Room of Power · Rituals" },
+    ]);
+    expect(row.calendar_event_needs_sync).toBe(false);
+    expect(row.calendar_event_graph_event_id).toBe("graph-1");
+  });
+
+  it("drops the row for a cancelled booking that never reached Outlook", async () => {
+    const row = mirrorRow("r1", true, null, {
+      bookings: bookingOf("cancelled"),
+    });
+    const client = fakeClient([row]);
+    const graph = fakeGraph();
+
+    const run = await syncCalendarEvents(client, graph);
+
+    expect(run.removed).toBe(1);
+    expect(graph.deleted).toEqual([]);
+    expect(graph.created).toEqual([]);
+  });
+
+  it("removes the entry for an expired booking and drops the row", async () => {
+    const row = mirrorRow("r1", true, "graph-1", {
+      bookings: bookingOf("expired"),
     });
     const client = fakeClient([row]);
     const graph = fakeGraph();
@@ -284,6 +318,8 @@ describe("syncCalendarEvents", () => {
 
     await syncCalendarEvents(client, graph);
 
-    expect(graph.payloads).toEqual(["Værkstedsdag"]);
+    expect(graph.payloads).toEqual([
+      { showAs: "busy", subject: "Værkstedsdag" },
+    ]);
   });
 });

@@ -8,10 +8,12 @@ const CPH = "Europe/Copenhagen";
 
 describe("outlookBookingEvent", () => {
   const input = {
+    addons: [],
     bookerEmail: "peter@rituals.dk",
     bookerName: "Peter Pedersen",
     bookerPhone: "+45 2010 2030",
     bookingNumber: "B-2607-0042",
+    cancelled: false,
     companyDisplayName: "Rituals",
     endAt: "2026-07-15T09:00:00Z",
     participantCount: 8,
@@ -20,8 +22,16 @@ describe("outlookBookingEvent", () => {
     startAt: "2026-07-15T07:00:00Z",
   };
 
-  it("names the entry booking number first, company second", () => {
-    expect(outlookBookingEvent(input).subject).toBe("B-2607-0042 · Rituals");
+  it("names the entry room first, company second", () => {
+    expect(outlookBookingEvent(input).subject).toBe("Room of Power · Rituals");
+    expect(outlookBookingEvent(input).showAs).toBe("busy");
+  });
+
+  it("marks a cancelled booking Aflyst with a free slot", () => {
+    const payload = outlookBookingEvent({ ...input, cancelled: true });
+    expect(payload.subject).toBe("Aflyst: Room of Power · Rituals");
+    expect(payload.showAs).toBe("free");
+    expect(payload.isAllDay).toBe(false);
   });
 
   it("sends Copenhagen wall clock with a named zone", () => {
@@ -43,16 +53,32 @@ describe("outlookBookingEvent", () => {
     });
   });
 
-  it("carries the booker contact, headcount and reference in the body", () => {
+  it("carries the booker contact, headcount, number and reference in the body", () => {
     expect(outlookBookingEvent(input).body).toEqual({
       content:
         "Booker: Peter Pedersen\n" +
         "E-mail: peter@rituals.dk\n" +
         "Telefon: +45 2010 2030\n" +
         "Deltagere: 8\n" +
+        "Bookingnr.: B-2607-0042\n" +
         "Referencenr.: MB-1042",
       contentType: "text",
     });
+  });
+
+  it("lists purchased add-ons with their quantities", () => {
+    const { body } = outlookBookingEvent({
+      ...input,
+      addons: [
+        { name: "Lunch", quantity: 8 },
+        { name: "House Service", quantity: 1 },
+      ],
+    });
+    expect(body.content).toContain("Tilkøb: Lunch ×8, House Service");
+  });
+
+  it("drops the add-on line when none were purchased", () => {
+    expect(outlookBookingEvent(input).body.content).not.toContain("Tilkøb:");
   });
 
   it("drops the reference line when there is none", () => {
