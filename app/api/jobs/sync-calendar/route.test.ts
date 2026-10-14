@@ -49,7 +49,7 @@ const fullEnv = () =>
     JOB_SECRET: "job-secret",
     OUTLOOK_CLIENT_ID: "c",
     OUTLOOK_CLIENT_SECRET: "s",
-    OUTLOOK_MAILBOX: "jacob@friis.com",
+    OUTLOOK_MAILBOX: "sandbox@example.com",
     OUTLOOK_TENANT_ID: "t",
   });
 
@@ -74,7 +74,7 @@ describe("sync-calendar route gate", () => {
     expect(state.capturedConfig).toMatchObject({
       clientId: "c",
       clientSecret: "s",
-      mailbox: "jacob@friis.com",
+      mailbox: "sandbox@example.com",
       tenantId: "t",
     });
   });

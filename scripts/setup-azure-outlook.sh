@@ -194,16 +194,20 @@ finish() {
 # access policy last.
 #
 # The OUTLOOK_* values never land in .env.local on purpose: a local value
-# would let a hand-run mirror real bookings. Re-running the wizard for the
-# next context means pasting the two IDs again (visible in the portal) and
-# minting a fresh secret.
+# would let a hand-run mirror real bookings. Captured values persist to the
+# untracked state file instead (ENV_FILE below), so a re-run pre-fills every
+# ask — overwrite them when you switch to the production pair at go-live.
 #
 # Azure click paths written 2026-10-14 from the live portal. If a page looks
 # different, look for the same words on it before assuming the value moved.
 
 TOTAL_STAGES=7
-ENV_FILE=".env.local"
+# State file for re-runs: every captured value persists here, so each ask
+# pre-fills and Enter keeps it. Untracked via the .gitignore .env* rule,
+# chmod 600, and never read by npm run dev — the mirror stays inert locally.
+ENV_FILE=".env.azure-outlook"
 NETLIFY_SET=() # "KEY (context)" written to Netlify this run
+GRAPH_VERIFIED="" # "yes" only when stage 5 created a throwaway event
 
 GUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
@@ -265,6 +269,13 @@ netlify_env_one() {
   fi
 }
 
+# save_state KEY VALUE: persist a captured value to the state file so the
+# next run pre-fills it (Enter keeps). Private and untracked.
+save_state() {
+  write_env "$1" "$2"
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
+}
+
 banner "Outlook 365 one-way sync: Microsoft Azure setup"
 
 # ── 1 ─────────────────────────────────────────────────────────────────────
@@ -276,7 +287,7 @@ else
   warn "stage 4 needs an admin. You can still register the app and capture"
   warn "values, but the sync stays off until consent is granted. Re-run then."
 fi
-if confirm "Does the tenant hold the mailbox you will point at (sandbox: jacob@friis.com; production: booking@thesocialhouse.dk)?"; then
+if confirm "Does the tenant hold the mailbox you will point at (a mailbox hosted in the tenant — e.g. its admin user; production: booking@thesocialhouse.dk)?"; then
   :
 else
   warn "Graph writes need that exact address. Create the mailbox before the"
@@ -310,6 +321,8 @@ step "  · Register"
 step "The new app's Overview page shows both IDs — copy them."
 ask_guid OUTLOOK_TENANT_ID "Directory (tenant) ID:"
 ask_guid OUTLOOK_CLIENT_ID "Application (client) ID:"
+save_state OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID"
+save_state OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID"
 pause "Registration done."
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
@@ -322,6 +335,7 @@ step "Copy the Value column NOW; it is shown once. (The Secret ID column is"
 step "not the secret.)"
 ask_secret OUTLOOK_CLIENT_SECRET "Client secret Value (hidden):"
 [[ -z "$OUTLOOK_CLIENT_SECRET" ]] && warn "empty: the sync stays off until a secret is set on Netlify."
+save_state OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET"
 pause "Secret captured."
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
@@ -343,7 +357,8 @@ say "one pass, from this laptop. No deploy is involved: the job routes sit"
 say "behind Netlify visitor protection until the go-live checklist turns it"
 say "off (docs/agents/deploy.md), so a hand-POST to /api/jobs/* 401s and"
 say "proves nothing."
-ask_mailbox OUTLOOK_MAILBOX "Mailbox to verify against (sandbox: jacob@friis.com; production: booking@thesocialhouse.dk):"
+ask_mailbox OUTLOOK_MAILBOX "Mailbox to verify against (a mailbox hosted in the target tenant, e.g. its admin user; production: booking@thesocialhouse.dk):"
+save_state OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX"
 if ! command -v curl >/dev/null 2>&1; then
   SKIPPED+=("Direct Graph verification (no curl)")
   warn "curl missing — run the token and event calls by hand against"
@@ -364,7 +379,7 @@ else
     warn "invalid_client / AADSTS7000218 = wrong client ID or secret; re-check both."
   else
     printf '  %s✓ token acquired%s — registration, secret and tenant are good.\n' "$GREEN" "$RESET"
-    step "Creating a throwaway event on $OUTLOOK_MAILBOX…"
+    step "Creating a throwaway event on ${OUTLOOK_MAILBOX}…"
     START=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
     END=$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u -v+1H +%Y-%m-%dT%H:%M:%S.000Z)
     CREATE_JSON=$(printf '{"subject":"Outlook sync smoke test — safe to delete","start":{"dateTime":"%s","timeZone":"UTC"},"end":{"dateTime":"%s","timeZone":"UTC"}}' "$START" "$END")
@@ -381,6 +396,7 @@ else
       warn "403 ErrorAccessDenied = an application access policy excludes this mailbox;"
       warn "404 = the mailbox does not exist in this tenant."
     else
+      GRAPH_VERIFIED="yes"
       printf '  %s✓ event created%s — consent and Calendars.ReadWrite are good.\n' "$GREEN" "$RESET"
       step "Deleting the throwaway event…"
       DELETE_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -X DELETE \
@@ -398,9 +414,16 @@ pause "Verification done."
 
 # ── 6 ─────────────────────────────────────────────────────────────────────
 stage "Netlify: write the four variables"
+if [[ "$GRAPH_VERIFIED" != "yes" ]]; then
+  say "Stage 5 did not prove the registration against Graph. At go-live a"
+  say "pre-filled state file makes Enter-through easy — and easy to get wrong."
+fi
 if ! command -v netlify >/dev/null 2>&1 || ! netlify status >/dev/null 2>&1; then
   SKIPPED+=("Netlify env write (netlify CLI not logged in or site not linked)")
   warn "Skipping. Later: scripts/setup-netlify-env.sh stage 10, or re-run this wizard."
+elif [[ "$GRAPH_VERIFIED" != "yes" ]] && ! confirm "Stage 5 verification did not pass — write these values to Netlify anyway?"; then
+  SKIPPED+=("Netlify env write (stage 5 verification did not pass)")
+  warn "Skipping the write. Re-run the wizard once stage 5 passes."
 else
   say "Three secrets and the mailbox go to the Netlify site for the context(s)"
   say "you pick. The mailbox is per context by design: production mirrors"
