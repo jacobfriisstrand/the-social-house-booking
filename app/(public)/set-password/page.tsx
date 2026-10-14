@@ -24,20 +24,20 @@ export default async function SetPasswordPage({
     type: params.type ?? (params.code ? "recovery" : undefined),
   });
 
+  // The centred shell lives in app/(public)/layout.tsx (#89); the page is
+  // content only.
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        {link.success ? (
-          <SetPasswordForm link={link.data} />
-        ) : (
-          <Alert variant="destructive">
-            <AlertTitle>{messages.setPassword.title}</AlertTitle>
-            <AlertDescription>
-              {messages.setPassword.errors.linkInvalid}
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
-    </main>
+    <div className="w-full max-w-sm">
+      {link.success ? (
+        <SetPasswordForm link={link.data} />
+      ) : (
+        <Alert variant="destructive">
+          <AlertTitle>{messages.setPassword.title}</AlertTitle>
+          <AlertDescription>
+            {messages.setPassword.errors.linkInvalid}
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }

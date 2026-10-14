@@ -33,50 +33,48 @@ export function ForgotPasswordForm() {
     successMessage: messages.forgotPassword.genericSuccess,
   });
 
+  // The centred shell lives in app/(public)/layout.tsx (#89); the form is
+  // content only.
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>{messages.forgotPassword.title}</CardTitle>
-          <CardDescription>
-            {messages.forgotPassword.description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form id="forgot-password-form" onSubmit={submit}>
-            <FieldGroup>
-              <TextField
-                control={form.control}
-                label={messages.forgotPassword.email}
-                name="email"
-                type="email"
-              />
-            </FieldGroup>
-          </form>
-        </CardContent>
-        <CardFooter>
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <Button
-              className="flex-1"
-              form="forgot-password-form"
-              pending={pending}
-              type="submit"
-            >
-              {pending
-                ? messages.forgotPassword.submitting
-                : messages.forgotPassword.submit}
-            </Button>
-            <Button
-              className="flex-1"
-              nativeButton={false}
-              render={<Link href="/login" />}
-              variant="secondary"
-            >
-              {messages.forgotPassword.backToLogin}
-            </Button>
-          </div>
-        </CardFooter>
-      </Card>
-    </main>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle>{messages.forgotPassword.title}</CardTitle>
+        <CardDescription>{messages.forgotPassword.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form id="forgot-password-form" onSubmit={submit}>
+          <FieldGroup>
+            <TextField
+              control={form.control}
+              label={messages.forgotPassword.email}
+              name="email"
+              type="email"
+            />
+          </FieldGroup>
+        </form>
+      </CardContent>
+      <CardFooter>
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
+          <Button
+            className="flex-1"
+            form="forgot-password-form"
+            pending={pending}
+            type="submit"
+          >
+            {pending
+              ? messages.forgotPassword.submitting
+              : messages.forgotPassword.submit}
+          </Button>
+          <Button
+            className="flex-1"
+            nativeButton={false}
+            render={<Link href="/login" />}
+            variant="secondary"
+          >
+            {messages.forgotPassword.backToLogin}
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

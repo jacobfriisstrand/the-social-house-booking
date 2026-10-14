@@ -20,12 +20,12 @@ export default async function CompanyChangePage({
   }
   const review = await getCompanyChangeReview(requestId, token);
   if (review) {
+    // The centred shell lives in app/(public)/layout.tsx (#89); the page is
+    // content only.
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-        <div className="w-full max-w-2xl">
-          <CompanyChangeReview review={review} token={token} />
-        </div>
-      </main>
+      <div className="w-full max-w-2xl">
+        <CompanyChangeReview review={review} token={token} />
+      </div>
     );
   }
 
@@ -38,13 +38,11 @@ export default async function CompanyChangePage({
 
 function InvalidChange() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Alert className="w-full max-w-sm" variant="destructive">
-        <AlertTitle>{messages.companyChangeReview.invalid}</AlertTitle>
-        <AlertDescription>
-          {messages.companyChangeReview.errors.invalid}
-        </AlertDescription>
-      </Alert>
-    </main>
+    <Alert className="w-full max-w-sm" variant="destructive">
+      <AlertTitle>{messages.companyChangeReview.invalid}</AlertTitle>
+      <AlertDescription>
+        {messages.companyChangeReview.errors.invalid}
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -193,47 +193,47 @@ export function LoginForm({
     }
   }, [state, form]);
 
+  // The centred shell lives in app/(public)/layout.tsx (#89); the form is
+  // content only.
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="flex w-full max-w-sm flex-col gap-4">
-        <LoginNotices
-          emailChanged={emailChanged}
-          error={state.status === "error" ? state.error : undefined}
-        />
-        <Card className="w-full">
-          <CardContent>
-            <form id="login-form" onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Controller
-                  control={form.control}
-                  name="email"
-                  render={EmailField}
-                />
-                <Controller
-                  control={form.control}
-                  name="password"
-                  render={PasswordField}
-                />
-              </FieldGroup>
-            </form>
-          </CardContent>
-          <CardFooter>
-            <div className="flex w-full flex-col gap-3">
-              <Button form="login-form" pending={pending} type="submit">
-                {pending ? messages.login.submitting : messages.login.submit}
-              </Button>
-              <Link
-                className="text-center text-muted-foreground text-sm underline"
-                href="/forgot-password"
-              >
-                {messages.login.forgotPassword}
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
+    <div className="flex w-full max-w-sm flex-col gap-4">
+      <LoginNotices
+        emailChanged={emailChanged}
+        error={state.status === "error" ? state.error : undefined}
+      />
+      <Card className="w-full">
+        <CardContent>
+          <form id="login-form" onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Controller
+                control={form.control}
+                name="email"
+                render={EmailField}
+              />
+              <Controller
+                control={form.control}
+                name="password"
+                render={PasswordField}
+              />
+            </FieldGroup>
+          </form>
+        </CardContent>
+        <CardFooter>
+          <div className="flex w-full flex-col gap-3">
+            <Button form="login-form" pending={pending} type="submit">
+              {pending ? messages.login.submitting : messages.login.submit}
+            </Button>
+            <Link
+              className="text-center text-muted-foreground text-sm underline"
+              href="/forgot-password"
+            >
+              {messages.login.forgotPassword}
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
 
-        {isDevelopment ? <SeedHintCard /> : null}
-      </div>
-    </main>
+      {isDevelopment ? <SeedHintCard /> : null}
+    </div>
   );
 }
