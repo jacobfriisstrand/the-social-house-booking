@@ -33,7 +33,7 @@
       "includes": [
         "lib/env.ts",
         "lib/env-client.ts",
-        "netlify/functions/*.mts",
+        "netlify/functions/**/*.mts",
         "scripts/*.ts",
         "next.config.ts",
         "instrumentation.ts",

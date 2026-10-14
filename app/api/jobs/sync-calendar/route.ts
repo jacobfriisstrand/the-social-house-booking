@@ -5,9 +5,8 @@
 // configured mailbox's calendar), answering with the counts.
 // No session exists here, so it uses the service-role client (allowlist in
 // docs/agents/supabase.md).
-import { captureException } from "@sentry/nextjs";
 import { env } from "@/lib/env";
-import { isJobAuthorized } from "@/lib/jobs/authorize";
+import { runScheduledJob } from "@/lib/jobs/run";
 import type { GraphClientConfig } from "@/lib/outlook/graph";
 import { createGraphClient, OUTLOOK_PROD_MAILBOX } from "@/lib/outlook/graph";
 import { syncCalendarEvents } from "@/lib/outlook/sync";
@@ -18,11 +17,7 @@ const runJob = (config: GraphClientConfig) => {
   return syncCalendarEvents(admin, createGraphClient(config));
 };
 
-export async function POST(request: Request): Promise<Response> {
-  const secret = env.JOB_SECRET;
-  if (!secret) {
-    return new Response("Job is not configured", { status: 503 });
-  }
+export function POST(request: Request): Promise<Response> {
   // Empty means "not configured" (lib/env-schema.ts): the job stays off —
   // locally and on deploy previews — until the four Graph variables are set
   // for the context. Production carries the booking mailbox; the develop
@@ -42,10 +37,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!config) {
     return new Response("Job is not configured", { status: 503 });
   }
-  if (!isJobAuthorized(request.headers.get("authorization"), secret)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  try {
+  return runScheduledJob(request, async () => {
     // Bilag 1 fixes the production mailbox (ADR-0003): it runs only on
     // production, and production runs only against it. A wrong value on the
     // production context, or the production mailbox pointed at a development
@@ -63,8 +55,5 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
     return Response.json(await runJob(config));
-  } catch (error) {
-    captureException(error);
-    return new Response("Job failed", { status: 500 });
-  }
+  });
 }

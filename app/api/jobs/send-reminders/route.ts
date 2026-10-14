@@ -3,10 +3,8 @@
 // sends the due 24-hour reminders (Mail 5), and answers with the counts. No
 // session exists here, so it uses the service-role client (allowlist in
 // docs/agents/supabase.md).
-import { captureException } from "@sentry/nextjs";
 import { sendDueReminders } from "@/lib/bookings/reminders";
-import { env } from "@/lib/env";
-import { isJobAuthorized } from "@/lib/jobs/authorize";
+import { runScheduledJob } from "@/lib/jobs/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const runJob = async () => {
@@ -19,18 +17,6 @@ const runJob = async () => {
   return { holdsExpired: holds.data, reminders };
 };
 
-export async function POST(request: Request): Promise<Response> {
-  const secret = env.JOB_SECRET;
-  if (!secret) {
-    return new Response("Job is not configured", { status: 503 });
-  }
-  if (!isJobAuthorized(request.headers.get("authorization"), secret)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  try {
-    return Response.json(await runJob());
-  } catch (error) {
-    captureException(error);
-    return new Response("Job failed", { status: 500 });
-  }
+export function POST(request: Request): Promise<Response> {
+  return runScheduledJob(request, async () => Response.json(await runJob()));
 }
