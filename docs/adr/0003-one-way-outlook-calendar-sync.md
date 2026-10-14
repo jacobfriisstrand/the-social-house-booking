@@ -9,3 +9,7 @@ Bookings, changes, and cancellations flow one-way from the platform to the share
 - The entry text carries what staff need to run the meeting — booker name, work email, mobile, headcount, reference. **Practical notes never leave the platform**: they may hold health data, and Microsoft must not become a holder of it (docs/compliance/gdpr-data-inventory.md).
 - "Same entry, no duplicates" is a database guarantee, not worker discipline: the `calendar_events` table keeps exactly one mirror row per source item (unique FKs) and the dirty-marking triggers in the schema files mark it on every write; the stored Graph event id is the only memory of Outlook, and the worker (`lib/outlook/sync.ts`) is a single serialized writer. Outlook is never read back.
 - The mirror is switched on per environment by the `OUTLOOK_*` variables (production only); the mailbox itself is fixed by Bilag 1 and lives as a constant in `lib/outlook/graph.ts`.
+
+## Amendment (2026-10-14, sandbox testing)
+
+The mailbox moved from a code constant to the `OUTLOOK_MAILBOX` variable, set per Netlify context. Production keeps `booking@thesocialhouse.dk` — Bilag 1 still fixes the production value. The develop branch deploy (the `branch-deploy` context) carries the sandbox pair (an app registration in the sandbox tenant, mailbox `jacob@friis.com`), so test runs write demo data to a sandbox mailbox and never touch the production calendar. The route still answers 503 wherever a variable is missing, so local runs do nothing.

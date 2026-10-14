@@ -185,14 +185,17 @@ finish() {
 
 # Microsoft Entra setup for the Outlook one-way calendar mirror (issue #13,
 # docs/agents/outlook-sync.md). Registers the app, mints the client secret,
-# grants Calendars.ReadWrite with admin consent, optionally scopes the app to
-# the booking mailbox with an application access policy, and writes the three
-# OUTLOOK_* variables to the chosen Netlify context as secrets.
+# grants Calendars.ReadWrite with admin consent, verifies the registration
+# with a direct token request plus a throwaway Graph event — the job routes
+# sit behind Netlify visitor protection until deploy.md go-live item 1, so a
+# hand-POST to /api/jobs proves nothing — then writes the four OUTLOOK_*
+# variables to the chosen Netlify context (the sandbox pair on the develop
+# branch deploy, the production pair at go-live) and offers the application
+# access policy last.
 #
-# The three values never land in .env.local on purpose: the mirror is
-# production-only by design, and a value here would let local POSTs to
-# /api/jobs/sync-calendar write to a real calendar. Re-running the wizard for
-# the next context means pasting the two IDs again (visible in the portal) and
+# The OUTLOOK_* values never land in .env.local on purpose: a local value
+# would let a hand-run mirror real bookings. Re-running the wizard for the
+# next context means pasting the two IDs again (visible in the portal) and
 # minting a fresh secret.
 #
 # Azure click paths written 2026-10-14 from the live portal. If a page looks
@@ -216,21 +219,49 @@ ask_guid() {
   done
 }
 
-# netlify_env_one KEY VALUE CONTEXT: writes one variable as a secret on one
-# deploy context. Values are marked secret so the Netlify UI never shows them.
+# ask_mailbox KEY "Prompt": like ask, but re-prompts until the value has an
+# address shape (name@domain). The verification call and the Netlify write
+# both depend on it.
+ask_mailbox() {
+  local key="$1" prompt="$2"
+  ask "$key" "$prompt"
+  until [[ "${!key:-}" =~ ^[^@[:space:]]+@[^@[:space:]]+$ ]]; do
+    warn "that does not look like an address (name@domain); paste it again"
+    ask "$key" "$prompt"
+  done
+}
+
+# urlencode STRING: percent-encode everything but unreserved characters.
+# Graph event ids carry '/' and '=' and must not go raw into a URL path.
+urlencode() {
+  local s="$1" out="" c i hex
+  for ((i = 0; i < ${#s}; i++)); do
+    c=${s:i:1}
+    case "$c" in
+    [a-zA-Z0-9.~_-]) out+="$c" ;;
+    *) printf -v hex '%%%02X' "'$c" && out+="$hex" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+
+# netlify_env_one KEY VALUE public|secret CONTEXT: writes one variable to one
+# deploy context. Secret values are marked so the Netlify UI never shows them.
 netlify_env_one() {
-  local key="$1" value="$2" ctx="$3"
+  local key="$1" value="$2" kind="$3" ctx="$4"
   if [[ -z "$value" ]]; then
     SKIPPED+=("$key on $ctx (captured value was empty)")
     warn "no value captured for $key; skipped"
     return
   fi
-  if netlify env:set "$key" "$value" --context "$ctx" --force --secret >/dev/null 2>&1; then
+  local -a args=(env:set "$key" "$value" --context "$ctx" --force)
+  [[ "$kind" == "secret" ]] && args+=(--secret)
+  if netlify "${args[@]}" >/dev/null 2>&1; then
     NETLIFY_SET+=("$key ($ctx)")
     printf '  %s✓ set%s %s on %s\n' "$GREEN" "$RESET" "$key" "$ctx"
   else
     SKIPPED+=("$key on $ctx")
-    warn "could not set $key on $ctx; by hand: netlify env:set $key <value> --context $ctx --force --secret"
+    warn "could not set $key on $ctx; by hand: netlify env:set $key <value> --context $ctx --force"
   fi
 }
 
@@ -245,11 +276,11 @@ else
   warn "stage 4 needs an admin. You can still register the app and capture"
   warn "values, but the sync stays off until consent is granted. Re-run then."
 fi
-if confirm "Does booking@thesocialhouse.dk exist as a shared mailbox in that tenant?"; then
+if confirm "Does the tenant hold the mailbox you will point at (sandbox: jacob@friis.com; production: booking@thesocialhouse.dk)?"; then
   :
 else
-  warn "Graph writes need that exact address: it is a code constant in"
-  warn "lib/outlook/graph.ts, not configuration. Create the mailbox before go-live."
+  warn "Graph writes need that exact address. Create the mailbox before the"
+  warn "verification stage; it cannot be renamed from here."
 fi
 if command -v netlify >/dev/null 2>&1; then
   if netlify status >/dev/null 2>&1; then
@@ -267,10 +298,10 @@ pause "Prerequisites checked."
 # ── 2 ─────────────────────────────────────────────────────────────────────
 stage "App registration"
 say "One Entra app registration provides the client-credentials OAuth the"
-say "mirror uses. Register it in the tenant you are testing against."
+say "mirror uses. Register it in the tenant you are working in now: the"
+say "sandbox tenant for testing, thesocialhouse.dk at go-live."
 open_url "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
-step "Sign in with an account in the target tenant (sandbox tenant while"
-step "testing; thesocialhouse.dk at go-live)."
+step "Sign in with an account in that tenant."
 step "New registration:"
 step "  · Name: the-social-house-booking-sync"
 step "  · Supported account types: Accounts in this organizational directory only (Single tenant)"
@@ -306,11 +337,103 @@ step "nothing uses it; client credentials never delegate."
 pause "Consent granted (or scheduled with your admin)?"
 
 # ── 5 ─────────────────────────────────────────────────────────────────────
-stage "Least privilege: application access policy (after sandbox validation)"
+stage "Verify: token + throwaway event, straight at Microsoft"
+say "This proves registration, secret, permission type and admin consent in"
+say "one pass, from this laptop. No deploy is involved: the job routes sit"
+say "behind Netlify visitor protection until the go-live checklist turns it"
+say "off (docs/agents/deploy.md), so a hand-POST to /api/jobs/* 401s and"
+say "proves nothing."
+ask_mailbox OUTLOOK_MAILBOX "Mailbox to verify against (sandbox: jacob@friis.com; production: booking@thesocialhouse.dk):"
+if ! command -v curl >/dev/null 2>&1; then
+  SKIPPED+=("Direct Graph verification (no curl)")
+  warn "curl missing — run the token and event calls by hand against"
+  warn "login.microsoftonline.com/$OUTLOOK_TENANT_ID/oauth2/v2.0/token and"
+  warn "graph.microsoft.com/v1.0/users/$OUTLOOK_MAILBOX/calendar/events."
+else
+  step "Requesting a client-credentials token…"
+  TOKEN_JSON=$(curl -s --max-time 30 \
+    -d grant_type=client_credentials \
+    -d client_id="$OUTLOOK_CLIENT_ID" \
+    -d client_secret="$OUTLOOK_CLIENT_SECRET" \
+    --data-urlencode "scope=https://graph.microsoft.com/.default" \
+    "https://login.microsoftonline.com/$OUTLOOK_TENANT_ID/oauth2/v2.0/token") || TOKEN_JSON=""
+  TOKEN=$(printf '%s' "$TOKEN_JSON" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+  if [[ -z "$TOKEN" ]]; then
+    SKIPPED+=("Direct Graph verification (token request failed)")
+    warn "no token. Microsoft said: $(printf '%.300s' "$TOKEN_JSON")"
+    warn "invalid_client / AADSTS7000218 = wrong client ID or secret; re-check both."
+  else
+    printf '  %s✓ token acquired%s — registration, secret and tenant are good.\n' "$GREEN" "$RESET"
+    step "Creating a throwaway event on $OUTLOOK_MAILBOX…"
+    START=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+    END=$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u -v+1H +%Y-%m-%dT%H:%M:%S.000Z)
+    CREATE_JSON=$(printf '{"subject":"Outlook sync smoke test — safe to delete","start":{"dateTime":"%s","timeZone":"UTC"},"end":{"dateTime":"%s","timeZone":"UTC"}}' "$START" "$END")
+    CREATE_RESP=$(curl -s --max-time 30 -X POST \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "$CREATE_JSON" \
+      "https://graph.microsoft.com/v1.0/users/$OUTLOOK_MAILBOX/calendar/events") || CREATE_RESP=""
+    EVENT_ID=$(printf '%s' "$CREATE_RESP" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+    if [[ -z "$EVENT_ID" ]]; then
+      SKIPPED+=("Direct Graph verification (event create failed)")
+      warn "create failed. Graph said: $(printf '%.300s' "$CREATE_RESP")"
+      warn "403 access_rights_missing = admin consent not granted;"
+      warn "403 ErrorAccessDenied = an application access policy excludes this mailbox;"
+      warn "404 = the mailbox does not exist in this tenant."
+    else
+      printf '  %s✓ event created%s — consent and Calendars.ReadWrite are good.\n' "$GREEN" "$RESET"
+      step "Deleting the throwaway event…"
+      DELETE_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -X DELETE \
+        -H "Authorization: Bearer $TOKEN" \
+        "https://graph.microsoft.com/v1.0/users/$OUTLOOK_MAILBOX/calendar/events/$(urlencode "$EVENT_ID")") || DELETE_CODE=""
+      if [[ "$DELETE_CODE" == "204" || "$DELETE_CODE" == "404" ]]; then
+        printf '  %s✓ deleted%s — nothing left behind in the calendar.\n' "$GREEN" "$RESET"
+      else
+        warn "delete answered '$DELETE_CODE' — remove 'Outlook sync smoke test' by hand."
+      fi
+    fi
+  fi
+fi
+pause "Verification done."
+
+# ── 6 ─────────────────────────────────────────────────────────────────────
+stage "Netlify: write the four variables"
+if ! command -v netlify >/dev/null 2>&1 || ! netlify status >/dev/null 2>&1; then
+  SKIPPED+=("Netlify env write (netlify CLI not logged in or site not linked)")
+  warn "Skipping. Later: scripts/setup-netlify-env.sh stage 10, or re-run this wizard."
+else
+  say "Three secrets and the mailbox go to the Netlify site for the context(s)"
+  say "you pick. The mailbox is per context by design: production mirrors"
+  say "booking@thesocialhouse.dk, the develop branch deploy the sandbox one."
+  ask NETLIFY_CONTEXTS "Context(s), comma-separated (production at go-live; branch-deploy for the sandbox pair) [production]:"
+  [[ -z "$NETLIFY_CONTEXTS" ]] && NETLIFY_CONTEXTS="production"
+  IFS=',' read -ra CTX <<< "$NETLIFY_CONTEXTS"
+  for ctx in "${CTX[@]}"; do
+    ctx="${ctx//[[:space:]]/}"
+    [[ -z "$ctx" ]] && continue
+    if [[ "$ctx" == "production" && "$OUTLOOK_MAILBOX" != "booking@thesocialhouse.dk" ]]; then
+      warn "production should mirror booking@thesocialhouse.dk (Bilag 1 fixes it);"
+      warn "you are about to write '$OUTLOOK_MAILBOX' there instead."
+    fi
+    netlify_env_one OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" secret "$ctx"
+    netlify_env_one OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" secret "$ctx"
+    netlify_env_one OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret "$ctx"
+    netlify_env_one OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX" public "$ctx"
+  done
+  note "The context picks the values up on its next deploy; the job route only"
+  note "answers once visitor protection is off (docs/agents/deploy.md go-live"
+  note "item 1). End-to-end before any deploy, locally: copy the four values"
+  note "into .env.local, run npm run dev, POST /api/jobs/sync-calendar with"
+  note "JOB_SECRET — then empty them again so local runs stay inert."
+fi
+pause "Netlify write done (or skipped)."
+
+# ── 7 ─────────────────────────────────────────────────────────────────────
+stage "Least privilege: application access policy (production go-live)"
 say "Without a policy, Calendars.ReadWrite reaches every mailbox in the"
 say "tenant. Microsoft's documented fix scopes the app to the booking"
 say "mailbox only. Needs an Exchange admin with PowerShell 7."
-if confirm "Apply the application access policy now? (skip until the sync is validated in the sandbox)"; then
+if confirm "Apply the application access policy now? (production go-live only — after the sandbox validation passed)"; then
   open_url "https://learn.microsoft.com/en-us/graph/auth-limit-mailbox-access"
   step "Once: brew install --cask powershell, then run pwsh and paste —"
   say "  Install-Module ExchangeOnlineManagement -Scope CurrentUser"
@@ -323,51 +446,15 @@ if confirm "Apply the application access policy now? (skip until the sync is val
   say "    -Description 'Booking sync: shared booking mailbox only'"
   say "  Test-ApplicationAccessPolicy -Identity booking@thesocialhouse.dk \\"
   say "    -AppId $OUTLOOK_CLIENT_ID   # expect Allow for the booking mailbox"
-  note "Policy changes can take up to an hour to take effect."
+  note "Afterwards the policy excludes the sandbox mailbox: any later sandbox"
+  note "run answers 403 ErrorAccessDenied until that mailbox joins the scope"
+  note "group or the policy is removed. That is the restriction working."
+  note "Policy changes can take up to an hour to take effect — a first 403"
+  note "right after applying it is not proof of a broken registration."
   pause "Policy applied (or not yet — Enter either way)."
 else
-  SKIPPED+=("Application access policy (re-run this wizard after sandbox validation)")
+  SKIPPED+=("Application access policy (re-run this wizard at production go-live)")
 fi
-
-# ── 6 ─────────────────────────────────────────────────────────────────────
-stage "Netlify: write the three variables"
-if ! command -v netlify >/dev/null 2>&1 || ! netlify status >/dev/null 2>&1; then
-  SKIPPED+=("Netlify env write (netlify CLI not logged in or site not linked)")
-  warn "Skipping. Later: scripts/setup-netlify-env.sh stage 10, or re-run this wizard."
-else
-  say "Values go to the Netlify site as secrets on the context(s) you pick."
-  say "Remember: the mailbox is a code constant, booking@thesocialhouse.dk —"
-  say "whatever tenant the app registration lives in must contain that mailbox."
-  ask NETLIFY_CONTEXTS "Context(s), comma-separated (production at go-live; develop to force-run from the develop deploy first) [production]:"
-  [[ -z "$NETLIFY_CONTEXTS" ]] && NETLIFY_CONTEXTS="production"
-  IFS=',' read -ra CTX <<< "$NETLIFY_CONTEXTS"
-  for ctx in "${CTX[@]}"; do
-    ctx="${ctx//[[:space:]]/}"
-    [[ -z "$ctx" ]] && continue
-    netlify_env_one OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" "$ctx"
-    netlify_env_one OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" "$ctx"
-    netlify_env_one OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" "$ctx"
-  done
-fi
-pause "Netlify write done (or skipped)."
-
-# ── 7 ─────────────────────────────────────────────────────────────────────
-stage "Verify: force a sync run after the next deploy"
-say "Netlify only picks up new variables on the next deploy of that context."
-JOB=$(_existing JOB_SECRET || true)
-if [[ -n "$JOB" ]]; then
-  say "  curl -s -X POST https://<deploy-url>/api/jobs/sync-calendar \\"
-  say "    -H 'Authorization: Bearer $JOB'"
-else
-  say "  curl -s -X POST https://<deploy-url>/api/jobs/sync-calendar \\"
-  say "    -H 'Authorization: Bearer <JOB_SECRET from .env.local>'"
-fi
-say "<deploy-url> is the deploy URL of the context you set. Then look in the"
-say "booking@thesocialhouse.dk Outlook calendar for entries."
-say "A calendar_events row still marked calendar_event_needs_sync means the"
-say "worker has not reached it (check the Netlify function log); no row means"
-say "the booking is not confirmed. Full diagnosis: docs/agents/outlook-sync.md."
-pause "Verification noted — finishing."
 
 # ── Done ──────────────────────────────────────────────────────────────────
 finish
@@ -375,8 +462,13 @@ if (( ${#NETLIFY_SET[@]} )); then
   note "set ${#NETLIFY_SET[@]} Netlify variable(s):"
   for v in "${NETLIFY_SET[@]}"; do note "  - $v"; done
 fi
+note "Go-live, after deploy.md item 1 turns visitor protection off: deploy the"
+note "production context, then force a run and watch the calendar:"
+note "  curl -s -X POST https://<prod-url>/api/jobs/sync-calendar \\"
+note "    -H 'Authorization: Bearer <JOB_SECRET from .env.local>'"
+note "A 401 there is visitor protection, not a broken registration."
 note "Client secrets expire: the sync dies on the expiry date. Mint a new one"
 note "and re-run this wizard for production before it does."
-note "If you wrote develop for sandbox testing, clean up when done:"
-note "  netlify env:unset OUTLOOK_TENANT_ID --context develop  (and CLIENT_ID, CLIENT_SECRET)"
+note "If you wrote branch-deploy for sandbox testing, clean up when done:"
+note "  netlify env:unset OUTLOOK_TENANT_ID --context branch-deploy  (and CLIENT_ID, CLIENT_SECRET, MAILBOX)"
 printf '\n'

@@ -42,6 +42,7 @@ export const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   OUTLOOK_CLIENT_ID: emptyToUndefined(z.string().min(1)),
   OUTLOOK_CLIENT_SECRET: emptyToUndefined(z.string().min(1)),
+  OUTLOOK_MAILBOX: emptyToUndefined(z.email()),
   OUTLOOK_TENANT_ID: emptyToUndefined(z.string().min(1)),
   RESEND_API_KEY: emptyToUndefined(z.string().min(1)),
   RESEND_FROM: z.string().min(1),

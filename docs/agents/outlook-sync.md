@@ -40,10 +40,14 @@ no webhook exists in that direction.
 2. Every five minutes (production only), `netlify/functions/sync-calendar.mts`
    POSTs `/api/jobs/sync-calendar` with `JOB_SECRET`.
 3. The route (`app/api/jobs/sync-calendar/route.ts`) answers 503 until
-   `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET` are
-   set; they exist only on the Netlify production context. With them it runs
-   `lib/outlook/sync.ts` on the service-role client (allowlist entry 9 in
-   `supabase.md`).
+   `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET` and
+   `OUTLOOK_MAILBOX` are set for the context. Production carries
+   `booking@thesocialhouse.dk`; the develop branch deploy (the
+   `branch-deploy` context) carries the sandbox pair
+   (an app registration in the sandbox tenant, mailbox `jacob@friis.com`) for
+   test runs; locally nothing is set, so local runs do nothing. With them it
+   runs `lib/outlook/sync.ts` on the service-role client (allowlist entry 9
+   in `supabase.md`).
 4. The worker claims dirty rows one at a time (conditional update returning
    the row's current data, so an edit landing mid-batch keeps its mark), then
    per row: create (no Graph id yet), patch (id known; a 404 recreates under
@@ -64,17 +68,21 @@ against stubbed fetch.
 
 ## Operations
 
-- `.env.example` documents the three `OUTLOOK_*` variables; they are set on
-  the Netlify production context only (setup-netlify-env.sh picks them up).
-  The mailbox `booking@thesocialhouse.dk` is a constant in
-  `lib/outlook/graph.ts` — Bilag 1 fixes it.
+- `.env.example` documents the four `OUTLOOK_*` variables; they are set on
+  Netlify contexts only, never locally (setup-netlify-env.sh picks up the
+  production set). The mailbox is `OUTLOOK_MAILBOX`, not a constant:
+  production `booking@thesocialhouse.dk` — Bilag 1 fixes the production
+  value — and the develop sandbox `jacob@friis.com`.
 - Going live needs a Microsoft Entra app registration (client credentials)
   with `Calendars.ReadWrite` on the shared mailbox, granted admin consent.
-  `scripts/setup-azure-outlook.sh` walks the portal and writes the three
-  `OUTLOOK_*` variables to a Netlify context as secrets (develop for a
-  sandbox run, production at go-live).
-  Until the three variables are set, the job is off everywhere and no data
-  reaches Microsoft.
+  `scripts/setup-azure-outlook.sh` walks the portal, proves the registration
+  with a direct token request plus a throwaway Graph event — the job routes
+  sit behind Netlify visitor protection until deploy.md go-live item 1, so a
+  hand-POST to `/api/jobs/*` 401s regardless — and writes the four
+  `OUTLOOK_*` variables to a Netlify context: the sandbox set on the develop
+  branch deploy, the production set at go-live.
+  Until the four variables are set on a context, the job is off there and no
+  data reaches Microsoft.
 - To force a run outside the schedule: `POST /api/jobs/sync-calendar` with
   `Authorization: Bearer $JOB_SECRET` — on production, or on `develop`
   where the scheduled function never fires.

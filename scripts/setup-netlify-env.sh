@@ -373,6 +373,8 @@ say "The one-way Outlook mirror (#13) needs an Entra app registration with"
 say "the application permission Calendars.ReadWrite on the shared mailbox"
 say "booking@thesocialhouse.dk, granted admin consent. Production only;"
 say "the sync stays off until these exist (docs/agents/outlook-sync.md)."
+say "scripts/setup-azure-outlook.sh walks this part with per-step URLs and"
+say "a live Graph verification — prefer that wizard when the rest is set."
 if confirm "Set the Outlook Graph credentials now? (skip while the app registration is not ready)"; then
   open_url "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
   step "New registration → name 'the-social-house-booking-sync',"
@@ -384,9 +386,11 @@ if confirm "Set the Outlook Graph credentials now? (skip while the app registrat
   ask OUTLOOK_TENANT_ID "Directory (tenant) ID:"
   ask OUTLOOK_CLIENT_ID "Application (client) ID:"
   ask_secret OUTLOOK_CLIENT_SECRET "Client secret (hidden):"
+  ask OUTLOOK_MAILBOX "Mailbox to mirror into (production: booking@thesocialhouse.dk):"
   netlify_env OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" secret production
   netlify_env OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" secret production
   netlify_env OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret production
+  netlify_env OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX" public production
   pause "Outlook credentials written."
 else
   SKIPPED+=("Outlook Graph credentials (the mirror stays off until they are set on production)")

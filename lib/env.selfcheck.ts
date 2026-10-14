@@ -21,8 +21,8 @@ assert.equal(full.SUPABASE_SECRET_KEY, "secret");
 assert.equal(full.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, undefined);
 assert.equal(full.RESEND_API_KEY, undefined);
 assert.equal("PATH" in full, false);
-// The schema covers every variable in .env.example — exactly 18 today.
-assert.equal(Object.keys(envSchema.shape).length, 18);
+// The schema covers every variable in .env.example — exactly 19 today.
+assert.equal(Object.keys(envSchema.shape).length, 19);
 
 // APP_ENV accepts exactly the two documented values.
 assert.throws(
@@ -40,6 +40,12 @@ assert.throws(
 assert.throws(
   () => envSchema.parse({ ...required, NEXT_PUBLIC_SUPABASE_URL: "not-a-url" }),
   /NEXT_PUBLIC_SUPABASE_URL/
+);
+
+// The Outlook mailbox must be an address (the Graph URL is built from it).
+assert.throws(
+  () => envSchema.parse({ ...required, OUTLOOK_MAILBOX: "not-an-address" }),
+  /OUTLOOK_MAILBOX/
 );
 
 // Optional variables accept "" and real values alike.

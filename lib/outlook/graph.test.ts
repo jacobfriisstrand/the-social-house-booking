@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GraphEventPayload } from "@/lib/domain/outlook-event";
-import { createGraphClient, GraphError, OUTLOOK_MAILBOX } from "./graph";
+import { createGraphClient, GraphError } from "./graph";
 
 // The one-way Microsoft Graph client (#13, ADR-0003): the
 // shapes of the three calls the mirror is allowed to make, plus the
@@ -9,6 +9,7 @@ import { createGraphClient, GraphError, OUTLOOK_MAILBOX } from "./graph";
 const config = {
   clientId: "client-1",
   clientSecret: "secret-1",
+  mailbox: "booking@thesocialhouse.dk",
   tenantId: "tenant-1",
 };
 
@@ -59,7 +60,7 @@ describe("createGraphClient", () => {
       "https://graph.microsoft.com/.default"
     );
     expect(eventCall[0]).toBe(
-      `https://graph.microsoft.com/v1.0/users/${OUTLOOK_MAILBOX}/events`
+      `https://graph.microsoft.com/v1.0/users/${config.mailbox}/events`
     );
     expect(eventCall[1].method).toBe("POST");
     expect(eventCall[1].headers.authorization).toBe("Bearer tok-1");
@@ -76,7 +77,7 @@ describe("createGraphClient", () => {
     await client.createEvent(payload);
     await client.updateEvent("graph-1", payload);
     expect(fetchMock.mock.calls[2][0]).toBe(
-      `https://graph.microsoft.com/v1.0/users/${OUTLOOK_MAILBOX}/events/graph-1`
+      `https://graph.microsoft.com/v1.0/users/${config.mailbox}/events/graph-1`
     );
     expect(fetchMock.mock.calls[2][1].method).toBe("PATCH");
     expect(fetchMock).toHaveBeenCalledTimes(3);

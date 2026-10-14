@@ -2,33 +2,18 @@
 // netlify/functions/sync-calendar.mts POSTs here every five minutes with
 // JOB_SECRET as a bearer token. Drains calendar_events of dirty mirror rows
 // and pushes each one to Microsoft Graph (create/update/delete on the
-// shared booking@thesocialhouse.dk calendar), answering with the counts.
+// configured mailbox's calendar), answering with the counts.
 // No session exists here, so it uses the service-role client (allowlist in
 // docs/agents/supabase.md).
 import { captureException } from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import { isJobAuthorized } from "@/lib/jobs/authorize";
+import type { GraphClientConfig } from "@/lib/outlook/graph";
 import { createGraphClient } from "@/lib/outlook/graph";
 import { syncCalendarEvents } from "@/lib/outlook/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Empty means "not configured" (lib/env-schema.ts): the job stays off —
-// locally, on deploy previews and on the develop deploy — until the three
-// Graph app variables are set.
-const graphConfig = () =>
-  env.OUTLOOK_TENANT_ID && env.OUTLOOK_CLIENT_ID && env.OUTLOOK_CLIENT_SECRET
-    ? {
-        clientId: env.OUTLOOK_CLIENT_ID,
-        clientSecret: env.OUTLOOK_CLIENT_SECRET,
-        tenantId: env.OUTLOOK_TENANT_ID,
-      }
-    : null;
-
-const runJob = () => {
-  const config = graphConfig();
-  if (!config) {
-    throw new Error("Outlook Graph credentials are not configured");
-  }
+const runJob = (config: GraphClientConfig) => {
   const admin = createAdminClient();
   return syncCalendarEvents(admin, createGraphClient(config));
 };
@@ -38,14 +23,30 @@ export async function POST(request: Request): Promise<Response> {
   if (!secret) {
     return new Response("Job is not configured", { status: 503 });
   }
-  if (!graphConfig()) {
+  // Empty means "not configured" (lib/env-schema.ts): the job stays off —
+  // locally and on deploy previews — until the four Graph variables are set
+  // for the context. Production carries the booking mailbox; the develop
+  // context carries the sandbox pair for test runs.
+  const config =
+    env.OUTLOOK_TENANT_ID &&
+    env.OUTLOOK_CLIENT_ID &&
+    env.OUTLOOK_CLIENT_SECRET &&
+    env.OUTLOOK_MAILBOX
+      ? {
+          clientId: env.OUTLOOK_CLIENT_ID,
+          clientSecret: env.OUTLOOK_CLIENT_SECRET,
+          mailbox: env.OUTLOOK_MAILBOX,
+          tenantId: env.OUTLOOK_TENANT_ID,
+        }
+      : null;
+  if (!config) {
     return new Response("Job is not configured", { status: 503 });
   }
   if (!isJobAuthorized(request.headers.get("authorization"), secret)) {
     return new Response("Unauthorized", { status: 401 });
   }
   try {
-    return Response.json(await runJob());
+    return Response.json(await runJob(config));
   } catch (error) {
     captureException(error);
     return new Response("Job failed", { status: 500 });

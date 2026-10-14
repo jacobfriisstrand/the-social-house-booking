@@ -1,20 +1,20 @@
 // The one-way Microsoft Graph client (#13, ADR-0003): everything the mirror
-// may do to the shared booking@thesocialhouse.dk calendar — create, update,
+// may do to the configured Outlook calendar — create, update,
 // delete an event — plus the OAuth2 client-credentials token those calls
 // carry (application permission Calendars.ReadWrite). Nothing here reads
 // events back; Outlook never writes to the platform. Plain fetch, no SDK:
 // it is three endpoints.
 //
-// The mailbox is a constant, not configuration: the job only ever runs in
-// production (Netlify scheduled functions are production-only) and there the
-// mailbox is fixed by Bilag 1 and ADR-0003.
+// The mailbox is configuration, not a constant: `OUTLOOK_MAILBOX` is set per
+// Netlify context — production writes `booking@thesocialhouse.dk` (Bilag 1
+// fixes the production value), the develop context carries the sandbox pair
+// for test runs. Locally it is unset, so the route answers 503.
 import type { GraphEventPayload } from "@/lib/domain/outlook-event";
-
-export const OUTLOOK_MAILBOX = "booking@thesocialhouse.dk";
 
 export interface GraphClientConfig {
   clientId: string;
   clientSecret: string;
+  mailbox: string;
   tenantId: string;
 }
 
@@ -58,7 +58,7 @@ const graphCode = async (response: Response): Promise<string> => {
 };
 
 export function createGraphClient(config: GraphClientConfig): GraphClient {
-  const eventsUrl = `${GRAPH_ORIGIN}/users/${OUTLOOK_MAILBOX}/events`;
+  const eventsUrl = `${GRAPH_ORIGIN}/users/${config.mailbox}/events`;
   let token: { value: string; expiresAt: number } | null = null;
 
   const bearer = async (): Promise<string> => {
