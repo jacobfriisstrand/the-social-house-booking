@@ -70,6 +70,9 @@ against stubbed fetch.
   `lib/outlook/graph.ts` — Bilag 1 fixes it.
 - Going live needs a Microsoft Entra app registration (client credentials)
   with `Calendars.ReadWrite` on the shared mailbox, granted admin consent.
+  `scripts/setup-azure-outlook.sh` walks the portal and writes the three
+  `OUTLOOK_*` variables to a Netlify context as secrets (develop for a
+  sandbox run, production at go-live).
   Until the three variables are set, the job is off everywhere and no data
   reaches Microsoft.
 - To force a run outside the schedule: `POST /api/jobs/sync-calendar` with
