@@ -100,7 +100,8 @@
     }
   ],
   // Kept intentionally before first use, not dead code:
-  // - lib/bookings/admin-cancel-actions.ts: #9 and #12 wire these actions to admin screens
+  // - lib/bookings/admin-cancel-actions.ts: cancelBookingAsAdmin is wired to the
+  //   admin bookings view (2026-10-14); waiveCancellationFee still waits for its screen
   "ignoreFindings": ["lib/bookings/admin-cancel-actions.ts"],
   // netlify-cli is a manual CLI tool (docs/agents/deploy.md), never imported
   // from source, so the unused-devDependency finding is a false positive.

@@ -110,8 +110,9 @@ export const messages = {
         "Vi sender en sekscifret kode til arbejdsemailen, som bekræfter bookingen.",
       calendarLabel: "Vælg dato",
       endLabel: "Sluttidspunkt",
-      endPlaceholder: "Vælg sluttidspunkt",
+      endListLabel: "Sluttidspunkter",
       next: "Næste",
+      noEndSlots: "Vælg et starttidspunkt først.",
       noStartSlots: "Ingen ledige starttidspunkter den dag.",
       overview: {
         addOns: "Tilkøb",
@@ -253,6 +254,16 @@ export const messages = {
       calendar: {
         more: (count: number) => `${count} flere`,
         showHiddenOn: (date: string) => `Vis de skjulte poster den ${date}`,
+      },
+      // Admin cancels on the company's behalf (#5): the same fee and mails
+      // as the member's own cancellation, worded for the admin.
+      cancel: {
+        action: "Aflys booking",
+        feeIntro: "Hvis bookingen afbookes nu, bliver afbestillingsgebyret:",
+        mailNote:
+          "Bookeren får en mail om afbookingen, og gebyret kommer med i faktureringsgrundlaget.",
+        title: (room: string, company: string) =>
+          `Afbook ${room} for ${company}?`,
       },
       columns: {
         company: "Virksomhed",
@@ -396,12 +407,8 @@ export const messages = {
     empty: {
       allDescription: "Du har ingen bookinger endnu.",
       allTitle: "Ingen bookinger",
-      cancelledDescription: "Der er ingen aflyste bookinger.",
-      cancelledTitle: "Ingen aflyste bookinger",
-      pastDescription: "Tidligere bookinger vises her.",
-      pastTitle: "Ingen tidligere bookinger",
-      upcomingDescription: "Du har ingen kommende bookinger lige nu.",
-      upcomingTitle: "Ingen kommende bookinger",
+      // The filter row narrowed the list to nothing.
+      filteredDescription: "Ingen bookinger passer til de valgte filtre.",
     },
     inactiveAddOn: "Tilkøb (ikke længere aktivt)",
     invoicing: {
@@ -971,6 +978,7 @@ export const messages = {
     perHourSuffix: "/time",
     perParticipantSuffix: "/ person",
     persons: "personer",
+    practicalNotesSection: "Praktiske oplysninger",
     priceColumn: "Timepris",
     pricesSection: "Pris og kapacitet",
     publicEmptyDescription: "Der er ingen lokaler at booke endnu.",
@@ -1076,6 +1084,26 @@ export const messages = {
       description: (year: string) => `Aflyste bookinger pr. måned i ${year}`,
       title: "Aflyste bookinger",
     },
+    // Virksomheder (DESIGN.md "Statistik" 4): the companies that held the
+    // most bookings in the month.
+    companies: {
+      columns: {
+        basis: "Faktureringsgrundlag",
+        bookings: "Bookinger",
+        cancellations: "Aflyste",
+        company: "Virksomhed",
+        hours: "Timer",
+        share: "Af månedens omsætning",
+      },
+      description: (month: string, shown: number, total: number) =>
+        shown < total
+          ? `De ${shown} af ${total} virksomheder med flest afholdte bookinger i ${month}`
+          : `Afholdte bookinger pr. virksomhed i ${month}`,
+      emptyDescription:
+        "Ingen virksomheder har afholdt eller aflyst en booking i måneden.",
+      emptyTitle: "Ingen bookinger endnu",
+      title: "Virksomheder",
+    },
     economy: {
       addons: "Tilkøb",
       cancellationFees: "Afbestillingsgebyrer",
@@ -1118,6 +1146,26 @@ export const messages = {
     previousMonth: "Forrige måned",
     // The comparison line under a number: "august 2026: 39.830,00 kr".
     previousValue: (month: string, value: string) => `${month}: ${value}`,
+    // Lokaler (DESIGN.md "Statistik" 4): every room's held bookings and
+    // share of opening time booked (booket af åbningstiden) in the month.
+    rooms: {
+      columns: {
+        basis: "Faktureringsgrundlag",
+        bookings: "Bookinger",
+        hours: "Timer",
+        occupancy: "Booket af åbningstiden",
+        room: "Lokale",
+      },
+      description: (month: string) =>
+        `Afholdte bookinger pr. lokale i ${month}`,
+      emptyDescription: "Der er ingen afholdte bookinger i måneden.",
+      emptyTitle: "Ingen bookinger endnu",
+      footnote:
+        "Booket af åbningstiden viser, hvor stor en del af lokalets åbningstid i måneden indtil nu der har været booket.",
+      occupancyLabel: (room: string) => `Booket af åbningstiden for ${room}`,
+      title: "Lokaler",
+      total: (share: string) => `${share} af åbningstiden booket i alt`,
+    },
   },
   // Booking terms, privacy policy, and GDPR overview (#15).
   terms: {

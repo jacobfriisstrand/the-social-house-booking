@@ -5,6 +5,7 @@
 // booking can take, or why not. It also reads a room's status for the
 // notice board. Display only: Postgres decides what is bookable on write.
 import {
+  endOptions,
   GRID_END_MINUTES,
   GRID_START_MINUTES,
   type Period,
@@ -67,6 +68,39 @@ export function gridSpan(date: string, period: Period): GridSpan | null {
     Math.ceil((period.endAt.getTime() - gridStart) / SLOT_MS)
   );
   return endRow > firstRow ? { firstRow, rowSpan: endRow - firstRow } : null;
+}
+
+// How far a drag from a free start row can reach: the last row of the
+// longest booking the room allows from there, which stops before the next
+// booking's buffer and leaves room for its own buffer before closing — the
+// same ends the booking dialog lists. The start row itself when only the
+// shortest booking fits.
+export function lastDragRow({
+  date,
+  startRow,
+  ...context
+}: Omit<RoomDay, "entries"> & {
+  blocked: Period[];
+  date: string;
+  startRow: number;
+}): number {
+  const gridStart = cphToUtc(date, GRID_START_LABEL).getTime();
+  const startAt = new Date(gridStart + startRow * SLOT_MS);
+  const last = endOptions({ ...context, startAt }).at(-1);
+  if (!last) {
+    return startRow;
+  }
+  return startRow + (last.getTime() - startAt.getTime()) / SLOT_MS - 1;
+}
+
+// The row a drag ends on: where the pointer is, never above the start and
+// never past what the room allows.
+export function dragEndRow(
+  startRow: number,
+  pointerRow: number,
+  lastRow: number
+): number {
+  return Math.min(Math.max(pointerRow, startRow), lastRow);
 }
 
 const spanRows = (span: GridSpan): number[] =>

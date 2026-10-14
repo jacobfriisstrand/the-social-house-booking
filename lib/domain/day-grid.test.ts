@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   dayGridColumn,
+  dragEndRow,
   GRID_ROW_COUNT,
   type GridCell,
   gridRows,
   gridSpan,
+  lastDragRow,
   roomStatusAt,
 } from "./day-grid";
 import type { WeeklyOpeningHours } from "./opening-hours";
@@ -252,5 +254,35 @@ describe("gridRows", () => {
       { cell: slot, column: 1 },
     ]);
     expect(rows[3]).toEqual([]);
+  });
+});
+
+describe("lastDragRow", () => {
+  const room = { blocked: [booking], date, specialDays: [], weekly };
+
+  it("reaches the closing time less the buffer", () => {
+    // From 12:30, right after the booking's buffer: the last end is 17:30,
+    // so the last row is 17:00 (row 16).
+    expect(lastDragRow({ ...room, startRow: 7 })).toBe(16);
+  });
+
+  it("stops before the next booking's start, buffer included", () => {
+    // From 09:00 only 09:00-09:30 fits: its buffer runs to 10:00.
+    expect(lastDragRow({ ...room, startRow: 0 })).toBe(0);
+  });
+
+  it("is the start row when nothing fits", () => {
+    expect(lastDragRow({ ...room, startRow: 3 })).toBe(3);
+  });
+});
+
+describe("dragEndRow", () => {
+  it("follows the pointer between the start and the last row", () => {
+    expect(dragEndRow(4, 6, 10)).toBe(6);
+  });
+
+  it("never goes above the start or past the last row", () => {
+    expect(dragEndRow(4, 1, 10)).toBe(4);
+    expect(dragEndRow(4, 20, 10)).toBe(10);
   });
 });

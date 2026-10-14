@@ -11,6 +11,7 @@ import {
 } from "@/lib/bookings/viewer";
 import { periodIsBookable } from "@/lib/domain/availability";
 import { bufferEndAt } from "@/lib/domain/buffer";
+import { startsInPast } from "@/lib/domain/search-slot";
 import { cphToUtc } from "@/lib/domain/time";
 import { listPublicRooms, type PublicRoom } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
@@ -33,14 +34,19 @@ const matchesSearch = (room: PublicRoom, search: RoomSearch): boolean =>
 // The rooms that are free for the searched period and hold the
 // participants (Bilag 1 "Lokaler og søgning"): a room is free when the
 // booking plus its buffer fits the opening hours and collides with no live
-// booking or House Event. The blocked periods for the search window depend
-// only on the URL, not on the room rows, so the page loads them in the same
-// round trip as the catalogue instead of after it.
+// booking or House Event. A search that starts in the past (a shared or
+// typed URL; the dialog refuses one) finds no rooms. The blocked periods
+// for the search window depend only on the URL, not on the room rows, so
+// the page loads them in the same round trip as the catalogue instead of
+// after it.
 function filterRooms(
   rooms: PublicRoom[],
   search: RoomSearch,
   blocked: Awaited<ReturnType<typeof listBlockedPeriods>>
 ): PublicRoom[] {
+  if (startsInPast(search.dato, search.fra, new Date())) {
+    return [];
+  }
   const startAt = cphToUtc(search.dato, search.fra);
   const endAt = cphToUtc(search.dato, search.til);
   return rooms.filter(

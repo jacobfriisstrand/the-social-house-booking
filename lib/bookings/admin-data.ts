@@ -17,7 +17,7 @@ import { periodUtcWindow } from "@/lib/domain/periods";
 import type { BookingDetail, DayEntry } from "@/lib/notice-board/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { selectedCompanyIds } from "./admin-company-filter";
-import { adminDisplayNames } from "./data";
+import { adminDisplayNames, listRoomOptions, type RoomOption } from "./data";
 import {
   adminBookingStatesFilter,
   adminCalendarStateCuts,
@@ -61,7 +61,7 @@ export interface AdminFilterOptions {
     displayName: string;
     membershipStatus: AdminMembership;
   }>;
-  rooms: Array<{ roomId: string; roomName: string }>;
+  rooms: RoomOption[];
 }
 
 // A name embed the foreign keys guarantee but that RLS could still hide:
@@ -265,9 +265,9 @@ export async function listAdminBookings(
     query = query.in("booking_invoicing_status", filter.invoicingStatuses);
   }
 
-  // The Bookingstatus buckets: cancelled, or confirmed with the start
-  // (not) passed — the split splitBookingOverview makes. The list carries
-  // only confirmed and cancelled rows, so the buckets partition it.
+  // The Bookingstatus buckets: cancelled, or confirmed with the end (not)
+  // passed — the member page's buckets too (bookingStateBucket). The list
+  // carries only confirmed and cancelled rows, so the buckets partition it.
   query = withBookingStates(
     query,
     filter.bookingStates,
@@ -310,7 +310,7 @@ export async function listAdminFilterOptions(
       .select("company_id, company_display_name, company_membership_status")
       .order("company_display_name")
       .limit(500),
-    supabase.from("rooms").select("room_id, room_name").order("room_name"),
+    listRoomOptions(supabase),
   ]);
   return {
     companies: rowsOrThrow(companies, "filter companies").map((company) => ({
@@ -318,10 +318,7 @@ export async function listAdminFilterOptions(
       displayName: company.company_display_name,
       membershipStatus: company.company_membership_status,
     })),
-    rooms: rowsOrThrow(rooms, "filter rooms").map((room) => ({
-      roomId: room.room_id,
-      roomName: room.room_name,
-    })),
+    rooms,
   };
 }
 

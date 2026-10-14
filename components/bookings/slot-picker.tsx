@@ -1,12 +1,11 @@
 "use client";
 
 // The white bordered panel of the booking dialog (DESIGN.md): two rows.
-// The calendar month beside the start-time list, unavailable slots muted
-// and disabled; under them the end-time select and the fields the form
-// adds (participants).
+// The calendar month beside the start-time and end-time lists, unavailable
+// starts muted and disabled; under them the fields the form adds
+// (participants).
 import { useCallback, useEffect, useRef } from "react";
 import { da } from "react-day-picker/locale";
-import { ChoiceSelect } from "@/components/forms/choice-select";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -62,32 +61,33 @@ interface SlotPickerProps {
   startAt: string;
 }
 
-function SlotButton({
-  loading,
-  onStartChange,
+// One time in a list: the chosen one in primary, an unavailable one muted
+// with its reason. A chosen time keeps itself in view: a pre-filled search
+// lands mid-list. The list scrolls on its own, so the dialog stays put.
+function TimeButton({
+  disabled,
+  label,
+  note,
+  onSelect,
   selected,
-  slot,
+  value,
 }: {
-  loading: boolean;
-  onStartChange: (startAt: string) => void;
+  disabled: boolean;
+  label: string;
+  note: string | null;
+  onSelect: (value: string) => void;
   selected: boolean;
-  slot: StartSlot;
+  value: string;
 }) {
-  const available = slot.status === "available";
   const ref = useRef<HTMLButtonElement>(null);
 
-  // Keep the chosen start in view: a pre-filled search lands mid-list. The
-  // list scrolls on its own, so the dialog around it stays put.
   useEffect(() => {
     if (selected && ref.current) {
       centreInList(ref.current);
     }
   }, [selected]);
 
-  const handleClick = useCallback(
-    () => onStartChange(slot.startAt.toISOString()),
-    [onStartChange, slot.startAt]
-  );
+  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
   return (
     <Button
       aria-selected={selected}
@@ -95,20 +95,25 @@ function SlotButton({
         "h-9 shrink-0 justify-between tabular-nums",
         selected &&
           "border-chart-2 bg-primary text-primary-foreground hover:bg-primary",
-        !available && "bg-muted text-muted-foreground"
+        note !== null && "bg-muted text-muted-foreground"
       )}
-      disabled={!available || loading}
+      disabled={disabled}
       onClick={handleClick}
       ref={ref}
       role="option"
       type="button"
       variant="outline"
     >
-      {slot.label}
-      <span className="text-xs">{statusLabel(slot.status)}</span>
+      {label}
+      <span className="text-xs">{note}</span>
     </Button>
   );
 }
+
+// From md up a list is exactly as tall as the month beside it: it fills
+// its field's remaining height absolutely. Below md a capped list in flow.
+const LIST_CLASSES =
+  "relative flex max-h-80 flex-col gap-1 overflow-y-auto pr-1 md:absolute md:inset-0 md:max-h-none";
 
 function StartList({
   loading,
@@ -132,7 +137,7 @@ function StartList({
     <div
       aria-busy={loading}
       aria-label={copy.startListLabel}
-      className="relative flex max-h-80 flex-col gap-1 overflow-y-auto pr-1 md:absolute md:inset-0 md:max-h-none"
+      className={LIST_CLASSES}
       ref={listRef}
       role="listbox"
     >
@@ -140,12 +145,46 @@ function StartList({
         <p className="text-muted-foreground text-sm">{copy.noStartSlots}</p>
       ) : null}
       {slots.map((slot) => (
-        <SlotButton
+        <TimeButton
+          disabled={slot.status !== "available" || loading}
           key={slot.label}
-          loading={loading}
-          onStartChange={onStartChange}
+          label={slot.label}
+          note={statusLabel(slot.status)}
+          onSelect={onStartChange}
           selected={slot.startAt.toISOString() === startAt}
-          slot={slot}
+          value={slot.startAt.toISOString()}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Every end the chosen start allows; empty until a start is chosen.
+function EndList({
+  endAt,
+  endOptions,
+  loading,
+  onEndChange,
+}: Pick<SlotPickerProps, "endAt" | "endOptions" | "loading" | "onEndChange">) {
+  return (
+    <div
+      aria-busy={loading}
+      aria-label={copy.endListLabel}
+      className={LIST_CLASSES}
+      role="listbox"
+    >
+      {endOptions.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{copy.noEndSlots}</p>
+      ) : null}
+      {endOptions.map((end) => (
+        <TimeButton
+          disabled={loading}
+          key={end.toISOString()}
+          label={formatTime(end)}
+          note={null}
+          onSelect={onEndChange}
+          selected={end.toISOString() === endAt}
+          value={end.toISOString()}
         />
       ))}
     </div>
@@ -175,8 +214,9 @@ export function SlotPicker({
   );
   return (
     <div className="flex flex-col gap-6 rounded-lg border bg-card p-4">
-      {/* Row one: the calendar and the start list at equal width from md
-          up; each on its own below md, so the days are large tap targets. */}
+      {/* Row one: the calendar and the two time lists at equal width
+          from md up; each on its own below md, so the days are large tap
+          targets. */}
       <div className="grid gap-6 md:grid-cols-2">
         <Calendar
           aria-label={copy.calendarLabel}
@@ -188,43 +228,38 @@ export function SlotPicker({
           onSelect={handleSelect}
           selected={isoToDate(date)}
         />
-        <Field>
-          <FieldLabel>{copy.startLabel}</FieldLabel>
-          {/* From md up the list is exactly as tall as the month beside it:
-              it fills the field's remaining height absolutely, so the row
-              is the calendar's height and the list is the one thing in the
-              step that scrolls. Below md it is a capped list in flow. Keyed
-              by date: a new day starts the list afresh, so it scrolls to
-              that day's first available start time. */}
-          <div className="md:relative md:flex-1">
-            <StartList
-              key={date}
-              loading={loading}
-              onStartChange={onStartChange}
-              slots={slots}
-              startAt={startAt}
-            />
-          </div>
-        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field>
+            <FieldLabel>{copy.startLabel}</FieldLabel>
+            {/* From md up the lists are the one thing in the step that
+                scrolls. Keyed by date: a new day starts the start list
+                afresh, so it scrolls to that day's first available start
+                time. */}
+            <div className="md:relative md:flex-1">
+              <StartList
+                key={date}
+                loading={loading}
+                onStartChange={onStartChange}
+                slots={slots}
+                startAt={startAt}
+              />
+            </div>
+          </Field>
+          <Field>
+            <FieldLabel>{copy.endLabel}</FieldLabel>
+            <div className="md:relative md:flex-1">
+              <EndList
+                endAt={endAt}
+                endOptions={endOptions}
+                loading={loading}
+                onEndChange={onEndChange}
+              />
+            </div>
+          </Field>
+        </div>
       </div>
-      {/* Row two: the end time and the participants side by side. */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Field>
-          <FieldLabel htmlFor="booking-end">{copy.endLabel}</FieldLabel>
-          <ChoiceSelect
-            disabled={endOptions.length === 0}
-            id="booking-end"
-            items={endOptions.map((end) => ({
-              label: formatTime(end),
-              value: end.toISOString(),
-            }))}
-            onChange={onEndChange}
-            placeholder={copy.endPlaceholder}
-            value={endAt || null}
-          />
-        </Field>
-        {children}
-      </div>
+      {/* Row two: the participants, under the calendar. */}
+      <div className="grid gap-6 md:grid-cols-2">{children}</div>
     </div>
   );
 }

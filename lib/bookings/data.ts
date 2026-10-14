@@ -104,6 +104,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
     price: bookingPriceOverview(booking, addOns),
+    roomId: booking.booking_room_id,
     roomName,
   };
 }
@@ -138,11 +139,11 @@ export async function listOwnBookingOverview(
   return bookings.map((booking) => toOverviewRow(booking, now));
 }
 
-// The sidebar badge on the member Bookinger item: how many bookings are
-// upcoming, judged on the same terms splitBookingOverview splits at
-// (lib/bookings/filters.ts) — not cancelled, start not passed, a pending
-// verification only while its hold stands. RLS keeps the count inside the
-// company's own rows.
+// The sidebar badge on the member Bookinger item: how many bookings the
+// page's Kommende bucket holds (bookingStateBucket in
+// lib/domain/booking-overview.ts, the SQL in lib/bookings/filters.ts) —
+// not cancelled, end not passed, a pending verification only while its
+// hold stands. RLS keeps the count inside the company's own rows.
 export async function countUpcomingOwnBookings(
   supabase: SupabaseClient<Database>,
   companyId: string,
@@ -159,6 +160,28 @@ export async function countUpcomingOwnBookings(
     );
   }
   return result.count ?? 0;
+}
+
+/** One choice in a Lokale filter. */
+export interface RoomOption {
+  roomId: string;
+  roomName: string;
+}
+
+// The Lokale filter's choices on both Bookinger pages: every room,
+// deactivated ones too, so a past booking's room stays selectable. Every
+// session may read the rooms (policies/rooms.sql).
+export async function listRoomOptions(
+  supabase: SupabaseClient<Database>
+): Promise<RoomOption[]> {
+  const result = await supabase
+    .from("rooms")
+    .select("room_id, room_name")
+    .order("room_name");
+  return rowsOrThrow(result, "filter rooms").map((room) => ({
+    roomId: room.room_id,
+    roomName: room.room_name,
+  }));
 }
 
 // The admins behind the manual amounts' creator ids (#16): one lookup for

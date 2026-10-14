@@ -9,9 +9,9 @@ import {
 const now = "2026-09-29T12:00:00.000Z";
 
 describe("upcomingBookingsFilter", () => {
-  it("counts confirmed bookings that have not started", () => {
+  it("counts confirmed bookings that have not ended, a running one included", () => {
     expect(upcomingBookingsFilter(now)).toContain(
-      'and(booking_status.eq.confirmed,booking_start_at.gte."2026-09-29T12:00:00.000Z")'
+      'and(booking_status.eq.confirmed,booking_end_at.gte."2026-09-29T12:00:00.000Z")'
     );
   });
 

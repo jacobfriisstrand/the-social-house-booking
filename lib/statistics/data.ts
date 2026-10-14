@@ -1,13 +1,17 @@
 // Read-side for Statistik (#10): every confirmed or cancelled booking whose
 // meeting starts in the selected month's year or the December before it,
-// with the company's membership status and the sum of its manual amounts.
-// RLS lets the admin session read every company's rows; the totals are
-// computed in lib/domain/statistics.ts.
+// with its room, the company's name and membership status, and the sum of
+// its manual amounts; and every room with its opening hours. RLS lets the
+// admin session read every company's rows; the totals are computed in
+// lib/domain/statistics.ts and lib/domain/statistics-usage.ts.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { toSpecialDays, toWeekly } from "@/lib/bookings/availability";
 import {
   type StatisticsBooking,
   statisticsWindow,
 } from "@/lib/domain/statistics";
+import type { StatisticsRoom } from "@/lib/domain/statistics-usage";
+import { listRoomDetails } from "@/lib/rooms/data";
 import type { Database } from "@/lib/supabase/database.types";
 
 // PostgREST returns at most max_rows (1000, supabase/config.toml) per
@@ -15,7 +19,7 @@ import type { Database } from "@/lib/supabase/database.types";
 const PAGE_ROWS = 1000;
 
 const COLUMNS =
-  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_end_at, booking_expected_total_ore, booking_id, booking_invoicing_status, booking_start_at, booking_status, companies(company_membership_status), manual_amounts(manual_amount_amount_ore)";
+  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_company_id, booking_end_at, booking_expected_total_ore, booking_id, booking_invoicing_status, booking_room_id, booking_start_at, booking_status, companies(company_display_name, company_membership_status), manual_amounts(manual_amount_amount_ore)";
 
 function pageQuery(
   supabase: SupabaseClient<Database>,
@@ -46,12 +50,11 @@ function rowsOrThrow(result: PageResult): Row[] {
   return result.data;
 }
 
-function requiredMembership(row: Row): StatisticsBooking["membership"] {
-  const membership = row.companies?.company_membership_status;
-  if (membership === undefined) {
+function requiredCompany(row: Row): NonNullable<Row["companies"]> {
+  if (!row.companies) {
     throw new Error(`booking ${row.booking_id} is missing its company`);
   }
-  return membership;
+  return row.companies;
 }
 
 // The query asks for these two statuses only; this narrows the type.
@@ -66,10 +69,13 @@ function heldOrCancelled(row: Row): StatisticsBooking["status"] {
 }
 
 function toStatisticsBooking(row: Row): StatisticsBooking {
+  const company = requiredCompany(row);
   return {
     addonTotalOre: row.booking_addon_total_ore,
     cancellationFeeOre: row.booking_cancellation_fee_ore,
     cancellationFeeWaived: row.booking_cancellation_fee_waived,
+    companyId: row.booking_company_id,
+    companyName: company.company_display_name,
     endAt: row.booking_end_at,
     expectedTotalOre: row.booking_expected_total_ore,
     invoicingStatus: row.booking_invoicing_status,
@@ -77,7 +83,8 @@ function toStatisticsBooking(row: Row): StatisticsBooking {
       (sum, amount) => sum + amount.manual_amount_amount_ore,
       0
     ),
-    membership: requiredMembership(row),
+    membership: company.company_membership_status,
+    roomId: row.booking_room_id,
     startAt: row.booking_start_at,
     status: heldOrCancelled(row),
   };
@@ -103,4 +110,18 @@ export async function listStatisticsBookings(
     offsets.map((offset) => pageQuery(supabase, month, offset))
   );
   return [...rows, ...rest.flatMap(rowsOrThrow)].map(toStatisticsBooking);
+}
+
+// Every room with its opening hours, for the rooms' occupancy.
+export async function listStatisticsRooms(
+  supabase: SupabaseClient<Database>
+): Promise<StatisticsRoom[]> {
+  const rooms = await listRoomDetails(supabase);
+  return rooms.map((room) => ({
+    isActive: room.isActive,
+    name: room.name,
+    roomId: room.roomId,
+    specialDays: toSpecialDays(room.specialDays),
+    weekly: toWeekly(room.openingHours),
+  }));
 }

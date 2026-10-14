@@ -5,11 +5,13 @@
 // ISO instant unambiguous.
 import type { AdminBookingState } from "@/lib/domain/admin-bookings";
 
-// Kommende (member badge): not cancelled, start not passed, and a pending
-// verification only while its hold still stands — the same split
-// splitBookingOverview makes at read time (lib/domain/booking-overview.ts).
+// Kommende (member badge): not cancelled, end not passed, and a pending
+// verification only while its hold still stands — the bucket the member
+// page's Bookingstatus filter keeps (bookingStateBucket,
+// lib/domain/booking-overview.ts), so the badge counts what Kommende
+// lists.
 export function upcomingBookingsFilter(nowIso: string): string {
-  return `and(booking_status.eq.confirmed,booking_start_at.gte."${nowIso}"),and(booking_status.eq.pending_verification,booking_hold_expires_at.gt."${nowIso}")`;
+  return `and(booking_status.eq.confirmed,booking_end_at.gte."${nowIso}"),and(booking_status.eq.pending_verification,booking_hold_expires_at.gt."${nowIso}")`;
 }
 
 // The admin invoicing worklist — the sidebar badge and the worklist
@@ -27,9 +29,8 @@ export function outstandingInvoicesFilter(): string {
 // The admin overview's Bookingstatus filter: the ticked buckets as one
 // or-filter — cancelled, or a confirmed booking that has (not) finished.
 // The cut is the END instant: "afsluttede" means ended, so a booking that
-// started but runs tonight is still kommende. Deliberately unlike the
-// member tabs' start-based split (splitBookingOverview): the admin cares
-// about finished work, the member about not-started plans. Called with
+// started but runs tonight is still kommende — the member page's buckets
+// too (bookingStateBucket, lib/domain/booking-overview.ts). Called with
 // two or more ticked buckets only: the PostgREST or-list parses a lone
 // and(...) as a parse error, so a single bucket chains as plain filters
 // instead (lib/bookings/admin-data.ts). Empty selection returns "" and

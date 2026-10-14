@@ -20,9 +20,8 @@ export type AdminMembership = "external" | "member";
 /** The booking-state buckets the admin overview's filter selects: the
  * cancelled bookings, or a confirmed booking that has (not) finished. The
  * cut is the END instant — "afsluttede" means ended, so a booking that
- * started but runs tonight is still kommende. Deliberately unlike the
- * member tabs' start-based split (splitBookingOverview): the admin cares
- * about finished work, the member about not-started plans. */
+ * started but runs tonight is still kommende. The member page's filter
+ * cuts the same way. */
 export type AdminBookingState = "cancelled" | "finished" | "upcoming";
 
 /** One booking's row in the admin overview, from its frozen snapshot. */
@@ -134,6 +133,14 @@ function addRow(totals: AdminTotals, row: AdminBookingRow): AdminTotals {
     minutes: totals.minutes + (parts.minutes ?? 0),
     roomPriceOre: totals.roomPriceOre + (parts.roomPriceOre ?? 0),
   };
+}
+
+// An admin can cancel what a member can (#5): a confirmed booking whose
+// start has not passed. The write re-checks it at the confirm moment.
+export function canAdminCancel(row: AdminBookingRow, now: Date): boolean {
+  return (
+    row.bookingStatus === "confirmed" && Date.parse(row.startAt) > now.getTime()
+  );
 }
 
 /** The totals of the filtered set: every column sums down its rows. */

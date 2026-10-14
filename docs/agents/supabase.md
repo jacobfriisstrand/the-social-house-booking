@@ -79,7 +79,7 @@ Everything else uses the user's session and RLS.
 
 ## Seed
 
-`supabase/seed.sql` runs on `supabase db reset` only: one admin, two rooms with opening hours and add-ons, one member company, one external company. It never runs against cloud projects; cloud admins are created with `scripts/create-admin.ts`.
+`supabase/seed.sql` runs on `supabase db reset` only: one admin, ten rooms with opening hours and add-ons, three member and two external companies, the three published terms texts, notices and House Events, and about 950 bookings spread over the reset's calendar year (most with add-ons, older months invoiced). The bookings are generated relative to `current_date`, so a reset always has a past and a future; the demo logins are listed at the top of the file. It never runs against cloud projects; cloud admins are created with `scripts/create-admin.ts`. Room photos are not in `seed.sql`: `npm run db:seed-images` (chained into `npm run db:reset`) uploads them as the seed admin.
 
 ## Auth config as code
 

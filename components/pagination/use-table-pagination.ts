@@ -33,15 +33,6 @@ function writeQuery(query: string): void {
   );
 }
 
-// A new view of the same table (tab switch) starts on its first page; the
-// chosen page size carries over.
-export function resetPaginationPage(): void {
-  if (!new URLSearchParams(window.location.search).has(PAGE_PARAM)) {
-    return;
-  }
-  writeQuery(updatedPaginationQuery({ page: null }, window.location.search));
-}
-
 export function useTablePagination(totalItems: number): PagedList {
   const searchParams = useSearchParams();
   const pageSize = parsePageSize(searchParams.get(PAGE_SIZE_PARAM));

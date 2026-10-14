@@ -1,16 +1,16 @@
 "use client";
 
 import { CalendarIcon, CheckIcon, ListIcon, XIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 // Bookinger (admin), the shell around the two views (#9, DESIGN.md
 // "Bookinger (admin)"): the filter row, the view toggle and the list or
 // the calendar. Every control writes its change to the URL, so the two
 // views share one state and a switch keeps the filters; the server re-reads
-// the set. The list's sorting, selection and bulk mark live with the table
-// (admin-bookings-table.tsx); the calendar's month grid and its stepper are
-// admin-calendar-grid.tsx.
+// the set (use-view-params.ts). The list's sorting, selection and bulk mark
+// live with the table (admin-bookings-table.tsx); the calendar's month
+// grid and its stepper are admin-calendar-grid.tsx. The filter row is the
+// member Bookinger page's too, without the admin's own filters.
 import type * as React from "react";
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { da } from "react-day-picker/locale";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ import {
   adminViewHref,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
+import type { RoomOption } from "@/lib/bookings/data";
+import type { ListFilterParams } from "@/lib/bookings/view-params";
 import { dateToIso, isoToDate } from "@/lib/calendar-date";
 import type { AdminBookingRow } from "@/lib/domain/admin-bookings";
 import { nextPeriodDraft } from "@/lib/domain/period-range";
@@ -47,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 import { AdminBookingsTable } from "./admin-bookings-table";
 import { AdminCalendarGrid } from "./admin-calendar-grid";
+import { useViewParams } from "./use-view-params";
 
 const copy = messages.bookings.admin;
 
@@ -318,83 +321,41 @@ function PeriodRangePicker({
   );
 }
 
-export function AdminBookingsView({
-  calendar,
-  options,
-  params,
-  rows,
-  today,
+/** What the filter row reads: the filters both Bookinger pages share, and
+ * the admin's own when the row carries them. */
+type FilterRowValue = ListFilterParams &
+  Partial<Pick<AdminViewParams, "companyIds" | "memberships" | "worklist">>;
+
+// The filter row, on both Bookinger pages: room, invoicing status,
+// booking state, the date range and the reset. Given `companies`, it adds
+// the admin's own filters — Faktureringsklar, company and membership; the
+// member page leaves them out, as a member sees only their own company.
+// `listTools` off hides Faktureringsklar and the date range on the
+// admin's month view, whose window the stepper owns; both ride the URL,
+// so a switch away and back keeps them. The view toggle comes in as
+// `children`, at the row's end.
+export function BookingFilterRow({
+  children,
+  companies,
+  listTools = true,
+  onChange,
+  onReset,
+  rooms,
+  value,
 }: {
-  // Null in the list view; a day grid or a compact grid otherwise.
-  calendar: AdminCalendarModel | null;
-  options: AdminFilterOptions;
-  params: AdminViewParams;
-  rows: AdminBookingRow[];
-  today: string;
+  children?: React.ReactNode;
+  companies?: AdminFilterOptions["companies"];
+  listTools?: boolean;
+  onChange: (changes: Partial<FilterRowValue>) => void;
+  onReset: () => void;
+  rooms: RoomOption[];
+  value: FilterRowValue;
 }) {
-  const router = useRouter();
-
-  // Every control writes its change to the URL at once, but the fresh
-  // params land one server read later. A second control touched in that
-  // window must not build its URL from the stale props and drop the first
-  // change — the overlay carries what was pushed since the last read, and
-  // the fresh props clear it. Every control below reads `view`, the
-  // merged params, not the raw props.
-  const paramsKey = adminViewHref(params);
-  const [paramsOverlay, setParamsOverlay] = useState<Partial<AdminViewParams>>(
-    {}
-  );
-  const [paramsRead, setParamsRead] = useState(paramsKey);
-  if (paramsKey !== paramsRead) {
-    // Fresh server params: they carry what the pushes asked for.
-    setParamsRead(paramsKey);
-    setParamsOverlay({});
-  }
-  const view: AdminViewParams = { ...params, ...paramsOverlay };
-
-  // Every URL write is a transition: the server re-read swaps the content
-  // in place, and while it is on the way `loading` swaps the views' rows
-  // and month cells for skeletons — loading.tsx does not fire for a
-  // search-param change.
-  const [loading, startLoading] = useTransition();
-
-  const update = useCallback(
-    (changes: Partial<AdminViewParams>) => {
-      // The merged overlay stands in until the props catch up, so a rapid
-      // second control (or a second tick on the same one) accumulates
-      // instead of clobbering.
-      const merged = { ...paramsOverlay, ...changes };
-      setParamsOverlay(merged);
-      startLoading(() => router.push(adminViewHref({ ...params, ...merged })));
-    },
-    [params, paramsOverlay, router]
-  );
-
-  const resetFilters = useCallback(() => {
-    setParamsOverlay({});
-    startLoading(() =>
-      router.push(
-        adminViewHref({
-          ...params,
-          bookingStates: [],
-          companyIds: [],
-          invoicingStatuses: [],
-          memberships: [],
-          periodFrom: undefined,
-          periodTo: undefined,
-          roomIds: [],
-          worklist: false,
-          ...windowAround(today),
-        })
-      )
-    );
-  }, [params, router, today]);
-
-  const companyOptions = options.companies.map((company) => ({
+  const companyOptions = (companies ?? []).map((company) => ({
     label: company.displayName,
     value: company.companyId,
   }));
-  const roomOptions = options.rooms.map((room) => ({
+  const roomOptions = rooms.map((room) => ({
     label: room.roomName,
     value: room.roomId,
   }));
@@ -413,9 +374,9 @@ export function AdminBookingsView({
     { label: copy.filters.membershipMember, value: "member" },
     { label: copy.filters.membershipExternal, value: "external" },
   ];
-  // The booking-state buckets: Kommende and Aflyste reuse the member tabs'
-  // words; Afsluttede is the admin's own bucket — cut on the end instant,
-  // so it does not reuse the tabs' start-based "Tidligere".
+  // The booking-state buckets: Kommende and Aflyste are the words the
+  // member page's tabs used; Afsluttede is the filter's own bucket — cut
+  // on the end instant, so it is not the tabs' start-based "Tidligere".
   const bookingStateOptions = [
     { label: messages.bookings.tabs.upcoming, value: "upcoming" },
     { label: copy.filters.bookingStateFinished, value: "finished" },
@@ -423,39 +384,154 @@ export function AdminBookingsView({
   ];
 
   const onCompanyChange = useCallback(
-    (ids: string[]) => update({ companyIds: ids }),
-    [update]
+    (ids: string[]) => onChange({ companyIds: ids }),
+    [onChange]
   );
   const onRoomChange = useCallback(
-    (ids: string[]) => update({ roomIds: ids }),
-    [update]
+    (ids: string[]) => onChange({ roomIds: ids }),
+    [onChange]
   );
   const onStatusChange = useCallback(
     (statuses: string[]) =>
-      update({
-        invoicingStatuses: statuses as AdminViewParams["invoicingStatuses"],
+      onChange({
+        invoicingStatuses: statuses as FilterRowValue["invoicingStatuses"],
       }),
-    [update]
+    [onChange]
   );
   const onMembershipChange = useCallback(
     (kinds: string[]) =>
-      update({ memberships: kinds as AdminViewParams["memberships"] }),
-    [update]
+      onChange({ memberships: kinds as AdminViewParams["memberships"] }),
+    [onChange]
   );
   const onBookingStateChange = useCallback(
     (states: string[]) =>
-      update({ bookingStates: states as AdminViewParams["bookingStates"] }),
-    [update]
+      onChange({ bookingStates: states as FilterRowValue["bookingStates"] }),
+    [onChange]
   );
   const onPeriodChange = useCallback(
     (periodFrom: string | undefined, periodTo: string | undefined) =>
-      update({ periodFrom, periodTo }),
-    [update]
+      onChange({ periodFrom, periodTo }),
+    [onChange]
   );
   const onWorklistChange = useCallback(
-    (checked: boolean) => update({ worklist: checked }),
-    [update]
+    (checked: boolean) => onChange({ worklist: checked }),
+    [onChange]
   );
+
+  return (
+    // shrink-0: the panel is a fixed-height scrolling column; the filter
+    // row and the view toggle stay visible while the views scroll.
+    <Card className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 p-3">
+      <div className="flex flex-wrap items-center gap-3 max-md:*:w-full">
+        {companies && listTools ? (
+          <span className="flex items-center gap-2">
+            <Switch
+              checked={value.worklist ?? false}
+              id="admin-worklist"
+              onCheckedChange={onWorklistChange}
+            />
+            <Label className="font-normal" htmlFor="admin-worklist">
+              {copy.filters.worklist}
+            </Label>
+          </span>
+        ) : null}
+        {companies ? (
+          <FilterMultiSelect
+            allLabel={copy.filters.companyAll}
+            label={copy.filters.company}
+            onChange={onCompanyChange}
+            options={companyOptions}
+            value={value.companyIds ?? []}
+          />
+        ) : null}
+        <FilterMultiSelect
+          allLabel={copy.filters.roomAll}
+          label={copy.filters.room}
+          onChange={onRoomChange}
+          options={roomOptions}
+          value={value.roomIds}
+        />
+        <FilterMultiSelect
+          allLabel={copy.filters.statusAll}
+          label={copy.filters.status}
+          onChange={onStatusChange}
+          options={statusOptions}
+          value={value.invoicingStatuses}
+        />
+        {companies ? (
+          <FilterMultiSelect
+            allLabel={copy.filters.membershipAll}
+            label={copy.filters.membership}
+            onChange={onMembershipChange}
+            options={membershipOptions}
+            value={value.memberships ?? []}
+          />
+        ) : null}
+        <FilterMultiSelect
+          allLabel={copy.filters.bookingStateAll}
+          label={copy.filters.bookingState}
+          onChange={onBookingStateChange}
+          options={bookingStateOptions}
+          value={value.bookingStates}
+        />
+        {listTools ? (
+          <PeriodRangePicker
+            onChange={onPeriodChange}
+            periodFrom={value.periodFrom}
+            periodTo={value.periodTo}
+          />
+        ) : null}
+        <Button
+          className="max-md:justify-start"
+          onClick={onReset}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          {copy.filters.reset}
+        </Button>
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+export function AdminBookingsView({
+  calendar,
+  options,
+  params,
+  rows,
+  today,
+}: {
+  // Null in the list view; a day grid or a compact grid otherwise.
+  calendar: AdminCalendarModel | null;
+  options: AdminFilterOptions;
+  params: AdminViewParams;
+  rows: AdminBookingRow[];
+  today: string;
+}) {
+  // Every control reads `view`, the params with the writes still on their
+  // way merged in, and writes through `update` (use-view-params.ts).
+  const { loading, replace, update, view } = useViewParams(
+    params,
+    adminViewHref
+  );
+
+  const resetFilters = useCallback(() => {
+    replace({
+      ...params,
+      bookingStates: [],
+      companyIds: [],
+      invoicingStatuses: [],
+      memberships: [],
+      periodFrom: undefined,
+      periodTo: undefined,
+      roomIds: [],
+      worklist: false,
+      ...windowAround(today),
+    });
+  }, [params, replace, today]);
+
   const onViewChange = useCallback(
     (values: string[]) => {
       // A click on the active segment empties the group; the view stays.
@@ -469,80 +545,14 @@ export function AdminBookingsView({
 
   return (
     <>
-      {/* shrink-0: the panel is a fixed-height scrolling column; the filter
-          row and the view toggle stay visible while the views scroll. */}
-      <Card className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 p-3">
-        <div className="flex flex-wrap items-center gap-3 max-md:*:w-full">
-          {/* The worklist switch is a list tool: hidden on the month view,
-              whose window the stepper owns. It rides the URL, so a switch
-              away and back keeps it. */}
-          {view.view === "list" ? (
-            <span className="flex items-center gap-2">
-              <Switch
-                checked={view.worklist}
-                id="admin-worklist"
-                onCheckedChange={onWorklistChange}
-              />
-              <Label className="font-normal" htmlFor="admin-worklist">
-                {copy.filters.worklist}
-              </Label>
-            </span>
-          ) : null}
-          <FilterMultiSelect
-            allLabel={copy.filters.companyAll}
-            label={copy.filters.company}
-            onChange={onCompanyChange}
-            options={companyOptions}
-            value={view.companyIds}
-          />
-          <FilterMultiSelect
-            allLabel={copy.filters.roomAll}
-            label={copy.filters.room}
-            onChange={onRoomChange}
-            options={roomOptions}
-            value={view.roomIds}
-          />
-          <FilterMultiSelect
-            allLabel={copy.filters.statusAll}
-            label={copy.filters.status}
-            onChange={onStatusChange}
-            options={statusOptions}
-            value={view.invoicingStatuses}
-          />
-          <FilterMultiSelect
-            allLabel={copy.filters.membershipAll}
-            label={copy.filters.membership}
-            onChange={onMembershipChange}
-            options={membershipOptions}
-            value={view.memberships}
-          />
-          <FilterMultiSelect
-            allLabel={copy.filters.bookingStateAll}
-            label={copy.filters.bookingState}
-            onChange={onBookingStateChange}
-            options={bookingStateOptions}
-            value={view.bookingStates}
-          />
-          {/* The date range is a list tool: hidden on the month view, whose
-              window the stepper owns. The range rides the URL, so a switch
-              away and back keeps it. */}
-          {view.view === "list" ? (
-            <PeriodRangePicker
-              onChange={onPeriodChange}
-              periodFrom={view.periodFrom}
-              periodTo={view.periodTo}
-            />
-          ) : null}
-          <Button
-            className="max-md:justify-start"
-            onClick={resetFilters}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            {copy.filters.reset}
-          </Button>
-        </div>
+      <BookingFilterRow
+        companies={options.companies}
+        listTools={view.view === "list"}
+        onChange={update}
+        onReset={resetFilters}
+        rooms={options.rooms}
+        value={view}
+      >
         <ToggleGroup
           onValueChange={onViewChange}
           spacing={0}
@@ -558,7 +568,7 @@ export function AdminBookingsView({
             {copy.view.month}
           </ToggleGroupItem>
         </ToggleGroup>
-      </Card>
+      </BookingFilterRow>
       {/* The branch reads the overlay's view, not the props: a toggle flips
           view.view at once while calendar/rows stay stale for the round
           trip, and the pending surface must be the one being switched TO —

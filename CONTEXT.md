@@ -139,6 +139,10 @@ The amount ready to invoice for a booking or period, excl. VAT.
 **Monthly booking economy** (månedens samlede bookingøkonomi):
 A cross-company admin view of one month's totals: bookings, booked room hours, room-rental value after discounts, add-ons, cancellation fees, manual amounts, and invoicing basis excl. VAT, split between member and external companies. A booking belongs to the month its meeting starts in. Only bookings whose meeting has ended count; the rest of the month is shown as expected value. A booking marked not invoicable counts as a booking but adds no amount.
 
+**Occupancy** (booket af åbningstiden):
+A room's booked time in a month as a share of its opening time in that month up to now. Only bookings whose meeting has ended count, as in the monthly booking economy.
+_Avoid_: belægning, utilisation, capacity
+
 **Invoice date / number** (fakturadato / fakturanummer):
 Recorded when admin marks bookings as invoiced.
 
