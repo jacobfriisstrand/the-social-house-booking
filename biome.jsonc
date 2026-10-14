@@ -48,18 +48,6 @@
         }
       }
     },
-    // env.selfcheck.ts is a standalone boot self-check (run manually), not a
-    // vitest suite; its top-level node:assert calls are intentional.
-    {
-      "includes": ["lib/env.selfcheck.ts"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noMisplacedAssertion": "off"
-          }
-        }
-      }
-    },
     // supabase/functions/ runs on Deno: the Deno global is real there.
     {
       "includes": ["supabase/functions/**"],
