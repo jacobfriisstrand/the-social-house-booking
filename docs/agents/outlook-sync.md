@@ -45,7 +45,9 @@ no webhook exists in that direction.
    `booking@thesocialhouse.dk`; the develop branch deploy (the
    `branch-deploy` context) carries the sandbox pair
    (an app registration in the sandbox tenant, mailbox `jacob@friis.com`) for
-   test runs; locally nothing is set, so local runs do nothing. With them it
+   test runs; locally the sandbox set may be copied into `.env.local` for a
+   deliberate end-to-end test against `jacob@friis.com`, and the production
+   pair must never go local. With them it
    runs `lib/outlook/sync.ts` on the service-role client (allowlist entry 9
    in `supabase.md`).
 4. The worker claims dirty rows one at a time (conditional update returning
@@ -84,12 +86,17 @@ against stubbed fetch.
   Until the four variables are set on a context, the job is off there and no
   data reaches Microsoft.
 - To force a run outside the schedule: `POST /api/jobs/sync-calendar` with
-  `Authorization: Bearer $JOB_SECRET` — on production, or on `develop`
-  where the scheduled function never fires.
-- Local runs do nothing: no `OUTLOOK_*` in `.env.local` means the route
-  answers 503. `lib/outlook/sync.test.ts` pins the worker's rules against an
-  in-memory client and gateway; `lib/outlook/graph.test.ts` pins the Graph
-  call shapes against stubbed fetch.
+  `Authorization: Bearer $JOB_SECRET` — on production, on the develop branch
+  deploy (once visitor protection is off), or locally against the values in
+  `.env.local`.
+- Local runs do nothing until the sandbox set is deliberately copied into
+  `.env.local` (`.env.example` documents when that is safe: against
+  `jacob@friis.com`, never the production pair); without them the route
+  answers 503, and on production the route refuses any mailbox other than
+  `booking@thesocialhouse.dk` (Bilag 1). `lib/outlook/sync.test.ts` pins the
+  worker's rules against an in-memory client and gateway;
+  `lib/outlook/graph.test.ts` pins the Graph call shapes against stubbed
+  fetch; `app/api/jobs/sync-calendar/route.test.ts` pins the gate.
 - If the mailbox shows a missing entry: check `calendar_events` — a row with
   `calendar_event_needs_sync` still true means the worker has not reached it
   (check the Netlify function log); no row at all means the booking is not
