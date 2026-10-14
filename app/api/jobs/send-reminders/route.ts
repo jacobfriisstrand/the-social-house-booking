@@ -17,6 +17,8 @@ const runJob = async () => {
   return { holdsExpired: holds.data, reminders };
 };
 
-export function POST(request: Request): Promise<Response> {
-  return runScheduledJob(request, async () => Response.json(await runJob()));
+export async function POST(request: Request): Promise<Response> {
+  return await runScheduledJob(request, async () =>
+    Response.json(await runJob())
+  );
 }

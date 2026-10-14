@@ -2,7 +2,7 @@
 // every five minutes on the production deploy only. Like send-reminders it
 // does nothing itself: it calls the job route, which owns the sync logic
 // behind JOB_SECRET.
-import { callScheduledJob } from "./common/job-call";
+import { callScheduledJob } from "./common/job-call.mts";
 
 export default async (): Promise<void> => {
   await callScheduledJob("/api/jobs/sync-calendar", "sync-calendar");

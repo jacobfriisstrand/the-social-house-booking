@@ -17,7 +17,7 @@ const runJob = (config: GraphClientConfig) => {
   return syncCalendarEvents(admin, createGraphClient(config));
 };
 
-export function POST(request: Request): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   // Empty means "not configured" (lib/env-schema.ts): the job stays off —
   // locally and on deploy previews — until the four Graph variables are set
   // for the context. Production carries the booking mailbox; the develop
@@ -37,7 +37,7 @@ export function POST(request: Request): Promise<Response> {
   if (!config) {
     return new Response("Job is not configured", { status: 503 });
   }
-  return runScheduledJob(request, async () => {
+  return await runScheduledJob(request, async () => {
     // Bilag 1 fixes the production mailbox (ADR-0003): it runs only on
     // production, and production runs only against it. A wrong value on the
     // production context, or the production mailbox pointed at a development
