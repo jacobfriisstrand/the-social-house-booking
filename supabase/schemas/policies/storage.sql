@@ -28,3 +28,35 @@ create policy room_images_bucket_delete_admin on storage.objects
     bucket_id = 'room-images'
     and (auth.jwt() ->> 'app_role') = 'admin'
   );
+
+-- Storage policies for the site-images bucket (#89): the hero photo of the
+-- public split-screen shell. The bucket row itself is DML (hand-written
+-- migration 20261014203000_site_images_bucket.sql). The photo is public
+-- presentation data rendered for anonymous visitors through getPublicUrl;
+-- writes are admin-only.
+
+create policy site_images_bucket_select_authenticated on storage.objects
+  for select to authenticated
+  using (bucket_id = 'site-images');
+
+create policy site_images_bucket_insert_admin on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'site-images'
+    and (auth.jwt() ->> 'app_role') = 'admin'
+  );
+
+create policy site_images_bucket_update_admin on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'site-images'
+    and (auth.jwt() ->> 'app_role') = 'admin'
+  )
+  with check ((auth.jwt() ->> 'app_role') = 'admin');
+
+create policy site_images_bucket_delete_admin on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'site-images'
+    and (auth.jwt() ->> 'app_role') = 'admin'
+  );

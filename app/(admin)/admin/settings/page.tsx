@@ -1,18 +1,27 @@
+import { HeroImageForm } from "@/components/settings/hero-image-form";
 import { WifiForm } from "@/components/settings/wifi-form";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getWifiSettings } from "@/lib/settings/data";
+import {
+  getPublicHeroImage,
+  getWifiSettings,
+  publicHeroImageUrl,
+} from "@/lib/settings/data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 const labels = messages.settings;
 
-// Indstillinger (admin): the Wi-Fi credentials the shell footer shows. The
-// single-row settings table backs the form; saving revalidates the whole
+// Indstillinger (admin): the Wi-Fi credentials the shell footer shows and
+// the public split-screen's hero image (#89). The single-row settings table
+// and the site_images table back the forms; saving revalidates the whole
 // shell (DESIGN.md, footer line).
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
-  const wifi = await getWifiSettings(supabase);
+  const [wifi, heroPath] = await Promise.all([
+    getWifiSettings(supabase),
+    getPublicHeroImage(supabase),
+  ]);
 
   return (
     <>
@@ -28,6 +37,18 @@ export default async function AdminSettingsPage() {
                 wifiNetwork: wifi.network,
                 wifiPassword: wifi.password,
               }}
+            />
+          </CardContent>
+        </Card>
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>{labels.heroImageSection}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HeroImageForm
+              currentUrl={
+                heroPath ? publicHeroImageUrl(supabase, heroPath) : null
+              }
             />
           </CardContent>
         </Card>
