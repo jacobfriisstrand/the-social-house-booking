@@ -783,6 +783,7 @@ export const messages = {
     selectAll: "Vælg alle",
     submit: "Gem",
     textSection: "Tekst til medlemmerne",
+    title: "House Events",
     whenSection: "Tidspunkt og lokaler",
   },
   login: {
@@ -883,10 +884,6 @@ export const messages = {
     },
     statusUpdated: "Opslaget er opdateret",
     submit: "Gem",
-    tabs: {
-      houseEvents: "House Events",
-      notices: "Beskeder",
-    },
     title: "Opslag",
     visibilitySection: "Visning",
   },

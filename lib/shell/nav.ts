@@ -5,6 +5,7 @@
 // empty (issue #55, recorded in docs/design/DESIGN.md).
 import {
   Building2Icon,
+  CalendarDaysIcon,
   CalendarIcon,
   ChartColumnIcon,
   DoorOpenIcon,
@@ -80,6 +81,11 @@ export function shellAdminLinks(): ShellNavLink[] {
       href: "/admin/notices",
       icon: MegaphoneIcon,
       label: messages.shell.notices,
+    },
+    {
+      href: "/admin/house-events",
+      icon: CalendarDaysIcon,
+      label: messages.houseEvents.title,
     },
     {
       href: "/admin/terms",
