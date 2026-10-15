@@ -1046,10 +1046,12 @@ export const messages = {
       wifiPasswordMax: "Adgangskoden må højst være 63 tegn.",
     },
     heroImageDescription:
-      "Billedet i højre halvdel af de offentlige sider (log ind, glemt adgangskode m.m.). Uden et billede vises standardfotoet.",
+      "Billedet i højre halvdel af de offentlige sider (log ind, glemt adgangskode m.m.). Uden et billede vises The Social House-logoet.",
+    heroImageRemoved: "Billedet er fjernet",
     heroImageSection: "Offentligt billede",
     passwordCopied: "Adgangskode kopieret",
     pickImage: "Vælg billede",
+    removeImage: "Fjern billede",
     saved: "Indstillingerne er gemt",
     saving: "Gemmer …",
     submit: "Gem",

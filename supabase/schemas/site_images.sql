@@ -3,8 +3,8 @@
 -- migration. The path points into the site-images bucket (public; bucket
 -- row in migration 20261014203000_site_images_bucket.sql). Anonymous
 -- visitors read the slot's path — the public layout renders with no
--- session — and only the admin claim writes. There is deliberately no
--- delete policy: replacing upserts the slot's row.
+-- session — and only the admin claim writes; delete is admin-only too
+-- (Fjern billede under Indstillinger falls the layout back to the logo).
 
 create table public.site_images (
   site_image_slot text primary key,

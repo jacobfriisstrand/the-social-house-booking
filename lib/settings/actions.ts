@@ -21,6 +21,11 @@ import { HERO_IMAGE_SLOT } from "./data";
 export type SettingsState = FormState<SettingsValues>;
 export type PublicHeroState = FormState<PublicHeroImageValues>;
 
+// Same shape as the rooms'/notices' module-local ActionResult.
+export type ActionResult =
+  | { status: "success" }
+  | { status: "error"; error: string };
+
 export async function updateSettings(
   _prevState: SettingsState,
   values: SettingsValues
@@ -93,6 +98,41 @@ export async function updatePublicHeroImage(
   }
 
   // The public layout shows the photo on every public page.
+  revalidatePath("/", "layout");
+  return { status: "success" };
+}
+
+// Remove the admin-set hero image (the layout falls back to the logo):
+// storage bytes first, then the referencing row — an orphaned object is
+// harmless, a dangling path is not (mirrors deleteRoomImage). Absent slot
+// row or object is already "removed".
+export async function removePublicHeroImage(): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: image } = await supabase
+    .from("site_images")
+    .select("site_image_path")
+    .eq("site_image_slot", HERO_IMAGE_SLOT)
+    .maybeSingle();
+
+  if (image) {
+    const { error: removeError } = await supabase.storage
+      .from(SITE_IMAGE_BUCKET)
+      .remove([image.site_image_path]);
+    if (removeError) {
+      return { error: messages.settings.errors.saveFailed, status: "error" };
+    }
+  }
+
+  const { error } = await supabase
+    .from("site_images")
+    .delete()
+    .eq("site_image_slot", HERO_IMAGE_SLOT);
+  if (error) {
+    return { error: messages.settings.errors.saveFailed, status: "error" };
+  }
+
   revalidatePath("/", "layout");
   return { status: "success" };
 }

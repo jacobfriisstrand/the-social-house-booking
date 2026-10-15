@@ -118,7 +118,7 @@ Decisions the shell (#55) records on top of these rules:
 - Footer line copy: seeded in the settings table (`TheSocialHouseguest` / `SocialHouse`), editable by admins under Indstillinger; `messages/da.ts` carries the same values as the fallback. Every viewer is a logged-in member, so the password in the bundle is intended.
 - Paths stay English (`/rooms`, `/bookings`, `/admin/companies`); labels come from `messages/da.ts`.
 
-Public pages without the sidebar (login, forgot password, set password, company change) share a split-screen shell (#89): house mark and brand top left, the page centred in the left half, and a full-height photo filling the right half from `lg` (`hidden` below it, content full width on mobile). Login keeps its centred white card with email, password and one primary button.
+Public pages without the sidebar (login, forgot password, set password, company change) share a split-screen shell (#89): house mark and brand top left, the page centred in the left half, and a full-height photo filling the right half from `lg` (`hidden` below it, content full width on mobile). The photo is the admin's upload under Indstillinger; with none set (or after Fjern billede) the house mark sits centred in that half instead. Login keeps its centred white card with email, password and one primary button.
 
 ## Page patterns
 
