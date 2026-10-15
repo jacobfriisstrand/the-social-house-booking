@@ -70,7 +70,7 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 2. Run the release workflow once (or `workflow_dispatch`) to push schema, config, function, and templates.
 3. Generate the hook secret once, `v1,whsec_$(openssl rand -base64 32)`, and store it twice: as the GitHub Environment secret `SEND_EMAIL_HOOK_SECRET` (config push registers the hook with it) and as an Edge Function secret: `supabase secrets set SEND_EMAIL_HOOK_SECRET=… RESEND_API_KEY=… RESEND_FROM=… APP_ENV=… EMAIL_REDIRECT_TO=…` (`APP_ENV=production` only on the production project; `EMAIL_REDIRECT_TO` only on development). Both hooks are registered by `config push`; nothing is done in the dashboard.
 4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
-5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.
+5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV` and `NEXT_PUBLIC_SITE_URL` are not part of it; they live in `netlify.toml` (build-time only). `RESEND_FROM` is also not part of the script: set it per context with `netlify env:set`, because it changes with the Resend account at go-live.
 
 ## Go-live checklist (before real bookings)
 

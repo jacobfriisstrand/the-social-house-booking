@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { z } from "zod";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { CompanyUsageCard } from "@/components/statistics/company-usage-card";
@@ -24,6 +25,10 @@ import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 const copy = messages.statistics;
+
+export const metadata: Metadata = {
+  title: messages.shell.statistics,
+};
 
 type SearchParams = Promise<{ month?: string }>;
 

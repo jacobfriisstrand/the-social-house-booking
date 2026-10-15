@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CompanyTable } from "@/components/companies/company-table";
 import { CreateCompanySheet } from "@/components/companies/create-company-sheet";
 import { PageHeader, PagePanel } from "@/components/shell/page";
@@ -12,6 +13,10 @@ import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 const copy = messages.companies;
+
+export const metadata: Metadata = {
+  title: copy.title,
+};
 
 // Virksomheder (admin): every company with status and master-data state.
 // The sheet carries the company's information — no dedicated page; Mail 10

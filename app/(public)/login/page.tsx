@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
 import { getSession } from "@/lib/auth/get-session";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { isDevelopment } from "@/lib/env";
+import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.login.title,
+};
 
 // A link that carries `next` (the booking link in Mail 4, 5 and 6, #88)
 // passes a visitor who is already logged in straight on; everyone else logs

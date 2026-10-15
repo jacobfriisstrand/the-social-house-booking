@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AddonSheet } from "@/components/addons/addon-sheet";
 import { AddonTable } from "@/components/addons/addon-table";
 import { PageHeader, PagePanel } from "@/components/shell/page";
@@ -7,6 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 const copy = messages.addons;
+
+export const metadata: Metadata = {
+  title: copy.title,
+};
 
 // Tilkøb (admin, #7): the catalogue with the fixed-vs-per-participant
 // distinction (ADR-0011) and drag-to-reorder (Rækkefølge column). House

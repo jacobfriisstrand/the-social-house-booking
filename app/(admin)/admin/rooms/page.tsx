@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminRoomTable } from "@/components/rooms/admin-room-table";
 import { RoomSheet } from "@/components/rooms/room-sheet";
 import { PageHeader, PagePanel } from "@/components/shell/page";
@@ -5,6 +6,10 @@ import { Card } from "@/components/ui/card";
 import { listAddons, listRoomDetails } from "@/lib/rooms/data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.rooms.listTitle,
+};
 
 // Lokaler (admin): every room with status and price, sliced by the URL
 // pagination. Edit and create open in a sheet on this page (DESIGN.md:
