@@ -25,9 +25,9 @@ import { messages } from "@/messages/da";
 
 const copy = messages.statistics;
 
-type SearchParams = Promise<{ maaned?: string }>;
+type SearchParams = Promise<{ month?: string }>;
 
-// The month to show: ?maaned=yyyy-mm, or this month in Copenhagen.
+// The month to show: ?month=yyyy-mm, or this month in Copenhagen.
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 const monthParam = z.string().regex(MONTH_PATTERN);
 
@@ -49,9 +49,9 @@ export default async function AdminStatisticsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { maaned } = await searchParams;
+  const { month: monthParamRaw } = await searchParams;
   const now = new Date();
-  const month = monthParam.safeParse(maaned).data ?? monthOf(now);
+  const month = monthParam.safeParse(monthParamRaw).data ?? monthOf(now);
   const supabase = await createClient();
   const [bookings, rooms] = await Promise.all([
     listStatisticsBookings(supabase, month),

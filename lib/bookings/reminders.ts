@@ -18,9 +18,10 @@ import { cancellationFeeAt } from "./cancellation";
 
 type Client = SupabaseClient<Database>;
 
-// One window holds at most a booking or two per room; the cap keeps a run
-// well inside Netlify's 30 s function limit.
-const BATCH_SIZE = 100;
+// The 24-hour window can hold a whole day's bookings; Resend rate-limits at
+// 2 requests per second, so 40 sequential sends stay well inside Netlify's
+// 30 s function limit. Anything beyond waits for the next hourly run.
+const BATCH_SIZE = 40;
 
 const REMINDER_SELECT = `
   booking_booker_email, booking_booker_name, booking_company_id,

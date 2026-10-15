@@ -1,7 +1,7 @@
 "use client";
 
 // Statistik's month control (DESIGN.md "Statistik"): previous, the month,
-// next. The month travels in the URL (?maaned=yyyy-mm) so a month can be
+// next. The month travels in the URL (?month=yyyy-mm) so a month can be
 // shared. A new month loads as a transition: the old figures stay while
 // data-pending marks the control, so the page can dim them (loading.tsx
 // does not fire for a search-param change).
@@ -15,8 +15,7 @@ import { messages } from "@/messages/da";
 
 const copy = messages.statistics;
 
-const monthHref = (month: string): string =>
-  `/admin/statistics?maaned=${month}`;
+const monthHref = (month: string): string => `/admin/statistics?month=${month}`;
 
 export function MonthControl({ month }: { month: string }) {
   const router = useRouter();

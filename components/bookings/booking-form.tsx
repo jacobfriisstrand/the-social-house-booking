@@ -138,10 +138,10 @@ const defaultValues = (
   bookerPhone: "",
   cateringAccepted: false,
   companyId: "",
-  endAt: prefillInstant(prefill.dato, prefill.til),
-  participantCount: prefill.personer ?? DEFAULT_PARTICIPANTS,
+  endAt: prefillInstant(prefill.date, prefill.to),
+  participantCount: prefill.participants ?? DEFAULT_PARTICIPANTS,
   roomId: room.roomId,
-  startAt: prefillInstant(prefill.dato, prefill.fra),
+  startAt: prefillInstant(prefill.date, prefill.from),
   termsAccepted: false,
   termsVersionIds: shownTermsIds(terms),
 });

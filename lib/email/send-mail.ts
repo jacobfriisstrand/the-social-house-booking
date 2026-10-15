@@ -39,14 +39,15 @@ const ANGLE_BRACKET = /<([^>]+)>/;
 const senderAddress = (from: string): string =>
   ANGLE_BRACKET.exec(from)?.[1] ?? from.trim();
 
-// In development every mail goes to EMAIL_REDIRECT_TO instead of the real
-// recipient (docs/agents/email.md); an unset target is a config error, never
-// a real send.
-const developmentRecipients = (): string[] => {
+// Outside production every mail goes to EMAIL_REDIRECT_TO instead of the
+// real recipient (docs/agents/email.md) — local and the development deploy
+// alike, so the local `APP_ENV` value keeps the redirect too; an unset
+// target is a config error, never a real send.
+const redirectRecipients = (): string[] => {
   const targets = env.EMAIL_REDIRECT_TO;
   if (!targets) {
     throw new Error(
-      "sendMail: EMAIL_REDIRECT_TO is not set, so mail cannot be redirected in development"
+      "sendMail: EMAIL_REDIRECT_TO is not set, so mail cannot be redirected outside production"
     );
   }
   return targets
@@ -55,7 +56,7 @@ const developmentRecipients = (): string[] => {
     .filter(Boolean);
 };
 
-const assertDevelopmentRecipientsAreSafe = async (
+const assertRedirectRecipientsAreSafe = async (
   admin: ReturnType<typeof createAdminClient>,
   companyId: string | undefined,
   recipients: string[]
@@ -106,17 +107,16 @@ export const sendMail = async ({
   }
   const parsedVariables = template.variables.parse(variables);
   const resend = resendClient();
-  const recipients =
-    env.APP_ENV === "development" ? developmentRecipients() : [to];
+  const recipients = env.APP_ENV === "production" ? [to] : redirectRecipients();
   const admin = createAdminClient();
-  if (env.APP_ENV === "development") {
-    await assertDevelopmentRecipientsAreSafe(admin, companyId, recipients);
+  if (env.APP_ENV !== "production") {
+    await assertRedirectRecipientsAreSafe(admin, companyId, recipients);
   }
   const renderedSubject = renderSubject(template.subject, parsedVariables);
   const subject =
-    env.APP_ENV === "development"
-      ? `[development] ${renderedSubject}`
-      : renderedSubject;
+    env.APP_ENV === "production"
+      ? renderedSubject
+      : `[${env.APP_ENV}] ${renderedSubject}`;
 
   // The log row goes in before the send: the once-only index
   // (reminder, booking-confirmation) aborts a double send before Resend is

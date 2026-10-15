@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const matchesSearch = (room: PublicRoom, search: RoomSearch): boolean =>
-  room.capacity >= search.personer;
+  room.capacity >= search.participants;
 
 // The rooms that are free for the searched period and hold the
 // participants (Bilag 1 "Lokaler og søgning"): a room is free when the
@@ -44,11 +44,11 @@ function filterRooms(
   search: RoomSearch,
   blocked: Awaited<ReturnType<typeof listBlockedPeriods>>
 ): PublicRoom[] {
-  if (startsInPast(search.dato, search.fra, new Date())) {
+  if (startsInPast(search.date, search.from, new Date())) {
     return [];
   }
-  const startAt = cphToUtc(search.dato, search.fra);
-  const endAt = cphToUtc(search.dato, search.til);
+  const startAt = cphToUtc(search.date, search.from);
+  const endAt = cphToUtc(search.date, search.to);
   return rooms.filter(
     (room) =>
       matchesSearch(room, search) &&
@@ -86,8 +86,8 @@ async function loadRoomsPage(
     getBookingViewer(supabase, session),
     search
       ? listBlockedPeriods(supabase, {
-          from: cphToUtc(search.dato, search.fra),
-          to: bufferEndAt(cphToUtc(search.dato, search.til)),
+          from: cphToUtc(search.date, search.from),
+          to: bufferEndAt(cphToUtc(search.date, search.to)),
         })
       : Promise.resolve(null),
   ]);

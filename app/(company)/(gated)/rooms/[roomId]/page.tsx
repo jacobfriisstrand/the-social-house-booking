@@ -194,7 +194,7 @@ export default async function RoomPage({
   ]);
   const supabase = await createClient();
   const prefill = parseRoomPrefill(query);
-  const initialDate = prefill.dato ?? cphDate(new Date());
+  const initialDate = prefill.date ?? cphDate(new Date());
   // The day periods depend only on the roomId from the URL, not on the room
   // row, so they load in parallel with the room and the viewer — the route
   // was paying a third sequential round trip for them.

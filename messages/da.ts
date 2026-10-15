@@ -783,6 +783,7 @@ export const messages = {
     selectAll: "Vælg alle",
     submit: "Gem",
     textSection: "Tekst til medlemmerne",
+    title: "House Events",
     whenSection: "Tidspunkt og lokaler",
   },
   login: {
@@ -825,7 +826,10 @@ export const messages = {
   },
   metadata: {
     description: "Booking af mødelokaler i The Social House",
+    // Tab title: "… • The Social House" on every page (#65); the prefix is
+    // the runtime, not part of the name (app/layout.tsx).
     title: "The Social House",
+    titleSuffix: "The Social House",
   },
   notFound: {
     backHome: "Gå til forsiden",
@@ -883,10 +887,6 @@ export const messages = {
     },
     statusUpdated: "Opslaget er opdateret",
     submit: "Gem",
-    tabs: {
-      houseEvents: "House Events",
-      notices: "Beskeder",
-    },
     title: "Opslag",
     visibilitySection: "Visning",
   },

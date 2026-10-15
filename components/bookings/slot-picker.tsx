@@ -222,6 +222,12 @@ export function SlotPicker({
           aria-label={copy.calendarLabel}
           className={CALENDAR_CLASSES}
           classNames={{ root: "w-full" }}
+          // Open on the searched date's month (#98): react-day-picker never
+          // derives the initial month from `selected`. defaultMonth is
+          // one-way — set at mount, then the user pages around freely; a
+          // controlled `month` would need onMonthChange state to keep the
+          // chevrons alive.
+          defaultMonth={isoToDate(date)}
           disabled={[{ before: now }, { after: bookingHorizonEnd(now) }]}
           locale={da}
           mode="single"

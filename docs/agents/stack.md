@@ -45,7 +45,7 @@ Scripts not yet present in `package.json` are added when the tool they call is i
 
 Every variable is declared once in `.env.example` and read exactly once, in `lib/env.ts`, which validates with zod at boot and exports a typed object. **Never read `process.env` anywhere else.** Adding a variable means: `.env.example` → `lib/env.ts` → Netlify (each deploy context) → GitHub Environment secret if CI needs it.
 
-`APP_ENV` is `development` or `production`. There is no third value. Local dev, the `develop` branch deploy, and deploy previews are all `development`.
+`APP_ENV` is `local`, `development` or `production`: local `npm run dev` runs `local`; the `develop` branch deploy and deploy previews run `development`; production runs `production`. The surface may split on the value (e.g. the page-title prefix, #65); every data/mail guard keys on `production` only.
 
 ## Linting and formatting: Ultracite
 

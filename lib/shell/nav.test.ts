@@ -31,6 +31,7 @@ describe("shellAdminLinks", () => {
       "/admin/companies",
       "/admin/addons",
       "/admin/notices",
+      "/admin/house-events",
       "/admin/terms",
       "/admin/settings",
     ]);

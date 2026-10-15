@@ -2,7 +2,7 @@
 
 // The day grid's date control (DESIGN.md "Hjem"): "Vælg dato" opens a
 // calendar, then a previous/next pair with the date between them. The
-// date travels in the URL (?dato=yyyy-mm-dd) so a day can be shared. A
+// date travels in the URL (?date=yyyy-mm-dd) so a day can be shared. A
 // new day loads as a transition: the old day stays while data-pending
 // marks the control, so the card around it can dim the grid and show the
 // spinner (loading.tsx does not fire for a search-param change).
@@ -23,7 +23,7 @@ import { messages } from "@/messages/da";
 
 const copy = messages.home;
 
-const dayHref = (date: string): string => `/?dato=${date}`;
+const dayHref = (date: string): string => `/?date=${date}`;
 
 export function DateControl({ date }: { date: string }) {
   const router = useRouter();

@@ -117,8 +117,11 @@ describe("updatedPaginationQuery", () => {
 
   it("leaves unrelated params untouched", () => {
     expect(
-      updatedPaginationQuery({ page: 5 }, "?dato=2026-10-01&personer=6&page=3")
-    ).toBe("dato=2026-10-01&personer=6&page=5");
+      updatedPaginationQuery(
+        { page: 5 },
+        "?date=2026-10-01&participants=6&page=3"
+      )
+    ).toBe("date=2026-10-01&participants=6&page=5");
   });
 
   it("reads a null page as a reset", () => {

@@ -12,4 +12,6 @@ export const env = assertEnvironment(
   })
 );
 
-export const isDevelopment = env.APP_ENV === "development";
+// Every non-production runtime keeps the development surfaces (demo forms,
+// seed logins) — production is the only one that hides them.
+export const isDevelopment = env.APP_ENV !== "production";

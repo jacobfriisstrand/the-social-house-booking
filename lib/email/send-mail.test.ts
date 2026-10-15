@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => {
       updateEq,
     },
     env: {
-      APP_ENV: "development" as "development" | "production",
+      APP_ENV: "development" as "local" | "development" | "production",
       EMAIL_REDIRECT_TO: "qa@example.com" as string | undefined,
       RESEND_API_KEY: "re_test" as string,
       RESEND_FROM: "The Social House <booking@tsh-dev.jacobfri.is>",
@@ -123,6 +123,21 @@ describe("sendMail", () => {
       expect.objectContaining({
         subject: "Din bekræftelseskode",
         to: ["booker@rituals.dk"],
+      })
+    );
+  });
+
+  // `local` must fail safe the same way `development` does: a locally
+  // triggered mail never reaches the real booker (the local Resend key is
+  // the development account's, docs/agents/email.md).
+  it("redirects and prefixes with [local] on the local APP_ENV value", async () => {
+    mocks.env.APP_ENV = "local";
+    await sendMail(sendInput);
+
+    expect(mocks.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "[local] Din bekræftelseskode",
+        to: ["qa@example.com"],
       })
     );
   });

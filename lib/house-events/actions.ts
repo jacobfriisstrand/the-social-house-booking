@@ -51,7 +51,7 @@ type Client = Awaited<ReturnType<typeof createClient>>;
 
 function revalidateHouseEvents(): void {
   revalidatePath("/");
-  revalidatePath("/admin/notices");
+  revalidatePath("/admin/house-events");
 }
 
 const when = ({ endAt, startAt }: Period): string =>

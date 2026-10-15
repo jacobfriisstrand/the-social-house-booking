@@ -29,9 +29,12 @@ describe("envSchema", () => {
     expect(Object.keys(envSchema.shape).length).toBe(19);
   });
 
-  it("accepts exactly the two documented APP_ENV values", () => {
+  it("accepts exactly the three documented APP_ENV values", () => {
     expect(() => envSchema.parse({ ...required, APP_ENV: "preview" })).toThrow(
       "APP_ENV"
+    );
+    expect(envSchema.parse({ ...required, APP_ENV: "local" }).APP_ENV).toBe(
+      "local"
     );
   });
 

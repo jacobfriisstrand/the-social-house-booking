@@ -1,15 +1,15 @@
 // The room search (#4, ADR-0009): date, start, end and participant count
 // travel in the URL of /rooms so a result page can be shared and reloaded.
-// Keys are Danish because the URL is user-visible (DESIGN.md "Book lokale").
+// Keys are English (#65's sibling rule: everything in a URL is English).
 import { z } from "zod";
 
 const wallClock = z.string().regex(/^\d{2}:\d{2}$/);
 
 export const roomSearchSchema = z.object({
-  dato: z.iso.date(),
-  fra: wallClock,
-  personer: z.coerce.number().int().min(1),
-  til: wallClock,
+  date: z.iso.date(),
+  from: wallClock,
+  participants: z.coerce.number().int().min(1),
+  to: wallClock,
 });
 
 export type RoomSearch = z.infer<typeof roomSearchSchema>;
