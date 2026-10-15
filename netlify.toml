@@ -17,6 +17,11 @@
 
 # develop (the branch deploy itself is enabled in the Netlify UI under
 # Branches and deploy contexts; this file cannot enable it)
+# NEXT_PUBLIC_SITE_URL is duplicated with `netlify env:set` on the
+# branch-deploy and production contexts: toml values are build-time only and
+# never reach the function runtime, and there is no `URL` fallback — the
+# runtime `URL` is always the production main address, so a missing variable
+# must fail loudly rather than drive production from another context.
 [context.branch-deploy.environment]
   APP_ENV = "development"
   NEXT_PUBLIC_SITE_URL = "https://develop--the-social-house-booking.netlify.app"

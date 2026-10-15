@@ -15,7 +15,7 @@ const body = JSON.stringify({
   action: "created",
   data: {
     issue: {
-      culprit: "app/(public)/demo/forms/actions.ts in submitDemo",
+      culprit: "app/demo/forms/actions.ts in submitDemo",
       firstSeen: "2026-09-09T10:00:00+00:00",
       level: "error",
       shortId: "TSH-BOOKING-1A",

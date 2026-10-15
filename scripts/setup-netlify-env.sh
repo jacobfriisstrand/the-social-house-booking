@@ -401,5 +401,6 @@ finish
 (( ${#NETLIFY_SET[@]} )) && note "set ${#NETLIFY_SET[@]} Netlify variable(s):"
 for v in "${NETLIFY_SET[@]}"; do note "  - $v"; done
 note "Not set here, by design: APP_ENV, NEXT_PUBLIC_SITE_URL, RESEND_FROM live in netlify.toml."
+note "But netlify.toml values are build-time only: for the scheduled functions, run 'netlify env:set NEXT_PUBLIC_SITE_URL <context-url> --context <branch-deploy|production>' for both contexts. There is no URL fallback — a missing variable fails loudly instead of calling production from another context."
 note "Trigger a deploy of develop and main so the new values take effect."
 printf '\n'

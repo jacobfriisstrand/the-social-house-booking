@@ -3,8 +3,7 @@
 // The verification step of the booking dialog (DESIGN.md "Booking dialog",
 // #2): a sentence naming the booker's email, the six-digit code input, the
 // hold countdown, "Send ny kode" and "Bekræft booking". #4 mounts it in the
-// dialog once "Book nu" has created the hold; until then the development
-// page under app/(public)/demo/booking does.
+// dialog once "Book nu" has created the hold.
 import { zodResolver } from "@hookform/resolvers/zod";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { useCallback, useEffect, useState, useTransition } from "react";
