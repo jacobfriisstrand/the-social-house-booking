@@ -826,7 +826,10 @@ export const messages = {
   },
   metadata: {
     description: "Booking af mødelokaler i The Social House",
+    // Tab title: "… • The Social House" on every page (#65); the prefix is
+    // the runtime, not part of the name (app/layout.tsx).
     title: "The Social House",
+    titleSuffix: "The Social House",
   },
   notFound: {
     backHome: "Gå til forsiden",

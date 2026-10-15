@@ -6,6 +6,8 @@ import { callScheduledJob } from "./job-call.mts";
 // non-2xx from the job route means the job did not happen. Both scheduled
 // functions share this caller (docs/agents/email.md).
 const ENV_KEYS = ["NEXT_PUBLIC_SITE_URL", "URL", "JOB_SECRET"] as const;
+const MUST_BE_SET = /must be set/;
+const RESPONDED = /send-reminders responded 401/;
 
 afterEach(() => {
   for (const key of ENV_KEYS) {
@@ -22,28 +24,27 @@ describe("callScheduledJob", () => {
     withEnv({ JOB_SECRET: "s" });
     await expect(
       callScheduledJob("/api/jobs/send-reminders", "reminders")
-    ).rejects.toThrow(/must be set/);
+    ).rejects.toThrow(MUST_BE_SET);
 
     withEnv({ NEXT_PUBLIC_SITE_URL: "https://site.test" });
     delete process.env.JOB_SECRET;
     await expect(
       callScheduledJob("/api/jobs/send-reminders", "reminders")
-    ).rejects.toThrow(/must be set/);
+    ).rejects.toThrow(MUST_BE_SET);
   });
 
   it("falls back to Netlify's own URL when the public one is unset", async () => {
     let url = "";
     let authorization = "";
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input, init) => {
+    globalThis.fetch = (input, init) => {
       url = String(input);
-      authorization = String(
-        (init as RequestInit | undefined)?.headers?.authorization
-      );
-      return new Response(null, { status: 200 });
+      const headers = new Headers((init as RequestInit | undefined)?.headers);
+      authorization = headers.get("authorization") ?? "";
+      return Promise.resolve(new Response(null, { status: 200 }));
     };
     try {
-      withEnv({ URL: "https://deploy.test", JOB_SECRET: "s" });
+      withEnv({ JOB_SECRET: "s", URL: "https://deploy.test" });
       await expect(
         callScheduledJob("/api/jobs/sync-calendar", "sync")
       ).resolves.toBeUndefined();
@@ -58,10 +59,10 @@ describe("callScheduledJob", () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(null, { status: 401 });
     try {
-      withEnv({ NEXT_PUBLIC_SITE_URL: "https://site.test", JOB_SECRET: "s" });
+      withEnv({ JOB_SECRET: "s", NEXT_PUBLIC_SITE_URL: "https://site.test" });
       await expect(
         callScheduledJob("/api/jobs/send-reminders", "reminders")
-      ).rejects.toThrow(/send-reminders responded 401/);
+      ).rejects.toThrow(RESPONDED);
     } finally {
       globalThis.fetch = originalFetch;
     }

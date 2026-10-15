@@ -32,7 +32,13 @@ const emptyToUndefined = <S extends z.ZodType>(schema: S) =>
 
 export const envSchema = z.object({
   ADMIN_NOTIFY_EMAIL: emptyToUndefined(z.email()),
-  APP_ENV: z.enum(["development", "production"]),
+  // Three runtimes, one value each: local dev (`npm run dev`), the
+  // development deployment (Netlify branch-deploy + PR previews) and
+  // production. Every `APP_ENV === "production"` check below the schema
+  // keeps its exact meaning: production alone sends real mail, syncs the
+  // prod mailbox and exports RLS to the real project. `local` and
+  // `development` differ only in surface (#65: the title prefix).
+  APP_ENV: z.enum(["local", "development", "production"]),
   EMAIL_REDIRECT_TO: emptyToUndefined(z.string().min(1)),
   GITHUB_ISSUES_TOKEN: emptyToUndefined(z.string().min(1)),
   JOB_SECRET: emptyToUndefined(z.string().min(1)),

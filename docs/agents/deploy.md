@@ -8,12 +8,12 @@ Read `docs/vendor/netlify/` before changing `netlify.toml`.
 
 | `APP_ENV` | Git | Netlify context | Supabase project | Resend key |
 |---|---|---|---|---|
-| `development` | local `next dev` | — | local (`supabase start`) | development |
+| `local` | local `next dev` | — | local (`supabase start`) | development |
 | `development` | `develop` | `branch-deploy` (`develop--<site>.netlify.app`) | `the-social-house-development` | development |
 | `development` | PR | `deploy-preview` | `the-social-house-development` | development |
 | `production` | `main` | `production` | `the-social-house-production` | production |
 
-Deploy previews are part of the development environment: same database, same email redirect. There is no staging and no third value of `APP_ENV`.
+Deploy previews are part of the development environment: same database, same email redirect. There is no staging. `local` names the developer machine; it differs from `development` only in surface (e.g. the page-title prefix, #65) — every data/mail guard keys on `production` only.
 
 `netlify.toml` carries the non-secret per-context values (`APP_ENV`, `NEXT_PUBLIC_SITE_URL`) under `[context.<name>.environment]`. Deploy previews get no fixed `NEXT_PUBLIC_SITE_URL`; `lib/env.ts` falls back to Netlify's `DEPLOY_PRIME_URL`. Everything else, secrets included, is set on the site per context with `netlify env:set` (see `scripts/setup-netlify-env.sh`); `RESEND_FROM` stays there too because it changes with the Resend account at go-live. The `develop` branch deploy is enabled in the Netlify UI, not in the toml. Secrets never go in `netlify.toml`.
 
