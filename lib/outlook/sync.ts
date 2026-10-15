@@ -166,43 +166,63 @@ type ClaimedRow = NonNullable<Awaited<ReturnType<typeof claimedRow>>>;
 // id patches its entry to the Aflyst form instead — the entry and the row
 // stay, so a later restore patches the same entry back.
 function payloadOf(row: ClaimedRow): GraphEventPayload | null {
-  const booking = row.bookings;
-  if (booking) {
-    const cancelled = booking.booking_status === "cancelled";
-    const hasEntry = row.calendar_event_graph_event_id !== null;
-    if (booking.booking_status !== "confirmed" && !(cancelled && hasEntry)) {
-      return null;
-    }
-    return outlookBookingEvent({
-      addons: (booking.booking_addons ?? []).map((addon) => ({
-        name: addon.addons?.addon_name ?? "",
-        quantity: addon.booking_addon_quantity,
-      })),
-      bookerEmail: booking.booking_booker_email,
-      bookerName: booking.booking_booker_name,
-      bookerPhone: booking.booking_booker_phone,
-      bookingNumber: booking.booking_number,
-      cancelled,
-      companyDisplayName: booking.companies?.company_display_name ?? "",
-      endAt: booking.booking_end_at,
-      participantCount: booking.booking_participant_count,
-      reference: booking.booking_reference,
-      roomName: booking.rooms?.room_name ?? "",
-      startAt: booking.booking_start_at,
-    });
+  if (row.bookings) {
+    return payloadOfBooking(
+      row.bookings,
+      row.calendar_event_graph_event_id !== null
+    );
   }
-  const houseEvent = row.house_events;
-  return houseEvent
-    ? outlookHouseEvent({
-        description: houseEvent.house_event_description,
-        endAt: houseEvent.house_event_end_at,
-        roomNames: (houseEvent.house_event_rooms ?? []).map(
-          (line) => line.rooms?.room_name ?? ""
-        ),
-        startAt: houseEvent.house_event_start_at,
-        title: houseEvent.house_event_title,
-      })
-    : null;
+  if (row.house_events) {
+    return payloadOfHouseEvent(row.house_events);
+  }
+  return null;
+}
+
+// A confirmed booking mirrors as itself; a cancelled one only while its
+// Graph entry still exists (the Aflyst patch keeps the row for a later
+// restore). A hold, an expired booking, or a cancellation that never
+// reached Outlook has nothing to mirror.
+function payloadOfBooking(
+  booking: NonNullable<ClaimedRow["bookings"]>,
+  hasEntry: boolean
+): GraphEventPayload | null {
+  const cancelled = booking.booking_status === "cancelled";
+  const mirrorable =
+    booking.booking_status === "confirmed" || (cancelled && hasEntry);
+  if (!mirrorable) {
+    return null;
+  }
+  return outlookBookingEvent({
+    addons: (booking.booking_addons ?? []).map((addon) => ({
+      name: addon.addons?.addon_name ?? "",
+      quantity: addon.booking_addon_quantity,
+    })),
+    bookerEmail: booking.booking_booker_email,
+    bookerName: booking.booking_booker_name,
+    bookerPhone: booking.booking_booker_phone,
+    bookingNumber: booking.booking_number,
+    cancelled,
+    companyDisplayName: booking.companies?.company_display_name ?? "",
+    endAt: booking.booking_end_at,
+    participantCount: booking.booking_participant_count,
+    reference: booking.booking_reference,
+    roomName: booking.rooms?.room_name ?? "",
+    startAt: booking.booking_start_at,
+  });
+}
+
+function payloadOfHouseEvent(
+  houseEvent: NonNullable<ClaimedRow["house_events"]>
+): GraphEventPayload {
+  return outlookHouseEvent({
+    description: houseEvent.house_event_description,
+    endAt: houseEvent.house_event_end_at,
+    roomNames: (houseEvent.house_event_rooms ?? []).map(
+      (line) => line.rooms?.room_name ?? ""
+    ),
+    startAt: houseEvent.house_event_start_at,
+    title: houseEvent.house_event_title,
+  });
 }
 
 type Outcome = "created" | "removed" | "updated";
