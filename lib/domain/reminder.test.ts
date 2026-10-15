@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 import { reminderWindow } from "./reminder";
 
 describe("reminderWindow", () => {
-  it("covers starts from 23 hours (exclusive) to 24 hours (inclusive) ahead", () => {
+  it("covers starts from now (exclusive) to 24 hours (inclusive) ahead", () => {
     const window = reminderWindow(new Date("2026-10-07T09:00:00+02:00"));
-    expect(window.after.toISOString()).toBe("2026-10-08T06:00:00.000Z");
+    expect(window.after.toISOString()).toBe("2026-10-07T07:00:00.000Z");
     expect(window.until.toISOString()).toBe("2026-10-08T07:00:00.000Z");
   });
 
-  it("tiles the timeline: consecutive hourly runs share only a boundary", () => {
+  it("overlaps between consecutive hourly runs, so a missed run is caught up", () => {
     const first = reminderWindow(new Date("2026-10-07T09:00:00+02:00"));
     const second = reminderWindow(new Date("2026-10-07T10:00:00+02:00"));
-    expect(second.after.getTime()).toBe(first.until.getTime());
+    expect(second.after.getTime()).toBeLessThan(first.until.getTime());
   });
 
   it("counts real hours across the end of summer time", () => {
