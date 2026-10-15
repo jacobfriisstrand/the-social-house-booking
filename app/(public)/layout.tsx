@@ -1,16 +1,13 @@
 // Split-screen shell for every page without the sidebar (#89): the house
 // brand top left, the page centred in the left half, a full-height photo
 // filling the right half from lg. The admin swaps the photo under
-// Indstillinger (site_images, slot 'hero'); until a first save this
-// committed fallback shows. The demo at app/demo/forms deliberately sits
-// outside this group to keep its own form-reference shell.
+// Indstillinger (site_images, slot 'hero'); with no image — none saved or
+// removed — the house mark fills in instead. The demo at app/demo/forms
+// deliberately sits outside this group to keep its own form-reference shell.
 import Image from "next/image";
 import { getPublicHeroImage, publicHeroImageUrl } from "@/lib/settings/data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
-
-// CC0 StockSnap VCM3QCKR3G, the same CDN scripts/seed-room-images.ts uses.
-const FALLBACK_HERO = "/hero.jpg";
 
 export default async function PublicLayout({
   children,
@@ -19,9 +16,7 @@ export default async function PublicLayout({
 }) {
   const supabase = await createClient();
   const heroPath = await getPublicHeroImage(supabase);
-  const hero = heroPath
-    ? publicHeroImageUrl(supabase, heroPath)
-    : FALLBACK_HERO;
+  const hero = heroPath ? publicHeroImageUrl(supabase, heroPath) : null;
   return (
     <div className="flex min-h-dvh bg-background">
       <div className="flex flex-1 flex-col">
@@ -52,7 +47,21 @@ export default async function PublicLayout({
           upload can be any dimension, so the image fills the fixed half
           instead of carrying intrinsic bounds. */}
       <div className="sticky top-0 hidden h-dvh w-1/2 self-start lg:block">
-        <Image alt="" className="object-cover" fill sizes="50vw" src={hero} />
+        {hero ? (
+          <Image alt="" className="object-cover" fill sizes="50vw" src={hero} />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            {/* The no-image fallback: the house mark, same source as the
+                header's. Half-screen filler, so four times its size. */}
+            <Image
+              alt=""
+              height={112}
+              src="/logo-mark.svg"
+              unoptimized
+              width={112}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

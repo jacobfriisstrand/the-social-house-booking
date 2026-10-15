@@ -4,8 +4,11 @@
 // or WebP up to 5 MB; Gem uploads it into the site-images bucket (client
 // strategy, like the room photos) and swaps the site_images pointer through
 // the server action. A failure after the upload removes the orphaned bytes
-// best-effort — the pointer is authoritative.
+// best-effort — the pointer is authoritative. Fjern billede deletes the
+// slot's bytes and row (same order as deleteRoomImage); the public layout
+// then falls back to the logo.
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   startTransition,
@@ -19,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import {
   type PublicHeroState,
+  removePublicHeroImage,
   updatePublicHeroImage,
 } from "@/lib/settings/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -43,6 +47,55 @@ const EXTENSIONS: Record<string, string> = {
   "image/webp": "webp",
 };
 
+interface HeroFormActionsProps {
+  canSave: boolean;
+  currentUrl: string | null;
+  onPick: () => void;
+  onRemove: () => void;
+  onSave: () => void;
+  pending: boolean;
+  removing: boolean;
+}
+
+// The row's three buttons: Fjern billede exists only while an image is
+// set, and each pending flag replaces its own button's label.
+function HeroFormActions({
+  canSave,
+  currentUrl,
+  onPick,
+  onRemove,
+  onSave,
+  pending,
+  removing,
+}: HeroFormActionsProps) {
+  return (
+    <div className="flex gap-2">
+      <Button onClick={onPick} type="button" variant="outline">
+        {labels.pickImage}
+      </Button>
+      <Button
+        disabled={!canSave}
+        onClick={onSave}
+        pending={pending}
+        type="button"
+      >
+        {pending ? labels.saving : labels.submit}
+      </Button>
+      {currentUrl ? (
+        <Button
+          disabled={pending}
+          onClick={onRemove}
+          pending={removing}
+          type="button"
+          variant="destructive"
+        >
+          {labels.removeImage}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 export function HeroImageForm({ currentUrl }: { currentUrl: string | null }) {
   const [state, formAction, actionPending] = useActionState<
     PublicHeroState,
@@ -51,7 +104,9 @@ export function HeroImageForm({ currentUrl }: { currentUrl: string | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   // The path uploaded for the running save, so a failed save can roll
   // back (the bytes would otherwise orphan).
   const uploadedPathsRef = useRef<string[]>([]);
@@ -134,6 +189,19 @@ export function HeroImageForm({ currentUrl }: { currentUrl: string | null }) {
     );
   }, [file, formAction, rollbackUploaded]);
 
+  // Direct call + toast + refresh, like room-sheet's image delete.
+  const handleRemove = useCallback(async (): Promise<void> => {
+    setRemoving(true);
+    const result = await removePublicHeroImage();
+    setRemoving(false);
+    if (result.status === "success") {
+      toast.add({ title: labels.heroImageRemoved, type: "success" });
+      router.refresh();
+    } else {
+      toast.add({ title: result.error, type: "error" });
+    }
+  }, [router]);
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-xs">
@@ -159,19 +227,15 @@ export function HeroImageForm({ currentUrl }: { currentUrl: string | null }) {
         <p className="text-muted-foreground text-xs">{file.name}</p>
       ) : null}
       {error ? <p className="text-destructive text-xs">{error}</p> : null}
-      <div className="flex gap-2">
-        <Button onClick={openImagePicker} type="button" variant="outline">
-          {labels.pickImage}
-        </Button>
-        <Button
-          disabled={!file}
-          onClick={handleSave}
-          pending={pending}
-          type="button"
-        >
-          {pending ? labels.saving : labels.submit}
-        </Button>
-      </div>
+      <HeroFormActions
+        canSave={Boolean(file) && !removing}
+        currentUrl={currentUrl}
+        onPick={openImagePicker}
+        onRemove={handleRemove}
+        onSave={handleSave}
+        pending={pending}
+        removing={removing}
+      />
     </div>
   );
 }

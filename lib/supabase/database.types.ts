@@ -1132,6 +1132,10 @@ export type Database = {
         }
         Returns: string
       }
+      terms_html_from_plain_text: {
+        Args: { plain_text: string }
+        Returns: string
+      }
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"

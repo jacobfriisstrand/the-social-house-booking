@@ -44,8 +44,9 @@ export async function getWifiSettings(
 
 // Read-side for the public hero image (#89): the path the admin saved in
 // site_images (slot 'hero'), rendered by the public split-screen layout.
-// Anonymous session + RLS — the select policy allows anon. Until a first
-// admin save the layout falls back to the committed photo.
+// Anonymous session + RLS — the select policy allows anon. With no row
+// (never saved, or removed under Indstillinger) the layout falls back to
+// the house logo.
 export async function getPublicHeroImage(
   supabase: SupabaseClient<Database>
 ): Promise<string | null> {

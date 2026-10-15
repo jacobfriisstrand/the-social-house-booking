@@ -1098,12 +1098,13 @@ on conflict (setting_id) do nothing;
 -- Demo texts written from Bilag 1, the ADRs and
 -- docs/compliance/gdpr-data-inventory.md: The Social House delivers the
 -- real texts, and an admin publishes them under Betingelser in each
--- cloud project. The page shows plain text with its line breaks, so a
--- heading is a line of its own and a list item starts with a bullet.
+-- cloud project. The texts are written as plain text and wrapped by
+-- terms_html_from_plain_text into the editor's HTML (#102): each line
+-- keeps its line, headings stay lines and list items keep their bullets.
 insert into public.terms_versions (
   terms_version_name, terms_version_version, terms_version_content, terms_version_published_at
 ) values
-  ('Booking terms', '1', $terms$Disse betingelser gælder for alle bookinger af mødelokaler i The Social House. Når bookeren trykker på "Book nu", accepterer bookeren betingelserne på virksomhedens vegne.
+  ('Booking terms', '1', public.terms_html_from_plain_text($terms$Disse betingelser gælder for alle bookinger af mødelokaler i The Social House. Når bookeren trykker på "Book nu", accepterer bookeren betingelserne på virksomhedens vegne.
 
 1. Hvem kan booke
 Lokalerne kan bookes af virksomheder med en konto hos The Social House. Medlemsvirksomheder booker selv i platformen. Eksterne virksomheder booker gennem os, og vi opretter bookingen for dem.
@@ -1183,8 +1184,8 @@ Andre virksomheder i huset kan se lokale, dato, tidspunkt og jeres visningsnavn.
 The Social House holder egne arrangementer, som kan lukke enkelte lokaler. Et arrangement kan ikke lægges oven i en booking, der allerede er bekræftet.
 
 13. Kontakt
-Har I spørgsmål til en booking eller en faktura, så skriv til booking@thesocialhouse.dk.$terms$, now()),
-  ('Privacy policy', '1', $terms$Her kan I læse, hvilke personoplysninger The Social House behandler, når I bruger bookingplatformen, og hvilke rettigheder I har.
+Har I spørgsmål til en booking eller en faktura, så skriv til booking@thesocialhouse.dk.$terms$), now()),
+  ('Privacy policy', '1', public.terms_html_from_plain_text($terms$Her kan I læse, hvilke personoplysninger The Social House behandler, når I bruger bookingplatformen, og hvilke rettigheder I har.
 
 1. Dataansvarlig
 The Social House er dataansvarlig for de oplysninger, vi behandler i bookingplatformen. Har I spørgsmål, så skriv til booking@thesocialhouse.dk.
@@ -1256,8 +1257,8 @@ Skriv til booking@thesocialhouse.dk. Vi svarer inden for en måned.
 I kan klage til Datatilsynet på www.datatilsynet.dk.
 
 10. Ændringer
-Når vi ændrer politikken, offentliggør vi en ny version. Ved hver booking gemmer vi, hvilken version bookeren har set.$terms$, now()),
-  ('GDPR overview', '1', $terms$Her kan I se, hvilke oplysninger bookingplatformen gemmer, hvem der kan se dem, hvilke leverandører vi bruger, og hvordan I får oplysninger udleveret, rettet eller slettet. Læs også vores privatlivspolitik.
+Når vi ændrer politikken, offentliggør vi en ny version. Ved hver booking gemmer vi, hvilken version bookeren har set.$terms$), now()),
+  ('GDPR overview', '1', public.terms_html_from_plain_text($terms$Her kan I se, hvilke oplysninger bookingplatformen gemmer, hvem der kan se dem, hvilke leverandører vi bruger, og hvordan I får oplysninger udleveret, rettet eller slettet. Læs også vores privatlivspolitik.
 
 1. Oplysninger om virksomheden
 Visningsnavn, juridisk navn, CVR-nummer, adresse, fakturamail, kontaktpersonens navn og mobilnummer, reference og bemærkninger til fakturering. Vi gemmer også medlemsstatus, rabat og jeres kundenummer i e-conomic.
@@ -1299,6 +1300,6 @@ Bookinger er en del af vores regnskab, så dem sletter vi ikke, så længe vi sk
 Lukker jeres virksomhed sin konto, lukker vi jeres login og fjerner kontaktoplysningerne. Bookinger og faktureringsgrundlag gemmer vi, så længe bogføringsloven kræver det.
 
 9. Kontakt
-Skriv til booking@thesocialhouse.dk, hvis I vil se, rette eller slette jeres oplysninger.$terms$, now());
+Skriv til booking@thesocialhouse.dk, hvis I vil se, rette eller slette jeres oplysninger.$terms$), now());
 
 commit;

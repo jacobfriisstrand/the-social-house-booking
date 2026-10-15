@@ -1,10 +1,10 @@
 -- RLS for site_images (#89): the public layout reads the hero slot with an
 -- anonymous session, any authenticated user reads along, and only the admin
--- claim writes. There is deliberately no delete policy: the slot's row is
--- replaced by upsert, never removed.
+-- claim writes — insert, update and the settings form's delete (Fjern
+-- billede, which falls the layout back to the logo).
 
 begin;
-select plan(8);
+select plan(12);
 
 -- Fixtures: one admin, one member company user.
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
@@ -61,6 +61,31 @@ select is(
   (select site_image_path from public.site_images where site_image_slot = 'hero'),
   'hero/ffffffffffffffffffffffffffffffff.png',
   'the replacement is visible to the next read');
+
+-- Member delete attempt: no delete policy for members, so RLS scopes the
+-- statement to zero rows without error.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
+
+select lives_ok(
+  'delete from public.site_images where site_image_slot = ''hero''',
+  'member delete is silently scoped to zero rows by RLS');
+select is(
+  (select site_image_path from public.site_images where site_image_slot = 'hero'),
+  'hero/ffffffffffffffffffffffffffffffff.png',
+  'the path survives the member delete');
+
+-- Admin removes the slot (the settings form's Fjern billede).
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
+
+select lives_ok(
+  'delete from public.site_images where site_image_slot = ''hero''',
+  'admin deletes the hero slot');
+select is(
+  (select site_image_path from public.site_images where site_image_slot = 'hero'),
+  null::text,
+  'the hero slot is gone for the next read');
 
 select * from finish();
 rollback;
