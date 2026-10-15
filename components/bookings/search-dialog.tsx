@@ -144,10 +144,10 @@ function SearchForm({ onSearched }: { onSearched: () => void }) {
       }
       router.push(
         `/rooms${roomSearchQuery({
-          dato: values.date,
-          fra: values.from,
-          personer: participantCount,
-          til: values.to,
+          date: values.date,
+          from: values.from,
+          participants: participantCount,
+          to: values.to,
         })}`
       );
       onSearched();

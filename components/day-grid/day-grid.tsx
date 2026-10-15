@@ -378,7 +378,7 @@ function GridBookingDialog({
       key={`${target.column}-${target.start}-${target.end ?? ""}`}
       onOpenChange={onOpenChange}
       open={open}
-      prefill={{ dato: date, fra: target.start, til: target.end }}
+      prefill={{ date, from: target.start, to: target.end }}
       room={column.room}
       terms={terms}
       viewer={viewer}

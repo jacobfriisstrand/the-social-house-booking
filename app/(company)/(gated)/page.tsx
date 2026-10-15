@@ -31,12 +31,12 @@ import { messages } from "@/messages/da";
 
 const copy = messages.home;
 
-type SearchParams = Promise<{ dato?: string; unauthorized?: string }>;
+type SearchParams = Promise<{ date?: string; unauthorized?: string }>;
 
-// The day to show: ?dato=yyyy-mm-dd, or today in Copenhagen (ADR-0021).
+// The day to show: ?date=yyyy-mm-dd, or today in Copenhagen (ADR-0021).
 const dayParam = z.iso.date();
-const pageDate = (dato: string | undefined, today: string): string =>
-  dayParam.safeParse(dato).data ?? today;
+const pageDate = (date: string | undefined, today: string): string =>
+  dayParam.safeParse(date).data ?? today;
 
 // Hjem, the notice board (#12, DESIGN.md "Hjem"): notices and today's
 // House Events, the day grid with each room's status, and the rooms. One
@@ -51,7 +51,7 @@ export default async function HomePage({
   const [params, session] = await Promise.all([searchParams, requireSession()]);
   const now = new Date();
   const today = cphDate(now);
-  const date = pageDate(params.dato, today);
+  const date = pageDate(params.date, today);
   const isAdmin = session.appRole === "admin";
   const supabase = await createClient();
   const [viewer, rooms, entries, events, details, notices, terms] =
