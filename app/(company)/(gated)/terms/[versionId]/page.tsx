@@ -10,6 +10,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { getTermsVersion } from "@/lib/terms/data";
+import { termsHtmlStyles } from "@/lib/terms/rich-text";
 import { messages } from "@/messages/da";
 
 const copy = messages.terms;
@@ -20,7 +21,9 @@ export const metadata: Metadata = {
 
 // One published version of a text (#15): what the terms links in the
 // booking dialog open, by id, so the booker reads exactly the version that
-// is recorded. Plain text with its line breaks kept; no markup.
+// is recorded. The content is the editor's schema-generated HTML (#102);
+// sanitizeTermsHtml keeps anything else out of the column, so rendering it
+// as HTML is safe, and the styles match the editor's.
 export default async function TermsVersionPage({
   params,
 }: {
@@ -44,8 +47,9 @@ export default async function TermsVersionPage({
               {copy.version(version.version, formatDate(version.publishedAt))}
             </CardDescription>
           </CardHeader>
-          <CardContent className="whitespace-pre-line">
-            {version.content}
+          <CardContent className={termsHtmlStyles}>
+            {/* biome-ignore lint/security/noDangerouslySetInnerHtml: the column keeps only what the terms schema generates (lib/terms/rich-text.ts), so the markup is the format, not untrusted input. */}
+            <div dangerouslySetInnerHTML={{ __html: version.content }} />
           </CardContent>
         </Card>
       </PagePanel>

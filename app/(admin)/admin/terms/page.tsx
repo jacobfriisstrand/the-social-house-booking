@@ -55,7 +55,9 @@ function TermsEditor({ editor }: { editor: Editor }) {
     <Card>
       <CardHeader>
         <CardTitle>{copy.documents[editor.name]}</CardTitle>
-        <CardDescription>{editor.description}</CardDescription>
+        <CardDescription className="max-md:col-span-2">
+          {editor.description}
+        </CardDescription>
         {editor.viewHref ? (
           <CardAction>
             <Link
