@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { z } from "zod";
 import { DateControl } from "@/components/day-grid/date-control";
 import { DayGrid } from "@/components/day-grid/day-grid";
@@ -30,6 +31,10 @@ import { getCurrentTerms } from "@/lib/terms/data";
 import { messages } from "@/messages/da";
 
 const copy = messages.home;
+
+export const metadata: Metadata = {
+  title: messages.shell.home,
+};
 
 type SearchParams = Promise<{ date?: string; unauthorized?: string }>;
 

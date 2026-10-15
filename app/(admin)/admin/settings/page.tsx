@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HeroImageForm } from "@/components/settings/hero-image-form";
 import { WifiForm } from "@/components/settings/wifi-form";
 import { PageHeader, PagePanel } from "@/components/shell/page";
@@ -11,6 +12,10 @@ import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 const labels = messages.settings;
+
+export const metadata: Metadata = {
+  title: labels.title,
+};
 
 // Indstillinger (admin): the Wi-Fi credentials the shell footer shows and
 // the public split-screen's hero image (#89). The single-row settings table
