@@ -12,7 +12,10 @@ create type public.outbound_email_kind as enum (
   'booking-cancelled',
   'admin-new-booking',
   'admin-booking-cancelled',
-  'admin-company-completed'
+  'admin-company-completed',
+  'company-change-review',
+  'company-change-new-email',
+  'company-change-completed'
 );
 
 create type public.outbound_email_status as enum (

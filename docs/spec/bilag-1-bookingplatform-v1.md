@@ -328,6 +328,8 @@ The booker must be able to cancel through a secure link in the booking confirmat
 
 The link leads to a confirmation page where the current fee is shown before the cancellation is completed.
 
+> **Decision (ADR-0024):** The link goes through the company login and opens the booking on the company's Bookinger page; the confirmation with the current fee is the booking sheet's Platform message 1. Cancelling always requires the login.
+
 The cancellation fee is calculated on the actual room price after member discount:
 
 - More than 72 hours before: free.
@@ -417,7 +419,7 @@ The final wording is described in Bilag 2 — Email texts, booking platform vers
 
 > **Implementation note (email foundation split).** The send mechanism — Resend integration, the `outbound_emails` send log, and a shared `sendMail()` helper that enforces the common rules (sender, one CTA, no-payment wording, hidden empty sections, savings conditional, sensitive-data flag) — is delivered first, in milestone M1, so early features (invite, confirmation code) can send real mail. The 10 email templates' exact Danish copy, the 24h reminder, and the in-app platform message are delivered later, in milestone M5. See GitHub issues #17 (email foundation) and #11 (templates + reminder).
 >
-> **Implementation note (reminder mechanism).** The 24h reminder is sent by exactly one scheduled job: a Netlify scheduled function (`@hourly`) that POSTs to `/api/jobs/send-reminders`. No Resend `scheduledAt` (30-day max vs 12-month bookings), no croner, no pg_cron, no Vercel cron. See `docs/agents/email.md`.
+> **Implementation note (reminder mechanism).** The 24h reminder is sent by a scheduled job: a Netlify scheduled function (`@hourly`) that POSTs to `/api/jobs/send-reminders`. No Resend `scheduledAt` (30-day max vs 12-month bookings), no croner, no pg_cron, no Vercel cron. See `docs/agents/email.md`.
 
 ## Calendar and notice board
 

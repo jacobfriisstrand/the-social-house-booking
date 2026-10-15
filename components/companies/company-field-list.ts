@@ -43,9 +43,9 @@ export const masterDataTextFields = [
     label: labels.billingCountry,
     name: "billingCountry",
   },
-  { label: labels.attention, name: "attention" },
-  { label: labels.department, name: "department" },
-  { label: labels.reference, name: "reference" },
+  { label: labels.attention, name: "attention", required: false },
+  { label: labels.department, name: "department", required: false },
+  { label: labels.reference, name: "reference", required: false },
 ] as const satisfies readonly FieldSpec<
   | "attention"
   | "billingAddress"

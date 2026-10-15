@@ -8,14 +8,16 @@ Read `docs/vendor/netlify/` before changing `netlify.toml`.
 
 | `APP_ENV` | Git | Netlify context | Supabase project | Resend key |
 |---|---|---|---|---|
-| `development` | local `next dev` | — | local (`supabase start`) | development |
+| `local` | local `next dev` | — | local (`supabase start`) | development |
 | `development` | `develop` | `branch-deploy` (`develop--<site>.netlify.app`) | `the-social-house-development` | development |
 | `development` | PR | `deploy-preview` | `the-social-house-development` | development |
 | `production` | `main` | `production` | `the-social-house-production` | production |
 
-Deploy previews are part of the development environment: same database, same email redirect. There is no staging and no third value of `APP_ENV`.
+Deploy previews are part of the development environment: same database, same email redirect. There is no staging. `local` names the developer machine; it differs from `development` only in surface (e.g. the page-title prefix, #65) — every data/mail guard keys on `production` only.
 
 `netlify.toml` carries the non-secret per-context values (`APP_ENV`, `NEXT_PUBLIC_SITE_URL`) under `[context.<name>.environment]`. Deploy previews get no fixed `NEXT_PUBLIC_SITE_URL`; `lib/env.ts` falls back to Netlify's `DEPLOY_PRIME_URL`. Everything else, secrets included, is set on the site per context with `netlify env:set` (see `scripts/setup-netlify-env.sh`); `RESEND_FROM` stays there too because it changes with the Resend account at go-live. The `develop` branch deploy is enabled in the Netlify UI, not in the toml. Secrets never go in `netlify.toml`.
+
+`netlify.toml` environment values are build-time only: they inline into the Next bundles but never reach the function runtime. The scheduled jobs (`netlify/functions/*`) resolve their target host at runtime from `NEXT_PUBLIC_SITE_URL` with **no fallback** — Netlify's runtime `URL` is always the site's main (production) address, and silently pointing a branch deploy at production is exactly the failure to avoid (observed 2026-10-14). So every context that runs the jobs carries `NEXT_PUBLIC_SITE_URL` set with `netlify env:set` (production and branch-deploy do; deploy previews have no fixed URL and must never run the jobs). A missing variable fails loudly instead of driving another context.
 
 ## Branching and PRs
 
@@ -57,9 +59,9 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 
 ## Netlify specifics
 
-- Next.js runs through Netlify's Next runtime; no `output: 'export'`, no custom server.
+- Next.js runs through the Netlify Next runtime; no `output: 'export'`, no custom server.
 - `.nvmrc` pins Node 24 for build and functions.
-- The only custom function is `netlify/functions/send-reminders.mts` (scheduled, production only). Everything else is Next.
+- Two scheduled functions, production only, both just POST a job route with `JOB_SECRET`: `netlify/functions/send-reminders.mts` (`@hourly`) and `netlify/functions/sync-calendar.mts` (`*/5 * * * *`, `docs/agents/outlook-sync.md`). Everything else is Next.
 - `SENTRY_AUTH_TOKEN` is set only in Netlify, all contexts, for source-map upload. `SENTRY_WEBHOOK_SECRET` and `GITHUB_ISSUES_TOKEN` are production context only: the Sentry webhook points at the production URL (`stack.md`).
 
 ## First-time setup of a cloud environment (once, by a human)
@@ -69,3 +71,12 @@ Secrets per GitHub Environment: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
 3. Generate the hook secret once, `v1,whsec_$(openssl rand -base64 32)`, and store it twice: as the GitHub Environment secret `SEND_EMAIL_HOOK_SECRET` (config push registers the hook with it) and as an Edge Function secret: `supabase secrets set SEND_EMAIL_HOOK_SECRET=… RESEND_API_KEY=… RESEND_FROM=… APP_ENV=… EMAIL_REDIRECT_TO=…` (`APP_ENV=production` only on the production project; `EMAIL_REDIRECT_TO` only on development). Both hooks are registered by `config push`; nothing is done in the dashboard.
 4. `node --env-file=<env-vars-file> scripts/create-admin.ts --email … --password … --display-name …` with that environment's URL and secret key (Node 24 runs the TypeScript directly).
 5. Run `scripts/setup-netlify-env.sh`. It walks through Supabase, Resend and Sentry and writes every context-scoped variable from `.env.example` to the linked Netlify site with the CLI (`netlify login` as the site owner first). `APP_ENV`, `NEXT_PUBLIC_SITE_URL` and `RESEND_FROM` are not part of it; they live in `netlify.toml`.
+
+## Go-live checklist (before real bookings)
+
+Found while testing #11 and #88 on 2026-10-07; do these in order when production opens to members.
+
+1. **Visitor protection is off (2026-10-15).** The site is public from then on, production included, and the four machine callers reach the site: the two scheduled functions, the Resend webhook, and the Sentry webhook. One leftover: re-enable the develop webhook endpoint in the Resend dashboard — Resend disabled it on 2026-10-13 after 401 failures since 2026-10-08, and `outbound_email_status` has stayed `queued` on the development project since. Re-enablement only resumes new events; the queued rows are not retroactively updated.
+2. **Switch Resend to the thesocialhouse.dk account.** Production still sends through the development account (domain `tsh-dev.jacobfri.is`). Replace `RESEND_API_KEY` and `RESEND_FROM` in the Netlify production context and in the production Edge Function secrets (`supabase secrets set --project-ref <prod ref> …`), register the production webhook on the new account (new `RESEND_WEBHOOK_SECRET`), and run the template sync against it (the release workflow does, with the production key).
+3. **Remove `BOOKING_CANCEL_SECRET`** from every Netlify context. Nothing reads it since #88 (ADR-0024).
+4. **Check the job and the webhooks after the next full hour**: the `send-reminders` function log shows a `200` with `{"holdsExpired":…,"reminders":{…}}`, a test mail moves from `queued` to `delivered` in `outbound_emails`, and a test Sentry error opens a GitHub issue.

@@ -57,7 +57,9 @@ export function MembershipField<Values extends MembershipValues>({
 
   return (
     <FieldSet data-invalid={fieldState.invalid}>
-      <FieldLegend variant="label">{labels.membershipStatus}</FieldLegend>
+      <FieldLegend required variant="label">
+        {labels.membershipStatus}
+      </FieldLegend>
       <RadioGroup
         aria-invalid={fieldState.invalid}
         name={field.name}

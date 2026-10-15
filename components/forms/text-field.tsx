@@ -25,6 +25,7 @@ export interface TextFieldProps<Values extends FieldValues> {
   label: string;
   maxLength?: number;
   name: Path<Values>;
+  required?: boolean;
   type?: "email" | "number" | "password" | "tel" | "text";
 }
 
@@ -46,6 +47,7 @@ export function TextField<Values extends FieldValues>({
   label,
   maxLength,
   name,
+  required = true,
   type = "text",
 }: TextFieldProps<Values>) {
   const { field, fieldState } = useController({ control, name });
@@ -61,7 +63,9 @@ export function TextField<Values extends FieldValues>({
 
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
       <Input
         aria-invalid={fieldState.invalid}
         autoComplete={autoComplete}
@@ -74,6 +78,7 @@ export function TextField<Values extends FieldValues>({
         onBlur={field.onBlur}
         onChange={handleChange}
         ref={field.ref}
+        required={required}
         type={type}
         value={displayValue(field.value)}
       />

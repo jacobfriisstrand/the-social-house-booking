@@ -21,9 +21,14 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 
 function FieldLegend({
   className,
+  required = false,
   variant = "legend",
+  children,
   ...props
-}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
+}: React.ComponentProps<"legend"> & {
+  required?: boolean;
+  variant?: "legend" | "label";
+}) {
   return (
     <legend
       className={cn(
@@ -33,7 +38,10 @@ function FieldLegend({
       data-slot="field-legend"
       data-variant={variant}
       {...props}
-    />
+    >
+      {children}
+      <RequiredIndicator visible={required} />
+    </legend>
   );
 }
 
@@ -99,8 +107,10 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
 
 function FieldLabel({
   className,
+  required = false,
+  children,
   ...props
-}: React.ComponentProps<typeof Label>) {
+}: React.ComponentProps<typeof Label> & { required?: boolean }) {
   return (
     <Label
       className={cn(
@@ -110,8 +120,22 @@ function FieldLabel({
       )}
       data-slot="field-label"
       {...props}
-    />
+    >
+      {children}
+      <RequiredIndicator visible={required} />
+    </Label>
   );
+}
+
+function RequiredIndicator({ visible }: { visible: boolean }) {
+  return visible ? (
+    <>
+      <span aria-hidden="true" className="text-destructive">
+        *
+      </span>
+      <span className="sr-only"> (påkrævet)</span>
+    </>
+  ) : null;
 }
 
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {

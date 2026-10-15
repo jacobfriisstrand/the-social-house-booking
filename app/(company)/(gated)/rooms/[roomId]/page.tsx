@@ -27,6 +27,7 @@ import { cphDate } from "@/lib/domain/opening-hours";
 import { formatKroner } from "@/lib/format";
 import { findPublicRoom, type PublicRoom } from "@/lib/rooms/public-data";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTerms } from "@/lib/terms/data";
 import {
   parseRoomPrefill,
   parseRoomSearch,
@@ -102,11 +103,14 @@ function RoomInfo({ room }: { room: PublicRoom }) {
         <ExpandableText className="text-sm" text={room.description} />
       ) : null}
       {room.practicalNotes ? (
-        <ExpandableText
-          className="text-muted-foreground text-sm"
-          lines={3}
-          text={room.practicalNotes}
-        />
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium text-lg">
+            {messages.rooms.practicalNotesSection}
+          </h2>
+          <p className="whitespace-pre-line text-muted-foreground text-sm">
+            {room.practicalNotes}
+          </p>
+        </section>
       ) : null}
       <Separator />
       <h2 className="font-medium text-lg">{messages.rooms.addonsSection}</h2>
@@ -183,23 +187,26 @@ export default async function RoomPage({
   params: Promise<{ roomId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ roomId }, query] = await Promise.all([params, searchParams]);
-  const prefill = parseRoomPrefill(query);
-  const session = await requireSession();
+  const [{ roomId }, query, session] = await Promise.all([
+    params,
+    searchParams,
+    requireSession(),
+  ]);
   const supabase = await createClient();
-  const [room, viewer] = await Promise.all([
+  const prefill = parseRoomPrefill(query);
+  const initialDate = prefill.date ?? cphDate(new Date());
+  // The day periods depend only on the roomId from the URL, not on the room
+  // row, so they load in parallel with the room and the viewer — the route
+  // was paying a third sequential round trip for them.
+  const [room, viewer, initialPeriods, terms] = await Promise.all([
     findPublicRoom(supabase, roomId),
     getBookingViewer(supabase, session),
+    listRoomDayPeriods(supabase, roomId, initialDate),
+    getCurrentTerms(),
   ]);
   if (!room) {
     notFound();
   }
-  const initialDate = prefill.dato ?? cphDate(new Date());
-  const initialPeriods = await listRoomDayPeriods(
-    supabase,
-    room.roomId,
-    initialDate
-  );
   const discountPercent = viewerDiscount(viewer);
 
   return (
@@ -240,6 +247,7 @@ export default async function RoomPage({
               initialPeriods={initialPeriods}
               prefill={prefill}
               room={room}
+              terms={terms}
               viewer={viewer}
             />
           </div>

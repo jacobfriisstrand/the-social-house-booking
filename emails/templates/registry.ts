@@ -6,8 +6,18 @@
 // these entries to create or update the Resend template by alias.
 import type { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
+import { bookingCancelledAdmin } from "./admin-booking-cancelled.ts";
 import { adminCompanyCompleted } from "./admin-company-completed.ts";
+import { adminNewBooking } from "./admin-new-booking.ts";
+import { bookingCancelled } from "./booking-cancelled.ts";
+import { bookingChanged } from "./booking-changed.ts";
+import { bookingConfirmation } from "./booking-confirmation.ts";
+import { companyChangeCompleted } from "./company-change-completed.ts";
+import { companyChangeNewEmail } from "./company-change-new-email.ts";
+import { companyChangeReview } from "./company-change-review.ts";
 import { companyInvitation } from "./company-invitation.ts";
+import { passwordReset } from "./password-reset.ts";
+import { reminder } from "./reminder.ts";
 import { verificationCode } from "./verification-code.ts";
 
 export type OutboundEmailKind =
@@ -25,7 +35,17 @@ export interface EmailTemplate {
 
 export const emailTemplates: Partial<Record<OutboundEmailKind, EmailTemplate>> =
   {
+    "admin-booking-cancelled": bookingCancelledAdmin,
     "admin-company-completed": adminCompanyCompleted,
+    "admin-new-booking": adminNewBooking,
+    "booking-cancelled": bookingCancelled,
+    "booking-changed": bookingChanged,
+    "booking-confirmation": bookingConfirmation,
+    "company-change-completed": companyChangeCompleted,
+    "company-change-new-email": companyChangeNewEmail,
+    "company-change-review": companyChangeReview,
     "company-invitation": companyInvitation,
+    "password-reset": passwordReset,
+    reminder,
     "verification-code": verificationCode,
   };

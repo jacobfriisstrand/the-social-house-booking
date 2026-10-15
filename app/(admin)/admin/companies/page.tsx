@@ -1,22 +1,13 @@
-import { CompanySheet } from "@/components/companies/company-sheet";
+import { CompanyTable } from "@/components/companies/company-table";
 import { CreateCompanySheet } from "@/components/companies/create-company-sheet";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
@@ -38,7 +29,10 @@ export default async function AdminCompaniesPage({
   const { data: companies } = await supabase
     .from("companies")
     .select("*")
-    .order("company_display_name");
+    .order("company_display_name")
+    // Bounded: the list is catalogue-sized; paginate in a follow-up if a
+    // tenant ever approaches the cap.
+    .limit(500);
 
   return (
     <>
@@ -52,67 +46,7 @@ export default async function AdminCompaniesPage({
       </PageHeader>
       <PagePanel>
         {companies?.length ? (
-          <Card className="overflow-x-auto py-0">
-            {/* table-fixed: column widths come from the header row only, so
-                row content can never resize a column and the layout does not
-                jump as data changes. */}
-            <Table className="table-fixed">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[26%]">
-                    {copy.columns.displayName}
-                  </TableHead>
-                  <TableHead className="w-[26%]">
-                    {copy.columns.email}
-                  </TableHead>
-                  <TableHead className="w-32">{copy.columns.status}</TableHead>
-                  <TableHead className="w-24 text-right">
-                    {copy.columns.discount}
-                  </TableHead>
-                  <TableHead className="w-56 max-w-56 text-right">
-                    {copy.columns.masterData}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((company) => (
-                  <TableRow key={company.company_id}>
-                    <TableCell className="truncate font-medium">
-                      <CompanySheet company={company} />
-                    </TableCell>
-                    <TableCell className="truncate">
-                      {company.company_email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {copy.membership[company.company_membership_status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {company.company_discount_percent} %
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {company.company_master_data_completed_at ? (
-                        <Badge
-                          className="bg-success/10 text-success"
-                          variant="outline"
-                        >
-                          {copy.masterDataComplete}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          className="bg-warning/20 text-warning-foreground"
-                          variant="outline"
-                        >
-                          {copy.masterDataMissing}
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <CompanyTable companies={companies} />
         ) : (
           <Card className="py-16">
             <CardContent className="flex flex-col items-center gap-2 text-center">

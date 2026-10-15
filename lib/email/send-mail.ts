@@ -39,20 +39,45 @@ const ANGLE_BRACKET = /<([^>]+)>/;
 const senderAddress = (from: string): string =>
   ANGLE_BRACKET.exec(from)?.[1] ?? from.trim();
 
-// In development every mail goes to EMAIL_REDIRECT_TO instead of the real
-// recipient (docs/agents/email.md); an unset target is a config error, never
-// a real send.
-const developmentRecipients = (): string[] => {
+// Outside production every mail goes to EMAIL_REDIRECT_TO instead of the
+// real recipient (docs/agents/email.md) — local and the development deploy
+// alike, so the local `APP_ENV` value keeps the redirect too; an unset
+// target is a config error, never a real send.
+const redirectRecipients = (): string[] => {
   const targets = env.EMAIL_REDIRECT_TO;
   if (!targets) {
     throw new Error(
-      "sendMail: EMAIL_REDIRECT_TO is not set, so mail cannot be redirected in development"
+      "sendMail: EMAIL_REDIRECT_TO is not set, so mail cannot be redirected outside production"
     );
   }
   return targets
     .split(",")
     .map((address) => address.trim())
     .filter(Boolean);
+};
+
+const assertRedirectRecipientsAreSafe = async (
+  admin: ReturnType<typeof createAdminClient>,
+  companyId: string | undefined,
+  recipients: string[]
+): Promise<void> => {
+  const companies = await admin
+    .from("companies")
+    .select("company_id, company_email")
+    .in("company_email", recipients);
+  if (companies.error) {
+    throw new Error(
+      `sendMail: could not verify development recipients: ${companies.error.message}`
+    );
+  }
+  const foreignCompanyMatch = companies.data.some(
+    (company) => company.company_id !== companyId
+  );
+  if (foreignCompanyMatch) {
+    throw new Error(
+      "sendMail: a development redirect recipient matches a real company email"
+    );
+  }
 };
 
 const redactRecipient = (text: string, recipient: string): string =>
@@ -82,18 +107,20 @@ export const sendMail = async ({
   }
   const parsedVariables = template.variables.parse(variables);
   const resend = resendClient();
-  const recipients =
-    env.APP_ENV === "development" ? developmentRecipients() : [to];
+  const recipients = env.APP_ENV === "production" ? [to] : redirectRecipients();
+  const admin = createAdminClient();
+  if (env.APP_ENV !== "production") {
+    await assertRedirectRecipientsAreSafe(admin, companyId, recipients);
+  }
   const renderedSubject = renderSubject(template.subject, parsedVariables);
   const subject =
-    env.APP_ENV === "development"
-      ? `[development] ${renderedSubject}`
-      : renderedSubject;
+    env.APP_ENV === "production"
+      ? renderedSubject
+      : `[${env.APP_ENV}] ${renderedSubject}`;
 
   // The log row goes in before the send: the once-only index
   // (reminder, booking-confirmation) aborts a double send before Resend is
   // called, so retries are safe.
-  const admin = createAdminClient();
   const insert = await admin
     .from("outbound_emails")
     .insert({

@@ -193,7 +193,7 @@ finish() {
 # from the pinned vendor docs. If a page looks different, look for the same
 # words on it before assuming the value moved.
 
-TOTAL_STAGES=9
+TOTAL_STAGES=10
 ENV_FILE=".env.local"
 SITE_NAME="the-social-house-booking"
 DEV_CONTEXTS=(branch-deploy deploy-preview)
@@ -367,10 +367,40 @@ netlify_env SENTRY_WEBHOOK_SECRET "$SENTRY_WEBHOOK_SECRET" secret production
 netlify_env GITHUB_ISSUES_TOKEN "$GITHUB_ISSUES_TOKEN" secret production
 pause "Sentry values written."
 
+# ── 10 ────────────────────────────────────────────────────────────────────
+stage "Outlook: Graph app registration for the calendar sync"
+say "The one-way Outlook mirror (#13) needs an Entra app registration with"
+say "the application permission Calendars.ReadWrite on the shared mailbox"
+say "booking@thesocialhouse.dk, granted admin consent. Production only;"
+say "the sync stays off until these exist (docs/agents/outlook-sync.md)."
+say "scripts/setup-azure-outlook.sh walks this part with per-step URLs and"
+say "a live Graph verification — prefer that wizard when the rest is set."
+if confirm "Set the Outlook Graph credentials now? (skip while the app registration is not ready)"; then
+  open_url "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
+  step "New registration → name 'the-social-house-booking-sync',"
+  step "single-tenant, no redirect URI. Then:"
+  step "Certificates & secrets → New client secret → copy it now."
+  step "API permissions → Application permissions → Graph →"
+  step "Calendars.ReadWrite → Add → Grant admin consent."
+  step "Overview page: copy the Directory (tenant) ID and Application (client) ID."
+  ask OUTLOOK_TENANT_ID "Directory (tenant) ID:"
+  ask OUTLOOK_CLIENT_ID "Application (client) ID:"
+  ask_secret OUTLOOK_CLIENT_SECRET "Client secret (hidden):"
+  ask OUTLOOK_MAILBOX "Mailbox to mirror into (production: booking@thesocialhouse.dk):"
+  netlify_env OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" secret production
+  netlify_env OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" secret production
+  netlify_env OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret production
+  netlify_env OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX" public production
+  pause "Outlook credentials written."
+else
+  SKIPPED+=("Outlook Graph credentials (the mirror stays off until they are set on production)")
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────
 finish
 (( ${#NETLIFY_SET[@]} )) && note "set ${#NETLIFY_SET[@]} Netlify variable(s):"
 for v in "${NETLIFY_SET[@]}"; do note "  - $v"; done
 note "Not set here, by design: APP_ENV, NEXT_PUBLIC_SITE_URL, RESEND_FROM live in netlify.toml."
+note "But netlify.toml values are build-time only: for the scheduled functions, run 'netlify env:set NEXT_PUBLIC_SITE_URL <context-url> --context <branch-deploy|production>' for both contexts. There is no URL fallback — a missing variable fails loudly instead of calling production from another context."
 note "Trigger a deploy of develop and main so the new values take effect."
 printf '\n'

@@ -21,6 +21,7 @@ Email is the only login credential (decided 2026-09-03, revising #25's username 
 - The auth user's email **is** the company's real contact email (`companies.company_email`), so password reset works unchanged. Same for admins.
 - The `/login` server action calls `signInWithPassword({ email, password })` with the normal server client — no service-role lookup step. On any failure (unknown email or wrong password), return the same generic error so the form never discloses whether an email exists.
 - `company_display_name` / `admin_display_name` are for showing people, never for signing in.
+- `/login?next=<path>` lands there after login, and passes a visitor who is already logged in straight on (#88). `safeNextPath()` in `lib/auth/next-path.ts` keeps only a path on this site; anything else falls back to `/`. The booking link in Mail 4, 5 and 6 uses it to open the booking on Bookinger (ADR-0024).
 
 ## Roles in the JWT
 
@@ -33,12 +34,12 @@ The Custom Access Token Hook is a Postgres function `public.custom_access_token_
 - Server code checks the role with `getSession()` from `lib/auth/get-session.ts` → `session.appRole`. Do not decode the JWT by hand in components.
 
 - `app/(company)/*`: requires a session. `app/(admin)/*`: requires `app_role = 'admin'`. Both enforced in the route-group layout via `lib/auth/requireSession()` / `requireAdmin()`, and again inside every server action (layouts are not a security boundary).
-- `app/(public)/*`: notice board, cancellation link pages, the forms demo. No session. Booker verification is not a public page: it is the verification step inside the booking dialog, under the company's session (#2).
+- `app/(public)/*`: login, forgot password, set password and company change — pages without the sidebar, no session. The forms demo sits outside the group at `app/demo/*` (development only). Booker verification is not a public page: it is the verification step inside the booking dialog, under the company's session (#2).
 - Use `@supabase/ssr` cookie handling exactly as in `docs/vendor/supabase/`; refresh the session in `proxy.ts` (Next 16's name for the former middleware — check `node_modules/next/dist/docs/`).
 
 ## Booker verification and holds
 
-Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/domain/verification.ts`, the code itself in `lib/bookings/verification-code.ts`, the UI in `components/bookings/verification-step.tsx`. Until the booking dialog (#4) exists, `app/(company)/(gated)/demo/booking` (development only, behind the session and the master-data gate like the real flow) is the form that starts the flow.
+Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/domain/verification.ts`, the code itself in `lib/bookings/verification-code.ts`, the UI in `components/bookings/verification-step.tsx`. The flow starts in the booking dialog (#4), which mounts the verification step once "Book nu" has created the hold.
 
 - "Book nu" → `createHold()` inserts a `pending_verification` booking with `booking_hold_expires_at = now() + 10 minutes` and the price snapshot, under the company's session and RLS. The database's no-overlap constraint is the availability check: an `exclusion_violation` (23P01) reads as "Lokalet er ikke ledigt". The action then stores a code and sends Mail 2 via `sendMail()` (template `verification-code`, greeting the company display name, recipient the booker's work email). If the mail fails, the hold is released at once.
 - The code is six digits from `crypto.randomInt`, stored in `verification_codes` as a SHA-256 hash bound to the booking id, compared with `timingSafeEqual`. Only this table goes through the service-role client (allowlist entry 1); it is admin-only under RLS because the booker is not an auth user.
@@ -49,4 +50,4 @@ Built in #2. Code in `lib/bookings/actions.ts` (Server Actions), rules in `lib/d
 
 ## Auth emails
 
-Supabase's own SMTP is disabled. Every auth email goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. Only `invite` is mapped today; `recovery` comes with #11, and `email_change` is never triggered because admin sets a new email with `email_confirm: true`. Locally the hook is off and the mail catcher on port 54324 receives auth mail. See `email.md`.
+Supabase's own SMTP is disabled. Every auth email goes through the Send Email Hook → `supabase/functions/send-email` (Deno Edge Function) → Resend, using the same template aliases as the app and logging to `outbound_emails`. `invite` maps to `company-invitation` and `recovery` maps to `password-reset`; member email changes use the two-step app flow instead of Auth's `email_change`. Locally the hook is off and the mail catcher on port 54324 receives auth mail. See `email.md`.

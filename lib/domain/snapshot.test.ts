@@ -33,7 +33,7 @@ describe("buildSnapshot", () => {
       discountPercent: 50,
       hours: 3,
       memberPriceOre: 240_000 - 120_000, // roomTotal = 240k, 50% off = 120k
-      roomHourlyPriceOre: 80_000,
+      roomTotalOre: 240_000,
       totalOre: 120_000 + 50_000,
     } satisfies BookingSnapshot);
   });
@@ -59,7 +59,7 @@ describe("buildSnapshot", () => {
     });
 
     // Simulating "price changes after confirmation" — snapshot is immutable
-    expect(snapshot.roomHourlyPriceOre).toBe(80_000);
+    expect(snapshot.roomTotalOre).toBe(240_000);
     expect(snapshot.memberPriceOre).toBe(120_000);
   });
 });

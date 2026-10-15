@@ -28,10 +28,11 @@ Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `
 | `npm run check` / `npm run fix` | Ultracite lint + format check / apply safe fixes. (Written by `npx ultracite init`.) |
 | `npm test` | `vitest run`. |
 | `npm run db:start` / `npm run db:stop` | Start / stop local Postgres + Auth + Studio in Docker (`supabase start` / `stop`). |
-| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`). This is where the demo logins come from. |
+| `npm run db:reset` | Rebuild local DB from migrations + `seed.sql` (`supabase db reset`), then `db:seed-images` uploads demo room photos (`scripts/seed-room-images.ts`, cached in the gitignored `supabase/seed-images/`). This is where the demo logins come from. |
 | `npm run db:test` | Run pgTAP tests in `supabase/tests/` (`supabase test db`). |
 | `npm run db:types` | `supabase gen types typescript --local > lib/supabase/database.types.ts`. |
 | `npm run email:sync` | `scripts/sync-email-templates.ts` — create/update/publish Resend templates by alias. |
+| `npx supabase functions serve <name>` | Serve an Edge Function locally at `http://127.0.0.1:54321/functions/v1/<name>` (local stack must be up; env from `supabase/functions/.env`). See `supabase.md`. |
 | `supabase db schema declarative sync --name <name>` | Turn `supabase/schemas/` changes into a migration (CLI ≥ 2.116; add `--no-apply` to review first). |
 
 Scripts not yet present in `package.json` are added when the tool they call is installed (Ultracite, Vitest, the sync script). Do not add a substitute in the meantime.
@@ -44,7 +45,7 @@ Scripts not yet present in `package.json` are added when the tool they call is i
 
 Every variable is declared once in `.env.example` and read exactly once, in `lib/env.ts`, which validates with zod at boot and exports a typed object. **Never read `process.env` anywhere else.** Adding a variable means: `.env.example` → `lib/env.ts` → Netlify (each deploy context) → GitHub Environment secret if CI needs it.
 
-`APP_ENV` is `development` or `production`. There is no third value. Local dev, the `develop` branch deploy, and deploy previews are all `development`.
+`APP_ENV` is `local`, `development` or `production`: local `npm run dev` runs `local`; the `develop` branch deploy and deploy previews run `development`; production runs `production`. The surface may split on the value (e.g. the page-title prefix, #65); every data/mail guard keys on `production` only.
 
 ## Linting and formatting: Ultracite
 

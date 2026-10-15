@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import {
   type AdminCompanyValues,
   type MasterDataValues,
+  type MemberCompanyValues,
   masterDataKeys,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
@@ -12,6 +13,8 @@ import { escapeHtml } from "@/supabase/functions/send-email/handler";
 
 export type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
 export type CompanyUpdate = Database["public"]["Tables"]["companies"]["Update"];
+
+export type CompanyChangeValues = MemberCompanyValues;
 
 const orNull = (value: string): string | null => (value === "" ? null : value);
 const orEmpty = (value: string | null): string => value ?? "";
@@ -72,6 +75,13 @@ export const companyToMasterDataValues = (
   invoiceEmail: orEmpty(row.company_invoice_email),
   legalName: orEmpty(row.company_legal_name),
   reference: orEmpty(row.company_reference),
+});
+
+export const companyToMemberValues = (
+  row: CompanyRow
+): MemberCompanyValues => ({
+  ...companyToMasterDataValues(row),
+  email: row.company_email,
 });
 
 export const companyToAdminValues = (row: CompanyRow): AdminCompanyValues => ({

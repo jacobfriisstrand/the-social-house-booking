@@ -20,12 +20,15 @@ const IMAGE_HEIGHT = 400;
 
 interface RoomPhotoCarouselProps {
   className?: string;
+  // The room card makes its photos taller than the 16:9 default (#15).
+  imageClassName?: string;
   images: string[];
   name: string;
 }
 
 export function RoomPhotoCarousel({
   className,
+  imageClassName,
   images,
   name,
 }: RoomPhotoCarouselProps) {
@@ -41,7 +44,7 @@ export function RoomPhotoCarousel({
           <CarouselItem className="pl-0" key={src}>
             <Image
               alt={alt}
-              className="aspect-video w-full object-cover"
+              className={cn("aspect-video w-full object-cover", imageClassName)}
               height={IMAGE_HEIGHT}
               src={src}
               width={IMAGE_WIDTH}

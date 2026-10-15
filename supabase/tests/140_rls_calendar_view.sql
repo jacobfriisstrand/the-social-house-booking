@@ -4,7 +4,7 @@
 -- definition; booker/PII columns do not exist on the view.
 
 begin;
-select plan(9);
+select plan(10);
 
 -- Fixtures: two companies with bookings, one house event blocking a room,
 -- one cancelled booking that must not appear.
@@ -37,10 +37,24 @@ set local role authenticated;
 
 -- Company session (Rituals): cross-company projection without PII.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
-select is((select count(*) from public.calendar_entries), 2::bigint, 'company sees confirmed bookings + house events (not cancelled)');
-select is((select count(*) from public.calendar_entries where calendar_entry_kind = 'booking' and company_display_name = 'Rituals'), 1::bigint, 'booking entry carries Display name only');
+select is(
+  (select count(*) from public.calendar_entries where room_id = '44444444-4444-4444-4444-444444444001'),
+  2::bigint,
+  'company sees confirmed bookings + house events (not cancelled) — scoped to the fixture room, seed.sql carries its own');
+select is(
+  (select count(*) from public.calendar_entries where calendar_entry_kind = 'booking'
+     and company_display_name = 'Rituals'
+     and calendar_entry_id = '66666666-6666-6666-6666-666666666001'),
+  1::bigint,
+  'booking entry carries Display name only');
 select is((select count(*) from public.calendar_entries where calendar_entry_kind = 'house_event' and house_event_title = 'Strategy day'), 1::bigint, 'house event entry carries its title');
-select is((select calendar_entry_id from public.calendar_entries where calendar_entry_kind = 'house_event'), '99999999-9999-9999-9999-999999999001', 'house event id is exposed for calendar joins');
+select is(
+  (select house_event_description from public.calendar_entries
+    where calendar_entry_kind = 'house_event'
+      and calendar_entry_id = '99999999-9999-9999-9999-999999999001'),
+  'Internal strategy day',
+  'house event entry carries its short explanation (member-visible, #12)');
+select is((select calendar_entry_id from public.calendar_entries where calendar_entry_kind = 'house_event' and calendar_entry_id = '99999999-9999-9999-9999-999999999001'), '99999999-9999-9999-9999-999999999001', 'house event id is exposed for calendar joins');
 select is((
   select count(*) from information_schema.columns
   where table_schema = 'public' and table_name = 'calendar_entries'
@@ -51,8 +65,15 @@ select is((select count(*) from public.bookings), 2::bigint, 'base bookings stay
 -- Admin sees the same projection (already covered by any-authenticated) and
 -- keeps full base-table access.
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111001","role":"authenticated","app_role":"admin"}';
-select is((select count(*) from public.calendar_entries), 2::bigint, 'admin sees the projection');
-select is((select count(*) from public.bookings), 2::bigint, 'admin sees all base bookings');
+select is(
+  (select count(*) from public.calendar_entries where room_id = '44444444-4444-4444-4444-444444444001'),
+  2::bigint,
+  'admin sees the projection (fixture room — seed.sql carries its own rows)');
+select is(
+  (select count(*) from public.bookings where booking_company_id in (
+    '22222222-2222-2222-2222-222222222001', '22222222-2222-2222-2222-222222222002')),
+  2::bigint,
+  'admin sees all base bookings (fixture companies)');
 
 select * from finish();
 rollback;

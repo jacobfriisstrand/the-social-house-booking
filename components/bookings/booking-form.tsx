@@ -1,11 +1,15 @@
 "use client";
 
-// The booking dialog's form (DESIGN.md "Booking dialog", #4): slot picker,
-// the summary sentence, add-ons and price, the booker, terms, "Book nu". A
+// The booking dialog's form (DESIGN.md "Booking dialog", #4, #81): four
+// steps over one react-hook-form instance. The slot, the add-ons, the
+// booker, then the overview with the terms and "Book nu". "Næste" validates
+// the step's own fields; the server re-parses everything on submit. A
 // company's submit creates the hold (#2); an admin's creates the confirmed
 // booking for the chosen company (#14, ADR-0023).
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import {
+  type FormEvent,
   startTransition,
   useActionState,
   useCallback,
@@ -17,6 +21,7 @@ import {
 import {
   type Control,
   type FieldErrors,
+  type Path,
   type UseFormReturn,
   useController,
   useForm,
@@ -27,8 +32,14 @@ import { ChoiceSelect } from "@/components/forms/choice-select";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
 import { useActionError } from "@/components/forms/use-form-action";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { createHold, type Hold, type HoldState } from "@/lib/bookings/actions";
 import {
@@ -48,7 +59,9 @@ import {
   type PriceOverviewModel,
   priceOverview,
 } from "@/lib/domain/price-overview";
+import { roomTotalOre } from "@/lib/domain/pricing";
 import { buildSnapshot } from "@/lib/domain/snapshot";
+import { ACCEPTED_ON_BOOKING, type CurrentTerms } from "@/lib/domain/terms";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
 import {
@@ -59,6 +72,7 @@ import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
 import { AddOnCheckboxList, CateringAcceptance } from "./addon-selection";
 import { BookerFields } from "./booker-fields";
+import { DetailRow } from "./detail-row";
 import { PriceOverview } from "./price-overview";
 import { SlotPicker } from "./slot-picker";
 
@@ -80,7 +94,26 @@ type BookingFormValues = z.infer<typeof bookingFormSchema>;
 type BookingState = AdminBookingState | HoldState;
 const idleState: BookingState = { status: "idle" };
 
-const toPeriods = (periods: SerializedPeriod[]): Period[] =>
+// The fields each step owns, in step order: "Næste" validates exactly
+// these, and a server error on one of them returns to its step.
+const STEP_FIELDS: readonly (readonly Path<BookingFormValues>[])[] = [
+  ["startAt", "endAt", "participantCount"],
+  ["addOnIds", "cateringAccepted"],
+  ["companyId", "bookerName", "bookerEmail", "bookerPhone"],
+  ["termsAccepted"],
+];
+export const FORM_STEP_COUNT = STEP_FIELDS.length;
+const LAST_STEP = FORM_STEP_COUNT - 1;
+
+const firstStepWithError = (fields: string[]): number =>
+  STEP_FIELDS.findIndex((step) => step.some((name) => fields.includes(name)));
+
+const errorStep = (state: BookingState): number =>
+  state.status === "error"
+    ? firstStepWithError(Object.keys(state.fieldErrors ?? {}))
+    : -1;
+
+export const toPeriods = (periods: SerializedPeriod[]): Period[] =>
   periods.map((period) => ({
     endAt: new Date(period.endAt),
     startAt: new Date(period.startAt),
@@ -89,9 +122,15 @@ const toPeriods = (periods: SerializedPeriod[]): Period[] =>
 const prefillInstant = (date?: string, time?: string): string =>
   date && time ? cphToUtc(date, time).toISOString() : "";
 
+// The versions the terms links open, sent back with the booking so the
+// server records what was shown (#15).
+const shownTermsIds = (terms: CurrentTerms): string[] =>
+  ACCEPTED_ON_BOOKING.flatMap((document) => terms[document] ?? []);
+
 const defaultValues = (
   room: DialogRoom,
-  prefill: RoomPrefill
+  prefill: RoomPrefill,
+  terms: CurrentTerms
 ): BookingFormValues => ({
   addOnIds: [],
   bookerEmail: "",
@@ -99,11 +138,12 @@ const defaultValues = (
   bookerPhone: "",
   cateringAccepted: false,
   companyId: "",
-  endAt: prefillInstant(prefill.dato, prefill.til),
-  participantCount: prefill.personer ?? DEFAULT_PARTICIPANTS,
+  endAt: prefillInstant(prefill.date, prefill.to),
+  participantCount: prefill.participants ?? DEFAULT_PARTICIPANTS,
   roomId: room.roomId,
-  startAt: prefillInstant(prefill.dato, prefill.fra),
+  startAt: prefillInstant(prefill.date, prefill.from),
   termsAccepted: false,
+  termsVersionIds: shownTermsIds(terms),
 });
 
 // Blocked periods per day: the initial day comes from the server, others
@@ -156,6 +196,48 @@ function useBookingResult(
   useActionError(state, form);
 }
 
+// A server error on an earlier step's field (the slot taken meanwhile, the
+// email refused) takes the visitor back to that step, where the field
+// shows it.
+function useStepForErrors(
+  state: BookingState,
+  onStepChange: (step: number) => void
+): void {
+  useEffect(() => {
+    const target = errorStep(state);
+    if (target >= 0) {
+      onStepChange(target);
+    }
+  }, [state, onStepChange]);
+}
+
+// After a refused "Næste", the step's fields revalidate as they change, so
+// an error clears the moment it is fixed, as a submitted form's would.
+// Returns the marker for a refused attempt; moving to another step ends
+// the live validation, since the attempt was for this step only.
+function useStepRevalidation(
+  form: UseFormReturn<BookingFormValues>,
+  step: number
+): () => void {
+  const [attemptedStep, setAttemptedStep] = useState<number | null>(null);
+  const attempted = attemptedStep === step;
+  useEffect(() => {
+    if (!attempted) {
+      return;
+    }
+    return form.subscribe({
+      callback: ({ name }) => {
+        if (name) {
+          form.trigger(name as Path<BookingFormValues>);
+        }
+      },
+      formState: { values: true },
+      name: STEP_FIELDS[step],
+    });
+  }, [attempted, form, step]);
+  return useCallback(() => setAttemptedStep(step), [step]);
+}
+
 const hoursOf = (startAt: string, endAt: string): number =>
   startAt && endAt ? hoursBetween(new Date(startAt), new Date(endAt)) : 0;
 
@@ -174,6 +256,7 @@ const livePriceOverview = (
   >,
   discountPercent: number
 ): PriceOverviewModel => {
+  const hours = hoursOf(values.startAt, values.endAt);
   const input = {
     addOnsOre: linesTotalOre(
       addonLines(
@@ -182,21 +265,46 @@ const livePriceOverview = (
       )
     ),
     discountPercent,
-    hours: hoursOf(values.startAt, values.endAt),
+    hours,
     roomHourlyPriceOre: room.hourlyPriceOre,
   };
-  return priceOverview({ ...input, totalOre: buildSnapshot(input).totalOre });
+  // The overview's room line is the room's total for the chosen hours —
+  // rounded here, at the only place that still derives it from the hourly
+  // price; every frozen surface reads booking_room_price_ore directly.
+  return priceOverview({
+    ...input,
+    roomTotalOre: roomTotalOre(room.hourlyPriceOre, hours),
+    totalOre: buildSnapshot(input).totalOre,
+  });
 };
 
-const summarySentence = (startAt: string, endAt: string): string =>
-  startAt && endAt
-    ? copy.summary(
-        formatWeekday(startAt),
-        formatDate(startAt),
-        formatTime(startAt),
-        formatTime(endAt)
-      )
-    : copy.summaryEmpty;
+const addOnNames = (room: DialogRoom, addOnIds: string[]): string =>
+  selectedAddOns(room, addOnIds)
+    .map((addOn) => addOn.name)
+    .join(", ") || copy.overview.noAddOns;
+
+const companyName = (
+  viewer: BookingViewer,
+  companyId: string
+): string | null =>
+  viewer.kind === "admin"
+    ? (viewer.companies.find((company) => company.companyId === companyId)
+        ?.displayName ?? null)
+    : null;
+
+const discountFor = (viewer: BookingViewer, companyId: string): number =>
+  viewer.kind === "company"
+    ? viewer.discountPercent
+    : (viewer.companies.find((company) => company.companyId === companyId)
+        ?.discountPercent ?? 0);
+
+const schemaFor = (viewer: BookingViewer) =>
+  viewer.kind === "admin" ? adminBookingSchema : bookingFormSchema;
+
+// "Book nu" holds the room for a member; an admin's booking is created and
+// confirmed in one go.
+const submitCopyFor = (viewer: BookingViewer) =>
+  viewer.kind === "admin" ? messages.booking.admin : copy;
 
 function CompanyField({
   control,
@@ -227,13 +335,51 @@ function CompanyField({
   );
 }
 
-function TermsField({ control }: { control: Control<BookingFormValues> }) {
+// A text the booker accepts, opened in a new tab so the dialog keeps its
+// values. Unlinked while the text has no published version; the server
+// then refuses the booking.
+function TermsLink({
+  children,
+  versionId,
+}: {
+  children: string;
+  versionId: string | undefined;
+}) {
+  if (!versionId) {
+    return children;
+  }
+  return (
+    <Link
+      className="underline underline-offset-4"
+      href={`/terms/${versionId}`}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      {children}
+    </Link>
+  );
+}
+
+// The box stays on the label's line; the error goes under the label.
+function TermsField({
+  className,
+  control,
+  terms,
+}: {
+  className?: string;
+  control: Control<BookingFormValues>;
+  terms: CurrentTerms;
+}) {
   const { field, fieldState } = useController({
     control,
     name: "termsAccepted",
   });
   return (
-    <Field data-invalid={fieldState.invalid} orientation="horizontal">
+    <Field
+      className={className}
+      data-invalid={fieldState.invalid}
+      orientation="horizontal"
+    >
       <Checkbox
         aria-invalid={fieldState.invalid}
         checked={field.value}
@@ -241,21 +387,26 @@ function TermsField({ control }: { control: Control<BookingFormValues> }) {
         name={field.name}
         onCheckedChange={field.onChange}
       />
-      <div className="flex flex-col gap-1">
+      <FieldContent>
         <FieldLabel className="font-normal" htmlFor="booking-terms">
-          {copy.terms}
+          {/* One span: the label is a flex row, and the links must stay in
+              the sentence's flow. */}
+          <span>
+            {copy.terms.start}
+            <TermsLink versionId={terms["Booking terms"]}>
+              {copy.terms.bookingTerms}
+            </TermsLink>
+            {copy.terms.middle}
+            <TermsLink versionId={terms["Privacy policy"]}>
+              {copy.terms.privacyPolicy}
+            </TermsLink>
+          </span>
         </FieldLabel>
         {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
-      </div>
+      </FieldContent>
     </Field>
   );
 }
-
-const discountFor = (viewer: BookingViewer, companyId: string): number =>
-  viewer.kind === "company"
-    ? viewer.discountPercent
-    : (viewer.companies.find((company) => company.companyId === companyId)
-        ?.discountPercent ?? 0);
 
 // The slot the form holds: the day, its blocked periods, the start-slot
 // list and end options for it, and the handlers that keep start and end
@@ -330,6 +481,8 @@ function useSlotSelection(
   };
 }
 
+type SlotSelection = ReturnType<typeof useSlotSelection>;
+
 // Submit goes to the hold action or the admin action by viewer; the result
 // is applied by useBookingResult.
 function useBookingSubmit(
@@ -349,47 +502,263 @@ function useBookingSubmit(
   const submit = form.handleSubmit((values) =>
     startTransition(() => formAction(values))
   );
-  return { pending, submit };
+  return { pending, state, submit };
 }
 
-// Add-ons left, the price overview right, then the catering rule, which
-// must be actively accepted (#7, Bilag 1 "Forplejning og hospitality").
-function ExtrasSection({
+// Step 1: the day, start and end, and the headcount.
+function SlotStep({
+  control,
+  room,
+  slot,
+}: {
+  control: Control<BookingFormValues>;
+  room: DialogRoom;
+  slot: SlotSelection;
+}) {
+  return (
+    <SlotPicker
+      date={slot.date}
+      endAt={slot.endAt}
+      endOptions={slot.ends}
+      loading={slot.loading}
+      onDateChange={slot.handleDateChange}
+      onEndChange={slot.handleEndChange}
+      onStartChange={slot.handleStartChange}
+      slots={slot.slots}
+      startAt={slot.startAt}
+    >
+      <TextField
+        control={control}
+        description={copy.participantsHint(room.capacity)}
+        inputMode="numeric"
+        label={messages.booking.fields.participantCount}
+        name="participantCount"
+        type="number"
+      />
+    </SlotPicker>
+  );
+}
+
+// Step 2: the add-ons, then the catering rule, which must be actively
+// accepted (#7, Bilag 1 "Forplejning og hospitality").
+function ExtrasStep({
   addOns,
   control,
   errors,
-  price,
 }: {
   addOns: AddOn[];
   control: Control<BookingFormValues>;
   errors: FieldErrors<BookingFormValues>;
-  price: PriceOverviewModel;
 }) {
   return (
-    <>
-      <div className="grid gap-6 md:grid-cols-2">
-        <AddOnCheckboxList
-          addOns={addOns}
-          control={control}
-          error={errors.addOnIds?.message}
-          name="addOnIds"
-        />
-        <PriceOverview model={price} />
-      </div>
+    // Two columns from md up, two to one: the add-ons left, the catering
+    // rule right (mockup of 2026-09-23 in #81). Stacked below md.
+    <div className="grid gap-6 md:grid-cols-[2fr_2fr]">
+      <AddOnCheckboxList
+        addOns={addOns}
+        control={control}
+        error={errors.addOnIds?.message}
+        name="addOnIds"
+      />
       <CateringAcceptance
         control={control}
         error={errors.cateringAccepted?.message}
         name="cateringAccepted"
       />
-    </>
+    </div>
+  );
+}
+
+// Step 3: why a person is asked for, then the responsible booker, and for
+// an admin the company first. Only members read about the code: an
+// admin's booking is confirmed without one (ADR-0023).
+function BookerStep({
+  control,
+  viewer,
+}: {
+  control: Control<BookingFormValues>;
+  viewer: BookingViewer;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <p className="text-muted-foreground">
+        {copy.bookerIntro}
+        {viewer.kind === "company" ? ` ${copy.bookerVerify}` : ""}
+      </p>
+      {viewer.kind === "admin" ? (
+        <CompanyField control={control} viewer={viewer} />
+      ) : null}
+      <BookerFields control={control} />
+    </div>
+  );
+}
+
+// Step 4: the choices read back, the price, and the terms.
+function OverviewStep({
+  control,
+  price,
+  room,
+  viewer,
+}: {
+  control: Control<BookingFormValues>;
+  price: PriceOverviewModel;
+  room: DialogRoom;
+  viewer: BookingViewer;
+}) {
+  const [
+    startAt,
+    endAt,
+    participantCount,
+    addOnIds,
+    bookerName,
+    bookerEmail,
+    bookerPhone,
+    companyId,
+  ] = useWatch({
+    control,
+    name: [
+      "startAt",
+      "endAt",
+      "participantCount",
+      "addOnIds",
+      "bookerName",
+      "bookerEmail",
+      "bookerPhone",
+      "companyId",
+    ],
+  });
+  const company = companyName(viewer, companyId);
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      {/* The rows centred in the space above the price, which sits at the
+          bottom of the step. The terms are on the button row. */}
+      <div className="flex flex-1 flex-col justify-center">
+        <dl className="flex flex-col">
+          <DetailRow
+            label={copy.overview.date}
+            value={`${formatWeekday(startAt)} ${formatDate(startAt)}`}
+          />
+          <DetailRow
+            label={copy.overview.time}
+            value={`${formatTime(startAt)} - ${formatTime(endAt)}`}
+          />
+          {company ? (
+            <DetailRow label={copy.overview.company} value={company} />
+          ) : null}
+          <DetailRow
+            label={copy.overview.participants}
+            value={`${participantCount} ${messages.rooms.persons}`}
+          />
+          <DetailRow
+            label={copy.overview.addOns}
+            value={addOnNames(room, addOnIds)}
+          />
+          <DetailRow
+            label={copy.overview.booker}
+            value={
+              <span className="flex flex-col items-end text-right">
+                <span>{bookerName}</span>
+                <span className="text-muted-foreground text-xs">
+                  {bookerEmail} · {bookerPhone}
+                </span>
+              </span>
+            }
+          />
+        </dl>
+      </div>
+      <PriceOverview model={price} />
+    </div>
+  );
+}
+
+interface StepBodyProps {
+  control: Control<BookingFormValues>;
+  errors: FieldErrors<BookingFormValues>;
+  price: PriceOverviewModel;
+  room: DialogRoom;
+  slot: SlotSelection;
+  step: number;
+  viewer: BookingViewer;
+}
+
+function StepBody({
+  control,
+  errors,
+  price,
+  room,
+  slot,
+  step,
+  viewer,
+}: StepBodyProps) {
+  if (step === 0) {
+    return <SlotStep control={control} room={room} slot={slot} />;
+  }
+  if (step === 1) {
+    return (
+      <ExtrasStep addOns={room.addons} control={control} errors={errors} />
+    );
+  }
+  if (step === 2) {
+    return <BookerStep control={control} viewer={viewer} />;
+  }
+  return (
+    <OverviewStep control={control} price={price} room={room} viewer={viewer} />
+  );
+}
+
+// "Tilbage" from the second step on; "Næste" until the overview, where the
+// submit takes its place with the terms checkbox beside it. Both submit the
+// form, so Enter in a field moves on rather than booking early.
+function StepNav({
+  control,
+  onBack,
+  pending,
+  step,
+  submitCopy,
+  terms,
+}: {
+  control: Control<BookingFormValues>;
+  onBack: () => void;
+  pending: boolean;
+  step: number;
+  submitCopy: { submit: string; submitting: string };
+  terms: CurrentTerms;
+}) {
+  const last = step === LAST_STEP;
+  return (
+    <div className="flex items-center justify-between gap-4">
+      {step > 0 ? (
+        <Button onClick={onBack} type="button" variant="outline">
+          {copy.back}
+        </Button>
+      ) : null}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        {last ? (
+          <TermsField className="w-auto" control={control} terms={terms} />
+        ) : null}
+        {last ? (
+          <PendingButton
+            idleLabel={submitCopy.submit}
+            pending={pending}
+            pendingLabel={submitCopy.submitting}
+            type="submit"
+          />
+        ) : (
+          <Button type="submit">{copy.next}</Button>
+        )}
+      </div>
+    </div>
   );
 }
 
 interface BookingFormProps extends ResultHandlers {
   initialDate: string;
   initialPeriods: SerializedPeriod[];
+  onStepChange: (step: number) => void;
   prefill: RoomPrefill;
   room: DialogRoom;
+  step: number;
+  terms: CurrentTerms;
   viewer: BookingViewer;
 }
 
@@ -398,22 +767,25 @@ export function BookingForm({
   initialPeriods,
   onCreated,
   onHeld,
+  onStepChange,
   prefill,
   room,
+  step,
+  terms,
   viewer,
 }: BookingFormProps) {
-  const schema =
-    viewer.kind === "admin" ? adminBookingSchema : bookingFormSchema;
   const form = useForm<BookingFormValues>({
-    defaultValues: defaultValues(room, prefill),
-    resolver: zodResolver(schema),
+    defaultValues: defaultValues(room, prefill, terms),
+    resolver: zodResolver(schemaFor(viewer)),
   });
   const { control, formState } = form;
   const slot = useSlotSelection(room, form, initialDate, initialPeriods);
-  const { pending, submit } = useBookingSubmit(viewer, form, {
+  const { pending, state, submit } = useBookingSubmit(viewer, form, {
     onCreated,
     onHeld,
   });
+  useStepForErrors(state, onStepChange);
+  const markAttempted = useStepRevalidation(form, step);
   const [participantCount, addOnIds, companyId] = useWatch({
     control,
     name: ["participantCount", "addOnIds", "companyId"],
@@ -423,48 +795,49 @@ export function BookingForm({
     { addOnIds, endAt: slot.endAt, participantCount, startAt: slot.startAt },
     discountFor(viewer, companyId)
   );
+  const back = useCallback(() => onStepChange(step - 1), [onStepChange, step]);
+  const next = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const valid = await form.trigger(STEP_FIELDS[step], {
+        shouldFocus: true,
+      });
+      if (valid) {
+        onStepChange(step + 1);
+      } else {
+        markAttempted();
+      }
+    },
+    [form, markAttempted, onStepChange, step]
+  );
 
   return (
-    <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
-      <SlotPicker
-        date={slot.date}
-        endAt={slot.endAt}
-        endOptions={slot.ends}
-        loading={slot.loading}
-        onDateChange={slot.handleDateChange}
-        onEndChange={slot.handleEndChange}
-        onStartChange={slot.handleStartChange}
-        slots={slot.slots}
-        startAt={slot.startAt}
-      >
-        <TextField
+    <form
+      className="flex min-h-0 flex-1 flex-col gap-6"
+      noValidate
+      onSubmit={step === LAST_STEP ? submit : next}
+    >
+      {/* Every step is sized to fit the dialog's fixed height; the overflow
+          is a safety net for viewports shorter than that. The gutter keeps
+          focus rings clear of the clipped edge. */}
+      <div className="-mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
+        <StepBody
           control={control}
-          description={copy.participantsHint(room.capacity)}
-          inputMode="numeric"
-          label={messages.booking.fields.participantCount}
-          name="participantCount"
-          type="number"
+          errors={formState.errors}
+          price={price}
+          room={room}
+          slot={slot}
+          step={step}
+          viewer={viewer}
         />
-        {viewer.kind === "admin" ? (
-          <CompanyField control={control} viewer={viewer} />
-        ) : null}
-      </SlotPicker>
-      <p className="text-sm">{summarySentence(slot.startAt, slot.endAt)}</p>
-      <ExtrasSection
-        addOns={room.addons}
+      </div>
+      <StepNav
         control={control}
-        errors={formState.errors}
-        price={price}
-      />
-      <BookerFields control={control} />
-      <TermsField control={control} />
-      <PendingButton
-        className="w-full"
-        idleLabel={copy.submit}
+        onBack={back}
         pending={pending}
-        pendingLabel={copy.submitting}
-        size="lg"
-        type="submit"
+        step={step}
+        submitCopy={submitCopyFor(viewer)}
+        terms={terms}
       />
     </form>
   );

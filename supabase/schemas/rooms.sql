@@ -79,3 +79,45 @@ alter table public.rooms enable row level security;
 alter table public.room_images enable row level security;
 alter table public.room_opening_hours enable row level security;
 alter table public.room_special_closing_days enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Outlook mirror (#13, ADR-0003): the calendar entry carries the room's name
+-- as its location (lib/domain/outlook-event.ts), so a rename re-marks the
+-- upcoming rows of the room's confirmed bookings and of the house events
+-- blocking it (calendar_events.sql). SECURITY DEFINER like the other mirror
+-- triggers: the rename session is an admin and the mirror table has no
+-- policies. ponytail: entries that have already ended keep the name they
+-- were created with — only bookings and events still ahead are re-marked;
+-- upgrade: drop the > now() bounds if staff ever need history corrected.
+create or replace function public.mark_room_bookings_calendar_dirty()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.calendar_events ce
+  set calendar_event_needs_sync = true,
+      calendar_event_updated_at = now()
+  where ce.calendar_event_booking_id in (
+    select b.booking_id
+    from public.bookings b
+    where b.booking_room_id = new.room_id
+      and b.booking_status = 'confirmed'
+      and b.booking_end_at > now()
+  ) or ce.calendar_event_house_event_id in (
+    select her.house_event_room_event_id
+    from public.house_event_rooms her
+    join public.house_events he on he.house_event_id = her.house_event_room_event_id
+    where her.house_event_room_room_id = new.room_id
+      and he.house_event_end_at > now()
+  );
+  return null;
+end;
+$$;
+
+create trigger rooms_calendar_dirty
+  after update of room_name
+  on public.rooms
+  for each row
+  execute function public.mark_room_bookings_calendar_dirty();

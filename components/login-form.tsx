@@ -1,7 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useActionState, useEffect } from "react";
+import { CopyIcon } from "lucide-react";
+import Link from "next/link";
+import { startTransition, useActionState, useCallback, useEffect } from "react";
 import {
   Controller,
   type ControllerFieldState,
@@ -24,12 +26,46 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 import { type LoginState, logIn } from "@/lib/auth/actions";
 import type { LoginValues } from "@/lib/validation/auth";
 import { loginSchema } from "@/lib/validation/auth";
 import { messages } from "@/messages/da";
 
 const initialState: LoginState = { status: "idle" };
+
+function CopyDemoEmailButton({ email }: { email: string }) {
+  const handleCopy = useCallback(async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(email);
+      toast.add({ title: messages.login.emailCopied, type: "success" });
+    } catch {
+      toast.add({ title: messages.login.emailCopyFailed, type: "error" });
+    }
+  }, [email]);
+
+  return (
+    <Button
+      aria-label={`${messages.login.copyEmail}: ${email}`}
+      onClick={handleCopy}
+      size="icon-sm"
+      title={messages.login.copyEmail}
+      type="button"
+      variant="ghost"
+    >
+      <CopyIcon aria-hidden="true" />
+    </Button>
+  );
+}
+
+function SeedEmail({ email }: { email: string }) {
+  return (
+    <dd className="flex items-center justify-between gap-2 font-mono">
+      <span>{email}</span>
+      <CopyDemoEmailButton email={email} />
+    </dd>
+  );
+}
 
 interface FieldRender<K extends keyof LoginValues> {
   field: ControllerRenderProps<LoginValues, K>;
@@ -39,7 +75,9 @@ interface FieldRender<K extends keyof LoginValues> {
 function EmailField({ field, fieldState }: FieldRender<"email">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="login-email">{messages.login.email}</FieldLabel>
+      <FieldLabel htmlFor="login-email" required>
+        {messages.login.email}
+      </FieldLabel>
       <Input
         {...field}
         aria-invalid={fieldState.invalid}
@@ -56,7 +94,7 @@ function EmailField({ field, fieldState }: FieldRender<"email">) {
 function PasswordField({ field, fieldState }: FieldRender<"password">) {
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor="login-password">
+      <FieldLabel htmlFor="login-password" required>
         {messages.login.password}
       </FieldLabel>
       <Input
@@ -72,14 +110,81 @@ function PasswordField({ field, fieldState }: FieldRender<"password">) {
   );
 }
 
-export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
+function LoginNotices({
+  emailChanged,
+  error,
+}: {
+  emailChanged?: string;
+  error?: string;
+}) {
+  return (
+    <>
+      {emailChanged ? (
+        <Alert variant="info">
+          <AlertDescription>
+            {messages.login.emailChangedAlert(emailChanged)}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </>
+  );
+}
+
+function SeedHintCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{messages.login.seedHint}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="flex flex-col gap-2 text-sm">
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedAdminLabel}
+            </dt>
+            <SeedEmail email={messages.login.seedAdminEmail} />
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedMemberLabel}
+            </dt>
+            <SeedEmail email={messages.login.seedMemberEmail} />
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {messages.login.seedExternalLabel}
+            </dt>
+            <SeedEmail email={messages.login.seedExternalEmail} />
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function LoginForm({
+  emailChanged,
+  isDevelopment,
+  next,
+}: {
+  emailChanged?: string;
+  isDevelopment: boolean;
+  // A same-site path to land on after login (#88), already checked by the
+  // page; the action checks it again.
+  next?: string;
+}) {
   const [state, formAction, pending] = useActionState(logIn, initialState);
   const form = useForm<LoginValues>({
     defaultValues: { email: "", password: "" },
     resolver: zodResolver(loginSchema),
   });
   const handleSubmit = form.handleSubmit((values) =>
-    startTransition(() => formAction(values))
+    startTransition(() => formAction({ ...values, next }))
   );
 
   useEffect(() => {
@@ -88,72 +193,47 @@ export function LoginForm({ isDevelopment }: { isDevelopment: boolean }) {
     }
   }, [state, form]);
 
+  // The centred shell lives in app/(public)/layout.tsx (#89); the form is
+  // content only.
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="flex w-full max-w-sm flex-col gap-4">
-        <Card className="w-full">
-          <CardContent>
-            <form id="login-form" onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Controller
-                  control={form.control}
-                  name="email"
-                  render={EmailField}
-                />
-                <Controller
-                  control={form.control}
-                  name="password"
-                  render={PasswordField}
-                />
-                {state.status === "error" ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{state.error}</AlertDescription>
-                  </Alert>
-                ) : null}
-              </FieldGroup>
-            </form>
-          </CardContent>
-          <CardFooter>
+    <div className="flex w-full max-w-sm flex-col gap-4">
+      <LoginNotices
+        emailChanged={emailChanged}
+        error={state.status === "error" ? state.error : undefined}
+      />
+      <Card className="w-full">
+        <CardContent>
+          <form id="login-form" onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Controller
+                control={form.control}
+                name="email"
+                render={EmailField}
+              />
+              <Controller
+                control={form.control}
+                name="password"
+                render={PasswordField}
+              />
+            </FieldGroup>
+          </form>
+        </CardContent>
+        <CardFooter>
+          <div className="flex w-full flex-col gap-3">
             <Button form="login-form" pending={pending} type="submit">
               {pending ? messages.login.submitting : messages.login.submit}
             </Button>
-          </CardFooter>
-        </Card>
+            <Link
+              className="text-center text-muted-foreground text-sm underline"
+              href="/forgot-password"
+            >
+              {messages.login.forgotPassword}
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
 
-        {isDevelopment ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>{messages.login.seedHint}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="flex flex-col gap-2 text-sm">
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedAdminLabel}
-                  </dt>
-                  <dd className="font-mono">{messages.login.seedAdminEmail}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedMemberLabel}
-                  </dt>
-                  <dd className="font-mono">
-                    {messages.login.seedMemberEmail}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">
-                    {messages.login.seedExternalLabel}
-                  </dt>
-                  <dd className="font-mono">
-                    {messages.login.seedExternalEmail}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-        ) : null}
-      </div>
-    </main>
+      {isDevelopment ? <SeedHintCard /> : null}
+    </div>
   );
 }

@@ -13,23 +13,28 @@ interface TextareaFieldProps<Values extends FieldValues> {
   control: Control<Values>;
   label: string;
   name: Path<Values>;
+  required?: boolean;
 }
 
 export function TextareaField<Values extends FieldValues>({
   control,
   label,
   name,
+  required = true,
 }: TextareaFieldProps<Values>) {
   const { field, fieldState } = useController({ control, name });
   const id = `field-${name}`;
 
   return (
     <Field data-invalid={fieldState.invalid}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
       <Textarea
         {...field}
         aria-invalid={fieldState.invalid}
         id={id}
+        required={required}
         rows={3}
         value={typeof field.value === "string" ? field.value : ""}
       />

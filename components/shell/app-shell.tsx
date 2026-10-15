@@ -4,7 +4,13 @@
 // admin group only when the session carries the admin role, the content
 // column (mobile menu button, page content, footer line), and the
 // off-canvas sheet on phone. Visual rules: docs/design/DESIGN.md, "Shell".
-import { CalendarPlusIcon, CopyIcon, LogOutIcon, WifiIcon } from "lucide-react";
+import {
+  CalendarPlusIcon,
+  CopyIcon,
+  LogOutIcon,
+  SettingsIcon,
+  WifiIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,19 +28,21 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/toast";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
+import { type CurrentTerms, TERMS_DOCUMENTS } from "@/lib/domain/terms";
 import type { WifiSettings } from "@/lib/settings/data";
 import {
   isShellLinkActive,
@@ -62,7 +70,22 @@ function CloseMobileSidebarOnNavigate() {
   return null;
 }
 
-function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
+// Badges that deep-link into their set: the admin invoicing worklist
+// rides the Bookinger page's ?worklist=1 (a list-only filter there).
+// Derived from the href, not passed per call site — ShellNavLinkItem is
+// the only badge renderer, so a nav group added later cannot drop the
+// link.
+function badgeLinkFor(href: string): string | undefined {
+  return href === "/admin/bookings" ? "/admin/bookings?worklist=1" : undefined;
+}
+
+function ShellNavLinkItem({
+  badge,
+  link,
+}: {
+  badge?: number;
+  link: ShellNavLink;
+}) {
   const pathname = usePathname();
   const Icon = link.icon;
 
@@ -71,7 +94,7 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
       <SidebarMenuButton
         className="text-muted-foreground [&_svg]:size-5"
         isActive={isShellLinkActive(link.href, pathname)}
-        render={<Link href={link.href} />}
+        render={<Link href={link.href} prefetch={false} />}
         tooltip={link.label}
       >
         <Icon />
@@ -80,7 +103,46 @@ function ShellNavLinkItem({ link }: { link: ShellNavLink }) {
           {link.label}
         </span>
       </SidebarMenuButton>
+      {/* Zero counts hide the badge: an empty worklist says nothing. A
+        linked badge (the admin worklist) opens its filtered set. */}
+      <ShellNavBadge badge={badge} badgeLink={badgeLinkFor(link.href)} />
     </SidebarMenuItem>
+  );
+}
+
+// The nav badge beside a menu item. The linked variant (the admin
+// worklist) renders the badge as its own anchor through Badge's render
+// prop — it keeps its absolute placement beside the menu button and
+// gains hover and focus states from the badge's anchor styles.
+function ShellNavBadge({
+  badge,
+  badgeLink,
+}: {
+  badge?: number;
+  badgeLink?: string;
+}) {
+  if (!badge) {
+    return null;
+  }
+  if (!badgeLink) {
+    return <SidebarMenuBadge variant="default">{badge}</SidebarMenuBadge>;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <SidebarMenuBadge
+            aria-label={messages.shell.worklistBadge}
+            className="pointer-events-auto"
+            render={<Link href={badgeLink} />}
+            variant="default"
+          >
+            {badge}
+          </SidebarMenuBadge>
+        }
+      />
+      <TooltipContent>{messages.shell.worklistBadgeTooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -115,28 +177,45 @@ function BookRoomButtons({ onOpen }: { onOpen: () => void }) {
 }
 
 function ShellSidebar({
+  badgeCounts,
   isAdmin,
   onOpenSearch,
 }: {
+  badgeCounts?: Record<string, number>;
   isAdmin: boolean;
   onOpenSearch: () => void;
 }) {
+  const pathname = usePathname();
+  const badgeFor = (href: string): number | undefined => badgeCounts?.[href];
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* Fixed height: collapsing hides the logo, and the row must not
-            shrink or the whole nav shifts up. */}
-        <div className="flex h-9 items-center justify-between group-data-[collapsible=icon]:justify-center">
+        {/* The house mark always, and the brand as text beside it only
+            when expanded — the mark alone on the icon rail (changed
+            2026-10-01); on the phone sheet the sidebar carries no
+            data-collapsible, so the text shows there too. The row is as
+            tall as the page header row, so the logo sits on the same
+            centre line as the page title beside it. The sidebar toggle
+            lives outside the sidebar, on the page title row — it must
+            stay reachable with the sidebar collapsed or expanded. The
+            text is aria-hidden: the image's alt names the brand, so
+            screen readers hear it once in both modes. */}
+        <div className="flex h-9 items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <Image
             alt="The Social House"
-            className="group-data-[collapsible=icon]:hidden"
-            height={30}
+            height={28}
             priority
-            src="/logo.svg"
+            src="/logo-mark.svg"
             unoptimized
-            width={130}
+            width={28}
           />
-          <SidebarTrigger />
+          <span
+            aria-hidden="true"
+            className="font-semibold text-md text-muted-foreground group-data-[collapsible=icon]:hidden"
+          >
+            {messages.shell.brand}
+          </span>
         </div>
       </SidebarHeader>
       <SidebarGroup>
@@ -149,7 +228,11 @@ function ShellSidebar({
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {shellMainLinks(isAdmin).map((link) => (
-                <ShellNavLinkItem key={link.href} link={link} />
+                <ShellNavLinkItem
+                  badge={badgeFor(link.href)}
+                  key={link.href}
+                  link={link}
+                />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -162,7 +245,11 @@ function ShellSidebar({
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
                 {shellAdminLinks().map((link) => (
-                  <ShellNavLinkItem key={link.href} link={link} />
+                  <ShellNavLinkItem
+                    badge={badgeFor(link.href)}
+                    key={link.href}
+                    link={link}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -171,6 +258,21 @@ function ShellSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu className="gap-1">
+          {isAdmin ? null : (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="text-muted-foreground [&_svg]:size-5"
+                isActive={isShellLinkActive("/settings", pathname)}
+                render={<Link href="/settings" prefetch={false} />}
+                tooltip={messages.shell.settings}
+              >
+                <SettingsIcon />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {messages.shell.settings}
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <form action={signOut}>
               <SidebarMenuButton
@@ -191,7 +293,39 @@ function ShellSidebar({
   );
 }
 
-function ShellFooter({ wifi }: { wifi: WifiSettings }) {
+// The texts every member must be able to find (#15): the current version
+// of each, as plain links. A text never published is left out.
+function TermsLinks({ terms }: { terms: CurrentTerms }) {
+  return (
+    <nav aria-label={messages.terms.member.title}>
+      <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        {TERMS_DOCUMENTS.flatMap((document) => {
+          const versionId = terms[document];
+          return versionId
+            ? [
+                <li key={document}>
+                  <Link
+                    className="underline-offset-4 hover:text-foreground hover:underline"
+                    href={`/terms/${versionId}`}
+                  >
+                    {messages.terms.documents[document]}
+                  </Link>
+                </li>,
+              ]
+            : [];
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function ShellFooter({
+  terms,
+  wifi,
+}: {
+  terms: CurrentTerms;
+  wifi: WifiSettings;
+}) {
   const [copying, setCopying] = useState(false);
 
   const handleCopy = useCallback(async (): Promise<void> => {
@@ -218,56 +352,76 @@ function ShellFooter({ wifi }: { wifi: WifiSettings }) {
   );
 
   return (
-    <footer className="flex flex-wrap items-center justify-center gap-2 text-muted-foreground text-xs md:justify-end">
-      <span className="inline-flex">
-        <WifiIcon aria-hidden="true" className="size-4" />
-      </span>
-      <span>{wifi.network}</span>
-      <Separator className="my-auto h-3.5 self-center" orientation="vertical" />
-      <span>{messages.shell.footer.passwordLabel}</span>
-      <span className="inline-flex items-center gap-1">
-        <span className="font-mono text-foreground">{wifi.password}</span>
-        <Tooltip>
-          <TooltipTrigger render={<span className="inline-flex" />}>
-            {copyButton}
-          </TooltipTrigger>
-          <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
-        </Tooltip>
-      </span>
+    // The Wi-Fi left, the texts right from tablet up; both centred on phone.
+    <footer className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-muted-foreground text-xs md:justify-between">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <span className="inline-flex">
+          <WifiIcon aria-hidden="true" className="size-4" />
+        </span>
+        <span>{wifi.network}</span>
+        <Separator
+          className="my-auto h-3.5 self-center"
+          orientation="vertical"
+        />
+        <span>{messages.shell.footer.passwordLabel}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="font-mono text-foreground">{wifi.password}</span>
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              {copyButton}
+            </TooltipTrigger>
+            <TooltipContent>{messages.settings.copyPassword}</TooltipContent>
+          </Tooltip>
+        </span>
+      </div>
+      <TermsLinks terms={terms} />
     </footer>
   );
 }
 
 export function AppShell({
+  badgeCounts,
   children,
   isAdmin,
   defaultOpen,
+  terms,
   wifi,
 }: {
+  badgeCounts?: Record<string, number>;
   children: ReactNode;
   isAdmin: boolean;
   defaultOpen: boolean;
+  terms: CurrentTerms;
   wifi: WifiSettings;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <CloseMobileSidebarOnNavigate />
-      <ShellSidebar isAdmin={isAdmin} onOpenSearch={openSearch} />
-      <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
-      <SidebarInset>
-        {/* From tablet up the column is exactly the viewport: title, panel
-            and footer line stay in view and the panel scrolls inside
-            (DESIGN.md "Shell"). Phone keeps the document scroll. No left
-            padding from tablet up: the sidebar's own padding is the gutter,
-            so the menu sits centred between the screen edge and the
-            content. */}
-        <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
-          {children}
-          <ShellFooter wifi={wifi} />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <TooltipProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <CloseMobileSidebarOnNavigate />
+        <ShellSidebar
+          badgeCounts={badgeCounts}
+          isAdmin={isAdmin}
+          onOpenSearch={openSearch}
+        />
+        <SearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
+        {/* min-w-0: the inset is a flex item next to the sidebar, and a page
+            whose content has a minimum width (a wide table) must not widen
+            it past the viewport; the content scrolls inside instead. */}
+        <SidebarInset className="min-w-0">
+          {/* From tablet up the column is exactly the viewport: title, panel
+              and footer line stay in view and the panel scrolls inside
+              (DESIGN.md "Shell"). Phone keeps the document scroll. No left
+              padding from tablet up: the sidebar's own padding is the gutter,
+              so the menu sits centred between the screen edge and the
+              content. */}
+          <div className="flex w-full max-w-[1800px] flex-1 flex-col gap-3 px-2 py-2 md:h-svh md:flex-none md:overflow-hidden md:py-2 md:pr-2 md:pl-0">
+            {children}
+            <ShellFooter terms={terms} wifi={wifi} />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

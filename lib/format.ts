@@ -42,10 +42,20 @@ export function formatDateString(value: string): string {
   return `${day}/${month}/${year}`;
 }
 
+// formatMonthYear("2026-10-01") → "oktober 2026" — a bare yyyy-mm-dd
+// date's month and year, for period titles.
+export function formatMonthYear(value: string): string {
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("da-DK", {
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, (month ?? 1) - 1, 1)));
+}
+
 // formatDateTime("2026-09-02T17:00:00Z") → "02/09/2026 19:00" (Danish locale writes "19.00"; the spec wants "HH:mm").
 export function formatDateTime(instant: Date | string | number): string {
-  const date = new Date(instant);
-  return `${dateFormatter.format(date).replaceAll(".", "/")} ${timeFormatter.format(date).replace(".", ":")}`;
+  return `${formatDate(instant)} ${formatTime(instant)}`;
 }
 
 // formatTime("2026-09-02T17:00:00Z") → "19:00".
@@ -66,4 +76,69 @@ export function formatWeekday(instant: Date | string | number): string {
 // formatDate("2026-09-02T17:00:00Z") → "02/09/2026".
 export function formatDate(instant: Date | string | number): string {
   return dateFormatter.format(new Date(instant)).replaceAll(".", "/");
+}
+
+const monthFormatter = new Intl.DateTimeFormat("da-DK", {
+  month: "long",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
+const shortMonthFormatter = new Intl.DateTimeFormat("da-DK", {
+  month: "short",
+  timeZone: "UTC",
+});
+
+const monthStart = (month: string): Date => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1, 1));
+};
+
+// formatMonth("2026-09") → "september 2026".
+export function formatMonth(month: string): string {
+  return monthFormatter.format(monthStart(month));
+}
+
+// formatShortMonth("2026-09") → "sep" (chart axes; Danish adds a dot).
+export function formatShortMonth(month: string): string {
+  return shortMonthFormatter.format(monthStart(month)).replace(".", "");
+}
+
+const decimalFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 1,
+});
+
+// formatNumber(148.5) → "148,5", formatNumber(1200) → "1.200".
+export function formatNumber(value: number): string {
+  return decimalFormatter.format(value);
+}
+
+const changeFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+  style: "percent",
+});
+
+// formatChange(0.121) → "+12,1 %", formatChange(-0.05) → "-5 %".
+export function formatChange(fraction: number): string {
+  return changeFormatter.format(fraction);
+}
+
+const shareFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 0,
+  style: "percent",
+});
+
+// formatShare(0.684) → "68 %".
+export function formatShare(fraction: number): string {
+  return shareFormatter.format(fraction);
+}
+
+const hoursFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 2,
+});
+
+// formatHours(150) → "2,5 t" — billable hours as a Danish decimal.
+export function formatHours(minutes: number): string {
+  return `${hoursFormatter.format(minutes / 60)} t`;
 }

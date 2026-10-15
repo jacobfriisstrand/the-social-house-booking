@@ -59,23 +59,30 @@ function queryRows<T>(
 
 // Full detail for every room, for the admin page and its edit sheets: the
 // room rows plus the per-room tables in bulk (five queries for the whole
-// list, not five per room).
+// list, not five per room). Bounded: the catalogue is small and admin-only;
+// paginate in a follow-up if it ever approaches the caps.
 export async function listRoomDetails(
   supabase: SupabaseClient<Database>
 ): Promise<RoomDetail[]> {
   const [roomsResult, imagesResult, hoursResult, daysResult, linksResult] =
     await Promise.all([
-      supabase.from("rooms").select("*").order("room_name"),
-      supabase.from("room_images").select("*").order("room_image_sort_order"),
+      supabase.from("rooms").select("*").order("room_name").limit(200),
+      supabase
+        .from("room_images")
+        .select("*")
+        .order("room_image_sort_order")
+        .limit(500),
       supabase
         .from("room_opening_hours")
         .select("*")
-        .order("room_opening_hour_day_of_week"),
+        .order("room_opening_hour_day_of_week")
+        .limit(500),
       supabase
         .from("room_special_closing_days")
         .select("*")
-        .order("room_special_closing_day_date"),
-      supabase.from("room_addons").select("*"),
+        .order("room_special_closing_day_date")
+        .limit(500),
+      supabase.from("room_addons").select("*").limit(500),
     ]);
 
   const rooms = queryRows(roomsResult, "rooms");

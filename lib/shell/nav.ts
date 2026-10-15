@@ -5,16 +5,24 @@
 // empty (issue #55, recorded in docs/design/DESIGN.md).
 import {
   Building2Icon,
+  CalendarDaysIcon,
   CalendarIcon,
+  ChartColumnIcon,
   DoorOpenIcon,
   HouseIcon,
   type LucideIcon,
+  MegaphoneIcon,
+  ScrollTextIcon,
   SettingsIcon,
   ShoppingBagIcon,
 } from "lucide-react";
 import { messages } from "@/messages/da";
 
 export interface ShellNavLink {
+  // The tone of the item's count badge, when the layout supplies one.
+  // Neutral chips count what the item lists; the warning tint marks a
+  // worklist that waits on admin action.
+  badgeTone?: "neutral" | "warning";
   href: string;
   icon: LucideIcon;
   label: string;
@@ -26,6 +34,7 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
   ];
   if (!isAdmin) {
     links.push({
+      badgeTone: "neutral",
       href: "/bookings",
       icon: CalendarIcon,
       label: messages.shell.bookings,
@@ -39,8 +48,20 @@ export function shellMainLinks(isAdmin: boolean): ShellNavLink[] {
   return links;
 }
 
+// Statistik leads the admin group (2026-10-10, #10).
 export function shellAdminLinks(): ShellNavLink[] {
   return [
+    {
+      href: "/admin/statistics",
+      icon: ChartColumnIcon,
+      label: messages.shell.statistics,
+    },
+    {
+      badgeTone: "warning",
+      href: "/admin/bookings",
+      icon: CalendarIcon,
+      label: messages.shell.bookings,
+    },
     {
       href: "/admin/rooms",
       icon: DoorOpenIcon,
@@ -55,6 +76,21 @@ export function shellAdminLinks(): ShellNavLink[] {
       href: "/admin/addons",
       icon: ShoppingBagIcon,
       label: messages.addons.title,
+    },
+    {
+      href: "/admin/notices",
+      icon: MegaphoneIcon,
+      label: messages.shell.notices,
+    },
+    {
+      href: "/admin/house-events",
+      icon: CalendarDaysIcon,
+      label: messages.houseEvents.title,
+    },
+    {
+      href: "/admin/terms",
+      icon: ScrollTextIcon,
+      label: messages.shell.terms,
     },
     {
       href: "/admin/settings",

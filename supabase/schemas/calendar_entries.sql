@@ -1,6 +1,7 @@
 -- Member-visible notice-board/calendar projection (#12): room, date/time,
--- the company's Display name for bookings, and the House Event title. Never
--- booker name/email/phone, purpose, participants, or any notes.
+-- the company's Display name for bookings, and the House Event title and
+-- short explanation (member-visible, decided in #12). Never booker
+-- name/email/phone, purpose, participants, or any notes.
 --
 -- Definer view (sees all rows; base tables keep their own RLS): this is the
 -- only cross-company read surface. Access is gated in the definition, not
@@ -25,7 +26,8 @@ from (
     r.room_id,
     r.room_name,
     c.company_display_name,
-    null::text as house_event_title
+    null::text as house_event_title,
+    null::text as house_event_description
   from public.bookings b
   join public.rooms r on r.room_id = b.booking_room_id
   join public.companies c on c.company_id = b.booking_company_id
@@ -39,7 +41,8 @@ from (
     r.room_id,
     r.room_name,
     null::text,
-    he.house_event_title
+    he.house_event_title,
+    he.house_event_description
   from public.house_events he
   join public.house_event_rooms her on her.house_event_room_event_id = he.house_event_id
   join public.rooms r on r.room_id = her.house_event_room_room_id

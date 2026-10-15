@@ -30,7 +30,10 @@ const tabsListVariants = cva(
     },
     variants: {
       variant: {
-        default: "bg-muted",
+        // Every page sits on the muted panel, so a muted list would vanish;
+        // secondary is the shell's warm grey and the active tab stays white
+        // like the cards (DESIGN.md "Tabs").
+        default: "bg-secondary",
         line: "gap-1 bg-transparent",
       },
     },

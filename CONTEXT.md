@@ -78,7 +78,7 @@ The number of people attending, entered at booking. Drives capacity checks and p
 A unique, human-readable identifier shown in mail and the admin panel.
 
 **Cancellation** (afbooking):
-Calling off a booking via a secure link. Frees the room and buffer immediately; the booking stays in history.
+Calling off a booking from the company's Bookinger page, behind the company login; the link in the confirmation and reminder opens the booking there (ADR-0024). Frees the room and buffer immediately; the booking stays in history.
 _Avoid_: cancel, no-show, delete
 
 **Cancellation fee** (afbestillingsgebyr):
@@ -100,7 +100,7 @@ A fixed add-on (500 kr excl. VAT) where The Social House prepares and resets the
 A fixed add-on (1,000 kr excl. VAT per event day) providing hosting during the meeting. For >5 participants, catering, >4 hours, or special setups. Admin can adjust the price per booking.
 
 **House Event**:
-An internal The Social House event that blocks selected rooms and is not part of the invoicing basis.
+An internal The Social House event that blocks selected rooms and is not part of the invoicing basis. It may not overlap a booking, the buffer included. Its title and short explanation are visible to members.
 _Avoid_: internal booking, block, closure
 
 **Practical notes**:
@@ -137,7 +137,11 @@ One of "Not invoiced" (ikke faktureret), "Invoiced" (faktureret), or "Not invoic
 The amount ready to invoice for a booking or period, excl. VAT.
 
 **Monthly booking economy** (månedens samlede bookingøkonomi):
-A cross-company admin view of one month's totals: bookings, booked room hours, room-rental value after discounts, add-ons, cancellation fees, and invoicing basis excl. VAT, split between members and external customers.
+A cross-company admin view of one month's totals: bookings, booked room hours, room-rental value after discounts, add-ons, cancellation fees, manual amounts, and invoicing basis excl. VAT, split between member and external companies. A booking belongs to the month its meeting starts in. Only bookings whose meeting has ended count; the rest of the month is shown as expected value. A booking marked not invoicable counts as a booking but adds no amount.
+
+**Occupancy** (booket af åbningstiden):
+A room's booked time in a month as a share of its opening time in that month up to now. Only bookings whose meeting has ended count, as in the monthly booking economy.
+_Avoid_: belægning, utilisation, capacity
 
 **Invoice date / number** (fakturadato / fakturanummer):
 Recorded when admin marks bookings as invoiced.
@@ -149,7 +153,11 @@ A mail sent 24 hours before a meeting, with booking details, the cancellation li
 _Avoid_: notification, alert
 
 **Notice board** (opslagstavle):
-The front page: today's bookings, free rooms, when occupied rooms free up, practical notices, and House Events.
+The front page: today's bookings, free rooms, when occupied rooms free up, practical notices, and House Events. An occupied room frees up at the end of what occupies it; the buffer is not added.
+
+**Notice** (besked):
+A practical message from The Social House on the notice board, with a title and a text. Admin switches it on or off and may set the last day it shows. Every logged-in member sees the notices that are on.
+_Avoid_: announcement, post, message
 
 **Outlook calendar**:
 The shared calendar `booking@thesocialhouse.dk` that mirrors all bookings and House Events one-way (platform → Outlook).

@@ -133,6 +133,38 @@ export type Database = {
           },
         ]
       }
+      booking_history: {
+        Row: {
+          booking_history_booking_id: string
+          booking_history_change: Json
+          booking_history_changed_at: string
+          booking_history_changed_by: string | null
+          booking_history_id: string
+        }
+        Insert: {
+          booking_history_booking_id: string
+          booking_history_change: Json
+          booking_history_changed_at?: string
+          booking_history_changed_by?: string | null
+          booking_history_id?: string
+        }
+        Update: {
+          booking_history_booking_id?: string
+          booking_history_change?: Json
+          booking_history_changed_at?: string
+          booking_history_changed_by?: string | null
+          booking_history_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_history_booking_history_booking_id_fkey"
+            columns: ["booking_history_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_addon_total_ore: number
@@ -140,8 +172,12 @@ export type Database = {
           booking_booker_name: string
           booking_booker_phone: string
           booking_cancellation_fee_ore: number | null
+          booking_cancellation_fee_waived: boolean
           booking_cancellation_terms: string | null
           booking_cancelled_at: string | null
+          booking_cancelled_by:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at: string | null
           booking_company_id: string
           booking_created_at: string
@@ -172,8 +208,12 @@ export type Database = {
           booking_booker_name: string
           booking_booker_phone: string
           booking_cancellation_fee_ore?: number | null
+          booking_cancellation_fee_waived?: boolean
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_cancelled_by?:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at?: string | null
           booking_company_id: string
           booking_created_at?: string
@@ -204,8 +244,12 @@ export type Database = {
           booking_booker_name?: string
           booking_booker_phone?: string
           booking_cancellation_fee_ore?: number | null
+          booking_cancellation_fee_waived?: boolean
           booking_cancellation_terms?: string | null
           booking_cancelled_at?: string | null
+          booking_cancelled_by?:
+            | Database["public"]["Enums"]["booking_cancelled_by"]
+            | null
           booking_catering_accepted_at?: string | null
           booking_company_id?: string
           booking_created_at?: string
@@ -244,6 +288,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rooms"
             referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          calendar_event_booking_id: string | null
+          calendar_event_created_at: string
+          calendar_event_graph_event_id: string | null
+          calendar_event_house_event_id: string | null
+          calendar_event_id: string
+          calendar_event_last_synced_at: string | null
+          calendar_event_needs_sync: boolean
+          calendar_event_updated_at: string
+        }
+        Insert: {
+          calendar_event_booking_id?: string | null
+          calendar_event_created_at?: string
+          calendar_event_graph_event_id?: string | null
+          calendar_event_house_event_id?: string | null
+          calendar_event_id?: string
+          calendar_event_last_synced_at?: string | null
+          calendar_event_needs_sync?: boolean
+          calendar_event_updated_at?: string
+        }
+        Update: {
+          calendar_event_booking_id?: string | null
+          calendar_event_created_at?: string
+          calendar_event_graph_event_id?: string | null
+          calendar_event_house_event_id?: string | null
+          calendar_event_id?: string
+          calendar_event_last_synced_at?: string | null
+          calendar_event_needs_sync?: boolean
+          calendar_event_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_calendar_event_booking_id_fkey"
+            columns: ["calendar_event_booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_calendar_event_house_event_id_fkey"
+            columns: ["calendar_event_house_event_id"]
+            isOneToOne: true
+            referencedRelation: "house_events"
+            referencedColumns: ["house_event_id"]
           },
         ]
       }
@@ -331,6 +423,88 @@ export type Database = {
         }
         Relationships: []
       }
+      company_change_requests: {
+        Row: {
+          company_change_request_after_values: Json
+          company_change_request_before_values: Json
+          company_change_request_company_id: string
+          company_change_request_created_at: string
+          company_change_request_current_email: string
+          company_change_request_id: string
+          company_change_request_proposed_email: string
+          company_change_request_status: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at: string
+        }
+        Insert: {
+          company_change_request_after_values: Json
+          company_change_request_before_values: Json
+          company_change_request_company_id: string
+          company_change_request_created_at?: string
+          company_change_request_current_email: string
+          company_change_request_id?: string
+          company_change_request_proposed_email: string
+          company_change_request_status?: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at?: string
+        }
+        Update: {
+          company_change_request_after_values?: Json
+          company_change_request_before_values?: Json
+          company_change_request_company_id?: string
+          company_change_request_created_at?: string
+          company_change_request_current_email?: string
+          company_change_request_id?: string
+          company_change_request_proposed_email?: string
+          company_change_request_status?: Database["public"]["Enums"]["company_change_request_status"]
+          company_change_request_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_change_requests_company_change_request_company_id_fkey"
+            columns: ["company_change_request_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      company_change_tokens: {
+        Row: {
+          company_change_token_consumed_at: string | null
+          company_change_token_created_at: string
+          company_change_token_expires_at: string
+          company_change_token_hash: string
+          company_change_token_id: string
+          company_change_token_kind: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id: string
+        }
+        Insert: {
+          company_change_token_consumed_at?: string | null
+          company_change_token_created_at?: string
+          company_change_token_expires_at: string
+          company_change_token_hash: string
+          company_change_token_id?: string
+          company_change_token_kind: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id: string
+        }
+        Update: {
+          company_change_token_consumed_at?: string | null
+          company_change_token_created_at?: string
+          company_change_token_expires_at?: string
+          company_change_token_hash?: string
+          company_change_token_id?: string
+          company_change_token_kind?: Database["public"]["Enums"]["company_change_token_kind"]
+          company_change_token_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_change_tokens_company_change_token_request_id_fkey"
+            columns: ["company_change_token_request_id"]
+            isOneToOne: false
+            referencedRelation: "company_change_requests"
+            referencedColumns: ["company_change_request_id"]
+          },
+        ]
+      }
       house_event_rooms: {
         Row: {
           house_event_room_event_id: string
@@ -391,6 +565,82 @@ export type Database = {
         }
         Relationships: []
       }
+      invoicing_events: {
+        Row: {
+          invoicing_event_booking_id: string
+          invoicing_event_changed_at: string
+          invoicing_event_changed_by: string | null
+          invoicing_event_from_status: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id: string
+          invoicing_event_invoice_date: string | null
+          invoicing_event_invoice_number: string | null
+          invoicing_event_to_status: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Insert: {
+          invoicing_event_booking_id: string
+          invoicing_event_changed_at?: string
+          invoicing_event_changed_by?: string | null
+          invoicing_event_from_status: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id?: string
+          invoicing_event_invoice_date?: string | null
+          invoicing_event_invoice_number?: string | null
+          invoicing_event_to_status: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Update: {
+          invoicing_event_booking_id?: string
+          invoicing_event_changed_at?: string
+          invoicing_event_changed_by?: string | null
+          invoicing_event_from_status?: Database["public"]["Enums"]["booking_invoicing_status"]
+          invoicing_event_id?: string
+          invoicing_event_invoice_date?: string | null
+          invoicing_event_invoice_number?: string | null
+          invoicing_event_to_status?: Database["public"]["Enums"]["booking_invoicing_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoicing_events_invoicing_event_booking_id_fkey"
+            columns: ["invoicing_event_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
+      manual_amounts: {
+        Row: {
+          manual_amount_amount_ore: number
+          manual_amount_booking_id: string
+          manual_amount_created_at: string
+          manual_amount_created_by: string | null
+          manual_amount_id: string
+          manual_amount_note: string
+        }
+        Insert: {
+          manual_amount_amount_ore: number
+          manual_amount_booking_id: string
+          manual_amount_created_at?: string
+          manual_amount_created_by?: string | null
+          manual_amount_id?: string
+          manual_amount_note: string
+        }
+        Update: {
+          manual_amount_amount_ore?: number
+          manual_amount_booking_id?: string
+          manual_amount_created_at?: string
+          manual_amount_created_by?: string | null
+          manual_amount_id?: string
+          manual_amount_note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_amounts_manual_amount_booking_id_fkey"
+            columns: ["manual_amount_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       notices: {
         Row: {
           notice_body: string
@@ -398,7 +648,7 @@ export type Database = {
           notice_ends_at: string | null
           notice_id: string
           notice_is_active: boolean
-          notice_starts_at: string | null
+          notice_title: string
           notice_updated_at: string
         }
         Insert: {
@@ -407,7 +657,7 @@ export type Database = {
           notice_ends_at?: string | null
           notice_id?: string
           notice_is_active?: boolean
-          notice_starts_at?: string | null
+          notice_title: string
           notice_updated_at?: string
         }
         Update: {
@@ -416,7 +666,7 @@ export type Database = {
           notice_ends_at?: string | null
           notice_id?: string
           notice_is_active?: boolean
-          notice_starts_at?: string | null
+          notice_title?: string
           notice_updated_at?: string
         }
         Relationships: []
@@ -679,6 +929,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_images: {
+        Row: {
+          site_image_created_at: string
+          site_image_path: string
+          site_image_slot: string
+          site_image_updated_at: string
+        }
+        Insert: {
+          site_image_created_at?: string
+          site_image_path: string
+          site_image_slot: string
+          site_image_updated_at?: string
+        }
+        Update: {
+          site_image_created_at?: string
+          site_image_path?: string
+          site_image_slot?: string
+          site_image_updated_at?: string
+        }
+        Relationships: []
+      }
       terms_acceptances: {
         Row: {
           terms_acceptance_accepted_at: string
@@ -802,6 +1073,7 @@ export type Database = {
           calendar_entry_kind: string | null
           calendar_entry_start_at: string | null
           company_display_name: string | null
+          house_event_description: string | null
           house_event_title: string | null
           room_id: string | null
           room_name: string | null
@@ -810,6 +1082,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_company_change_request: {
+        Args: { p_request_id: string; p_token_hash: string }
+        Returns: Json
+      }
       assert_booking_room_free: {
         Args: { p_end_at: string; p_room_id: string; p_start_at: string }
         Returns: undefined
@@ -824,18 +1100,59 @@ export type Database = {
         Returns: undefined
       }
       booking_blocked_until: { Args: { p_end_at: string }; Returns: string }
+      commit_company_email_change: {
+        Args: { p_request_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      create_company_change_request: {
+        Args: {
+          p_after_values: Json
+          p_before_values: Json
+          p_company_id: string
+          p_current_email: string
+          p_proposed_email: string
+        }
+        Returns: string
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       expire_stale_holds: { Args: never; Returns: number }
       next_booking_number: { Args: never; Returns: string }
+      revoke_company_sessions: {
+        Args: { p_auth_user_id: string }
+        Returns: undefined
+      }
+      save_house_event: {
+        Args: {
+          p_description: string
+          p_end_at: string
+          p_house_event_id?: string
+          p_room_ids: string[]
+          p_start_at: string
+          p_title?: string
+        }
+        Returns: string
+      }
+      terms_html_from_plain_text: {
+        Args: { plain_text: string }
+        Returns: string
+      }
     }
     Enums: {
       addon_pricing_model: "fixed" | "per_participant"
+      booking_cancelled_by: "member" | "admin"
       booking_invoicing_status: "not_invoiced" | "invoiced" | "not_invoicable"
       booking_status:
         | "pending_verification"
         | "confirmed"
         | "cancelled"
         | "expired"
+      company_change_request_status:
+        | "pending"
+        | "awaiting_new_email"
+        | "committed"
+        | "rejected"
+        | "expired"
+      company_change_token_kind: "current_email" | "new_email"
       company_membership_status: "member" | "external"
       outbound_email_kind:
         | "company-invitation"
@@ -848,6 +1165,9 @@ export type Database = {
         | "admin-new-booking"
         | "admin-booking-cancelled"
         | "admin-company-completed"
+        | "company-change-review"
+        | "company-change-new-email"
+        | "company-change-completed"
       outbound_email_status:
         | "queued"
         | "sent"
@@ -987,6 +1307,7 @@ export const Constants = {
   public: {
     Enums: {
       addon_pricing_model: ["fixed", "per_participant"],
+      booking_cancelled_by: ["member", "admin"],
       booking_invoicing_status: ["not_invoiced", "invoiced", "not_invoicable"],
       booking_status: [
         "pending_verification",
@@ -994,6 +1315,14 @@ export const Constants = {
         "cancelled",
         "expired",
       ],
+      company_change_request_status: [
+        "pending",
+        "awaiting_new_email",
+        "committed",
+        "rejected",
+        "expired",
+      ],
+      company_change_token_kind: ["current_email", "new_email"],
       company_membership_status: ["member", "external"],
       outbound_email_kind: [
         "company-invitation",
@@ -1006,6 +1335,9 @@ export const Constants = {
         "admin-new-booking",
         "admin-booking-cancelled",
         "admin-company-completed",
+        "company-change-review",
+        "company-change-new-email",
+        "company-change-completed",
       ],
       outbound_email_status: [
         "queued",

@@ -34,6 +34,29 @@ function NormalPrice({ hourlyPriceOre }: { hourlyPriceOre: number }) {
   );
 }
 
+const priceLabel = (discountPercent: number | null): string =>
+  discountPercent === null
+    ? messages.rooms.normalPrice
+    : messages.rooms.yourPrice;
+
+// "Din pris" — the live price, right-aligned; alone it leads the row.
+function CurrentPrice({
+  discounted,
+  label,
+  ore,
+}: {
+  discounted: boolean;
+  label: string;
+  ore: number;
+}) {
+  return (
+    <div className={cn("flex flex-col text-right", !discounted && "ml-auto")}>
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span className="font-medium text-lg">{perHour(ore)}</span>
+    </div>
+  );
+}
+
 // "Normalpris" struck left, "Din pris" right (DESIGN.md room card). Without
 // a discount the struck price is omitted and the price sits alone.
 export function PriceRow({
@@ -42,20 +65,18 @@ export function PriceRow({
   hourlyPriceOre,
 }: PriceRowProps) {
   const discounted = hasDiscount(discountPercent);
-  const label =
-    discountPercent === null
-      ? messages.rooms.normalPrice
-      : messages.rooms.yourPrice;
-  const shown = discounted
-    ? memberHourly(hourlyPriceOre, discountPercent)
-    : hourlyPriceOre;
   return (
     <div className={cn("flex items-end justify-between gap-4", className)}>
       {discounted ? <NormalPrice hourlyPriceOre={hourlyPriceOre} /> : null}
-      <div className="flex flex-col text-right">
-        <span className="text-muted-foreground text-xs">{label}</span>
-        <span className="font-medium text-lg">{perHour(shown)}</span>
-      </div>
+      <CurrentPrice
+        discounted={discounted}
+        label={priceLabel(discountPercent)}
+        ore={
+          discounted
+            ? memberHourly(hourlyPriceOre, discountPercent)
+            : hourlyPriceOre
+        }
+      />
     </div>
   );
 }

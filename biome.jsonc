@@ -33,7 +33,7 @@
       "includes": [
         "lib/env.ts",
         "lib/env-client.ts",
-        "netlify/functions/*.mts",
+        "netlify/functions/**/*.mts",
         "scripts/*.ts",
         "next.config.ts",
         "instrumentation.ts",
@@ -44,18 +44,6 @@
         "rules": {
           "style": {
             "noProcessEnv": "off"
-          }
-        }
-      }
-    },
-    // env.selfcheck.ts is a standalone boot self-check (run manually), not a
-    // vitest suite; its top-level node:assert calls are intentional.
-    {
-      "includes": ["lib/env.selfcheck.ts"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noMisplacedAssertion": "off"
           }
         }
       }

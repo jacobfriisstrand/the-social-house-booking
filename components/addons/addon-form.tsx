@@ -75,7 +75,7 @@ function PricingModelField({ control }: { control: Control<AddonFormValues> }) {
   const { field } = useController({ control, name: "pricingModel" });
   return (
     <Field>
-      <FieldLabel>{copy.fields.pricingModel}</FieldLabel>
+      <FieldLabel required>{copy.fields.pricingModel}</FieldLabel>
       <RadioGroup
         name={field.name}
         onBlur={field.onBlur}
@@ -130,7 +130,7 @@ function FlagField({ control, id, label, name }: FlagFieldProps) {
   return (
     <Field orientation="horizontal">
       <Switch checked={field.value} id={id} onCheckedChange={field.onChange} />
-      <FieldLabel className="font-normal" htmlFor={id}>
+      <FieldLabel className="font-normal" htmlFor={id} required>
         {label}
       </FieldLabel>
     </Field>
@@ -202,7 +202,9 @@ export function AddonForm({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field data-invalid={Boolean(fieldError("name"))}>
-            <FieldLabel htmlFor="addon-name">{copy.fields.name}</FieldLabel>
+            <FieldLabel htmlFor="addon-name" required>
+              {copy.fields.name}
+            </FieldLabel>
             <Input
               aria-invalid={Boolean(fieldError("name"))}
               id="addon-name"
@@ -211,7 +213,7 @@ export function AddonForm({
             <FieldMessage message={fieldError("name")} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="addon-description">
+            <FieldLabel htmlFor="addon-description" required={false}>
               {copy.fields.description}
             </FieldLabel>
             <Textarea
@@ -221,7 +223,9 @@ export function AddonForm({
             />
           </Field>
           <Field data-invalid={Boolean(fieldError("priceKroner"))}>
-            <FieldLabel htmlFor="addon-price">{copy.fields.price}</FieldLabel>
+            <FieldLabel htmlFor="addon-price" required>
+              {copy.fields.price}
+            </FieldLabel>
             <Input
               aria-invalid={Boolean(fieldError("priceKroner"))}
               id="addon-price"

@@ -101,6 +101,7 @@ export function CompanyForm({
               control={form.control}
               label={labels.billingNotes}
               name="billingNotes"
+              required={false}
             />
           </FieldGroup>
         </CardContent>
@@ -121,6 +122,7 @@ export function CompanyForm({
               control={form.control}
               label={labels.internalNote}
               name="internalNote"
+              required={false}
             />
           </FieldGroup>
         </CardContent>

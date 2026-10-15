@@ -82,6 +82,27 @@ export const masterDataSchema = z.object({
   ...optionalFields,
 });
 
+export const memberCompanySchema = z.object({
+  ...masterDataFields,
+  ...optionalFields,
+  email,
+});
+
+// Existing companies may have incomplete master data from before the member
+// settings flow was introduced. Their historical review snapshot is still
+// valid data, even when a mandatory field is blank.
+export const companyChangeBeforeSchema = memberCompanySchema.extend({
+  billingAddress: optional,
+  billingCity: optional,
+  billingCountry: optional,
+  billingPostalCode: optional,
+  contactName: optional,
+  contactPhone: optional,
+  cvrNumber: optional,
+  invoiceEmail: z.union([z.literal(""), email]),
+  legalName: optional,
+});
+
 // Admin may leave master data blank until the company completes it; once
 // company_master_data_completed_at is set, the action re-checks the nine with
 // masterDataSchema so they never go blank again.
@@ -109,3 +130,4 @@ export type MembershipStatus = (typeof membershipStatuses)[number];
 export type CreateCompanyValues = z.infer<typeof createCompanySchema>;
 export type MasterDataValues = z.infer<typeof masterDataSchema>;
 export type AdminCompanyValues = z.infer<typeof adminCompanySchema>;
+export type MemberCompanyValues = z.infer<typeof memberCompanySchema>;

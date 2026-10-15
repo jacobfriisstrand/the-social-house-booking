@@ -9,6 +9,9 @@ export type FormState<Values> =
   | {
       error: string;
       fieldErrors?: Partial<Record<keyof Values, string[]>>;
+      // Set when the error means the auth link itself is dead, so link-based
+      // forms can offer a fresh link instead of a plain retry.
+      linkInvalid?: boolean;
       status: "error";
     };
 

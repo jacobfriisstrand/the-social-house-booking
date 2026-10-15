@@ -1,0 +1,185 @@
+"use client";
+
+// The booking sheet on the member overview (DESIGN.md "Bookinger (member)"):
+// a row click opens the booking's details, and a confirmed upcoming booking
+// carries the destructive "Aflys booking" flow — the confirm dialog is
+// Platform message 1 with the live fee (#11), and the action recomputes it
+// server-side at the exact confirm moment (#5, ADR-0006).
+import { useCallback, useState } from "react";
+import { CancelConfirmDialog } from "@/components/bookings/cancel-confirm-dialog";
+import { CancellationSummary } from "@/components/bookings/cancellation-summary";
+import { DetailRow } from "@/components/bookings/detail-row";
+import { PriceOverview } from "@/components/bookings/price-overview";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { cancelOwnBooking } from "@/lib/bookings/cancel-actions";
+import type { BookingOverviewRow } from "@/lib/domain/booking-overview";
+import { formatDate, formatOre, formatTime } from "@/lib/format";
+import { messages } from "@/messages/da";
+
+const copy = messages.bookings.sheet;
+const cancellationCopy = messages.cancellation;
+
+// The confirm dialog is Platform message 1 (DESIGN.md "Confirm before
+// destroying", the cancellation exception): the booking and its live fee,
+// cancelled under the company's own session.
+function MemberCancelDialog({
+  booking,
+  onClose,
+}: {
+  booking: BookingOverviewRow;
+  onClose: () => void;
+}) {
+  const cancel = useCallback(
+    () => cancelOwnBooking(booking.bookingId),
+    [booking.bookingId]
+  );
+  return (
+    <CancelConfirmDialog
+      cancel={cancel}
+      onClose={onClose}
+      title={cancellationCopy.confirmTitle(booking.roomName)}
+    >
+      <CancellationSummary
+        bookingNumber={booking.bookingNumber}
+        endAt={booking.endAt}
+        feeOre={booking.liveCancellationFeeOre ?? 0}
+        startAt={booking.bookingStartAt}
+      />
+    </CancelConfirmDialog>
+  );
+}
+
+// The amounts admin added after the meeting appear as price rows in the
+// frozen price overview above (ADR-0010); the sheet renders nothing extra
+// here.
+function CancellationRules() {
+  return (
+    <div className="rounded-lg border bg-muted/50 p-3 text-muted-foreground text-sm">
+      <p className="mb-1 font-medium text-foreground">{copy.termsTitle}</p>
+      <ul className="list-disc space-y-1 pl-4">
+        {cancellationCopy.rules.map((rule) => (
+          <li key={rule}>{rule}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Booking status controls both the cancellation rules and the cancel action.
+// fallow-ignore-next-line complexity
+function BookingSheetDetails({
+  booking,
+  onCancel,
+}: {
+  booking: BookingOverviewRow;
+  onCancel: () => void;
+}) {
+  const canCancel =
+    booking.bookingStatus === "confirmed" &&
+    booking.liveCancellationFeeOre !== null;
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle>{copy.title}</SheetTitle>
+        <SheetDescription className="font-mono">
+          {booking.bookingNumber}
+        </SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-col gap-6 px-4 pb-8">
+        <dl className="flex flex-col">
+          <DetailRow
+            label={messages.bookings.columns.room}
+            value={booking.roomName}
+          />
+          <DetailRow
+            label={messages.bookings.sheet.date}
+            value={formatDate(booking.bookingStartAt)}
+          />
+          <DetailRow
+            label={messages.bookings.sheet.time}
+            value={`${formatTime(booking.bookingStartAt)} – ${formatTime(booking.endAt)}`}
+          />
+          <DetailRow
+            label={messages.bookings.columns.booker}
+            value={booking.bookerName}
+          />
+          <DetailRow
+            label={messages.bookings.columns.cancellationFee}
+            value={
+              booking.cancellationFeeOre === null
+                ? messages.bookings.noCancellationFee
+                : formatOre(booking.cancellationFeeOre)
+            }
+          />
+          {booking.bookingStatus === "cancelled" &&
+          booking.cancelledAt !== null ? (
+            <DetailRow
+              label={copy.cancelledAt}
+              value={`${formatDate(booking.cancelledAt)} · ${formatTime(booking.cancelledAt)}`}
+            />
+          ) : null}
+        </dl>
+        <PriceOverview model={booking.price} />
+        {booking.bookingStatus === "confirmed" ? <CancellationRules /> : null}
+        {canCancel ? (
+          <Button onClick={onCancel} type="button" variant="destructive">
+            {copy.cancel}
+          </Button>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+// The sheet: the booking's details, the frozen price overview (ADR-0005),
+// the cancellation rules, and — for a confirmed upcoming booking — the
+// destructive cancel flow. A cancelled booking shows its fee instead.
+export function BookingSheet({
+  booking,
+  onClose,
+  open,
+}: {
+  booking: BookingOverviewRow | null;
+  onClose: () => void;
+  open: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const closeSheet = useCallback(() => {
+    setConfirming(false);
+    onClose();
+  }, [onClose]);
+  const handleSheetOpenChange = useCallback(
+    (value: boolean) => {
+      if (!value) {
+        closeSheet();
+      }
+    },
+    [closeSheet]
+  );
+  const openConfirm = useCallback(() => setConfirming(true), []);
+
+  if (!booking) {
+    return null;
+  }
+
+  return (
+    <>
+      <Sheet onOpenChange={handleSheetOpenChange} open={open}>
+        <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
+          <BookingSheetDetails booking={booking} onCancel={openConfirm} />
+        </SheetContent>
+      </Sheet>
+      {confirming ? (
+        <MemberCancelDialog booking={booking} onClose={closeSheet} />
+      ) : null}
+    </>
+  );
+}

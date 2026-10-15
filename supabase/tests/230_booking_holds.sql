@@ -47,7 +47,13 @@ alter table public.bookings enable trigger bookings_live_hold;
 
 select is(public.expire_stale_holds(), 1::integer, 'the sweep flips exactly the stale hold');
 select is((select count(*) from public.bookings where booking_status = 'expired'), 2::bigint, 'both dead holds are expired');
-select is((select count(*) from public.bookings where booking_status = 'pending_verification'), 1::bigint, 'the live hold is untouched');
+-- Scoped to the fixture room: base tables may carry other rows (seed.sql).
+select is(
+  (select count(*) from public.bookings
+   where booking_status = 'pending_verification'
+     and booking_room_id = '44444444-4444-4444-4444-444444444001'),
+  1::bigint,
+  'the live hold is untouched');
 select is(public.expire_stale_holds(), 0::integer, 'a second sweep finds nothing to flip');
 
 -- With pending meaning live, the calendar shows the live hold and none of
@@ -55,9 +61,11 @@ select is(public.expire_stale_holds(), 0::integer, 'a second sweep finds nothing
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111002","role":"authenticated"}';
 select is(
-  (select count(*) from public.calendar_entries where calendar_entry_kind = 'booking'),
+  (select count(*) from public.calendar_entries
+   where calendar_entry_kind = 'booking'
+     and room_id = '44444444-4444-4444-4444-444444444001'),
   1::bigint,
-  'calendar_entries shows the live hold only');
+  'calendar_entries shows the live hold only (fixture room)');
 
 select * from finish();
 rollback;
