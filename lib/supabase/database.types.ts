@@ -929,6 +929,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_images: {
+        Row: {
+          site_image_created_at: string
+          site_image_path: string
+          site_image_slot: string
+          site_image_updated_at: string
+        }
+        Insert: {
+          site_image_created_at?: string
+          site_image_path: string
+          site_image_slot: string
+          site_image_updated_at?: string
+        }
+        Update: {
+          site_image_created_at?: string
+          site_image_path?: string
+          site_image_slot?: string
+          site_image_updated_at?: string
+        }
+        Relationships: []
+      }
       terms_acceptances: {
         Row: {
           terms_acceptance_accepted_at: string

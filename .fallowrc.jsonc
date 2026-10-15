@@ -139,6 +139,27 @@
         "files": ["components/ui/toggle-group.tsx"],
         "maxCrap": 32,
         "reason": "shadcn-owned composition block, kept as added (DESIGN.md: ui components are owned, not restructured)."
+      },
+      {
+        "files": ["components/settings/hero-image-form.tsx"],
+        "maxCognitive": 20,
+        "maxCrap": 48,
+        "reason": "The hero upload flow (#89) is exercised end to end in the browser check (pick, save, replacement, orphan rollback) and its payload boundary is unit-tested; the CRAP estimate credits no coverage."
+      },
+      {
+        "files": ["lib/settings/actions.ts"],
+        "maxCrap": 48,
+        "reason": "updatePublicHeroImage is thin DB wiring over a schema-validated payload; the pointer swap runs under 165_rls_site_images.sql and the browser flow."
+      },
+      {
+        "files": ["lib/outlook/sync.ts"],
+        "maxCrap": 48,
+        "reason": "payloadOf is the Graph payload mapper; the sync module is covered by lib/outlook/sync.test.ts and the dirty-mark trigger suite (205_calendar_dirty_marks.sql)."
+      },
+      {
+        "files": ["netlify/functions/common/job-call.mts"],
+        "maxCrap": 48,
+        "reason": "callScheduledJob is pinned by netlify/functions/common/job-call.test.mts (five cases, the host-named 404 included); the estimator does not credit .mts test imports."
       }
     ]
   },

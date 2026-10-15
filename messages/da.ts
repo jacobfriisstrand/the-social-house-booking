@@ -1038,12 +1038,18 @@ export const messages = {
   settings: {
     copyPassword: "Klik for at kopiere adgangskoden",
     errors: {
+      imageMaxSize: "Billedet er for stort. Maks. 5 MB.",
+      imageMimeType: "Billedet skal være PNG, JPEG eller WebP.",
       required: "Feltet skal udfyldes.",
       saveFailed: "Indstillingerne kunne ikke gemmes. Prøv igen.",
       wifiNetworkMax: "Netværksnavnet må højst være 32 tegn.",
       wifiPasswordMax: "Adgangskoden må højst være 63 tegn.",
     },
+    heroImageDescription:
+      "Billedet i højre halvdel af de offentlige sider (log ind, glemt adgangskode m.m.). Uden et billede vises standardfotoet.",
+    heroImageSection: "Offentligt billede",
     passwordCopied: "Adgangskode kopieret",
+    pickImage: "Vælg billede",
     saved: "Indstillingerne er gemt",
     saving: "Gemmer …",
     submit: "Gem",
