@@ -131,11 +131,6 @@
         "reason": "CRAP is estimated without unit coverage on the admin read queries; the queries run under the seeded overview and the pgTap RLS suite."
       },
       {
-        "files": ["netlify/functions/common/job-call.mts"],
-        "maxCrap": 32,
-        "reason": "CRAP is estimated without unit coverage outside lib/, but the caller is unit-tested (netlify/functions/common/job-call.test.mts): env guard, URL fallback, response check."
-      },
-      {
         "files": ["components/ui/toggle-group.tsx"],
         "maxCrap": 32,
         "reason": "shadcn-owned composition block, kept as added (DESIGN.md: ui components are owned, not restructured)."
