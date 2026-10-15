@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { SetPasswordForm } from "@/components/set-password-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setPasswordLinkSchema } from "@/lib/validation/auth";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.setPassword.title,
+};
 
 // Target of the invite (and later recovery) link the Send Email Hook builds:
 // /set-password?token_hash=…&type=invite is used by the custom Send Email

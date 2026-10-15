@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.notFound.title,
+};
 
 // Rendered when no route matches (node_modules/next/dist/docs/01-app/01-getting-started/10-error-handling.md).
 export default function NotFound() {

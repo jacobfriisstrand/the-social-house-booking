@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { MasterDataForm } from "@/components/companies/master-data-form";
 import { requireOwnCompany } from "@/lib/auth/require-company";
 import { companyToMemberValues } from "@/lib/domain/company-master-data";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.masterData.title,
+};
 
 export default async function CompanyMasterDataPage() {
   const { company } = await requireOwnCompany();

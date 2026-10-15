@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CompanyChangeReview } from "@/components/company-change-review";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -6,6 +7,10 @@ import {
   verifyNewCompanyEmail,
 } from "@/lib/companies/change-actions";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.companyChangeReview.title,
+};
 
 export default async function CompanyChangePage({
   params,
