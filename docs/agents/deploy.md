@@ -17,6 +17,8 @@ Deploy previews are part of the development environment: same database, same ema
 
 `netlify.toml` carries the non-secret per-context values (`APP_ENV`, `NEXT_PUBLIC_SITE_URL`) under `[context.<name>.environment]`. Deploy previews get no fixed `NEXT_PUBLIC_SITE_URL`; `lib/env.ts` falls back to Netlify's `DEPLOY_PRIME_URL`. Everything else, secrets included, is set on the site per context with `netlify env:set` (see `scripts/setup-netlify-env.sh`); `RESEND_FROM` stays there too because it changes with the Resend account at go-live. The `develop` branch deploy is enabled in the Netlify UI, not in the toml. Secrets never go in `netlify.toml`.
 
+`netlify.toml` environment values are build-time only: they inline into the Next bundles but never reach the function runtime. The scheduled jobs (`netlify/functions/*`) resolve their target host at runtime from `NEXT_PUBLIC_SITE_URL` with **no fallback** — Netlify's runtime `URL` is always the site's main (production) address, and silently pointing a branch deploy at production is exactly the failure to avoid (observed 2026-10-14). So every context that runs the jobs carries `NEXT_PUBLIC_SITE_URL` set with `netlify env:set` (production and branch-deploy do; deploy previews have no fixed URL and must never run the jobs). A missing variable fails loudly instead of driving another context.
+
 ## Branching and PRs
 
 - `feature/<short-name>` → PR → `develop` (squash merge). `develop` → PR → `main` (merge commit; one commit per release).
