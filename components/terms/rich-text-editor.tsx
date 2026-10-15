@@ -53,6 +53,56 @@ interface TermsRichTextEditorProps {
   onChange: (html: string) => void;
 }
 
+interface LinkRowProps {
+  apply: () => void;
+  close: () => void;
+  href: string;
+  onHrefChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onHrefKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+}
+
+// The link dialog under the editor: href input, apply and remove. The
+// parent owns the open/closed state (the toolbar's link button opens it
+// with the selection's current href) and the input's handlers; the row
+// renders them and the "not allowed" line.
+function LinkRow({
+  apply,
+  close,
+  onHrefChange,
+  onHrefKeyDown,
+  href,
+}: LinkRowProps) {
+  const invalidHref =
+    href.trim().length > 0 && !isAllowedTermsHref(href.trim());
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-2">
+        <Input
+          aria-label={copy.link.href}
+          onChange={onHrefChange}
+          onKeyDown={onHrefKeyDown}
+          placeholder="https://"
+          value={href}
+        />
+        <Button
+          disabled={!isAllowedTermsHref(href.trim())}
+          onClick={apply}
+          size="sm"
+          type="button"
+        >
+          {copy.link.apply}
+        </Button>
+        <Button onClick={close} size="sm" type="button" variant="outline">
+          {copy.link.remove}
+        </Button>
+      </div>
+      {invalidHref ? (
+        <p className="text-destructive text-sm">{copy.link.invalid}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function TermsRichTextEditor({
   content,
   invalid = false,
@@ -204,37 +254,13 @@ export function TermsRichTextEditor({
         <EditorContent editor={editor} />
       </div>
       {linkHref === null ? null : (
-        <div className="flex flex-col gap-1">
-          <div className="flex gap-2">
-            <Input
-              aria-label={copy.link.href}
-              onChange={onLinkHrefChange}
-              onKeyDown={onLinkHrefKeyDown}
-              placeholder="https://"
-              value={linkHref}
-            />
-            <Button
-              disabled={!isAllowedTermsHref(linkHref.trim())}
-              onClick={applyLink}
-              size="sm"
-              type="button"
-            >
-              {copy.link.apply}
-            </Button>
-            <Button
-              onClick={removeLink}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {copy.link.remove}
-            </Button>
-          </div>
-          {linkHref.trim().length > 0 &&
-          !isAllowedTermsHref(linkHref.trim()) ? (
-            <p className="text-destructive text-sm">{copy.link.invalid}</p>
-          ) : null}
-        </div>
+        <LinkRow
+          apply={applyLink}
+          close={removeLink}
+          href={linkHref}
+          onHrefChange={onLinkHrefChange}
+          onHrefKeyDown={onLinkHrefKeyDown}
+        />
       )}
     </div>
   );

@@ -60,6 +60,29 @@ async function nextVersionFor(
   return { ok: true, version: nextTermsVersion(latest.terms_version_version) };
 }
 
+// The insert itself: two admins saving at once collide on (name,
+// version); the second gets the generic failure and saves again.
+async function insertVersion(
+  supabase: SessionClient,
+  content: string,
+  name: string,
+  version: string
+): Promise<FormState<TermsFormValues>> {
+  const { error } = await supabase.from("terms_versions").insert({
+    terms_version_content: content,
+    terms_version_name: name,
+    terms_version_published_at: new Date().toISOString(),
+    terms_version_version: version,
+  });
+  if (error) {
+    return saveFailed;
+  }
+  // The editor, and every page that links the current versions: the
+  // booking dialog on Hjem and the room pages, and the member settings.
+  revalidatePath("/", "layout");
+  return { status: "success" };
+}
+
 export async function publishTermsVersion(
   _previousState: FormState<TermsFormValues>,
   values: TermsFormValues
@@ -83,19 +106,5 @@ export async function publishTermsVersion(
   if (!next.ok) {
     return next.state;
   }
-  // Two admins saving at once collide on (name, version); the second gets
-  // the generic failure and saves again.
-  const { error } = await supabase.from("terms_versions").insert({
-    terms_version_content: content,
-    terms_version_name: parsed.data.name,
-    terms_version_published_at: new Date().toISOString(),
-    terms_version_version: next.version,
-  });
-  if (error) {
-    return saveFailed;
-  }
-  // The editor, and every page that links the current versions: the
-  // booking dialog on Hjem and the room pages, and the member settings.
-  revalidatePath("/", "layout");
-  return { status: "success" };
+  return insertVersion(supabase, content, parsed.data.name, next.version);
 }
