@@ -61,7 +61,15 @@ const mustAccept = (message: string) =>
 // booking's participant count in the action, the schema cannot know it).
 export const addOnFields = {
   addOnIds: z.array(z.guid()).max(50),
-  addOnQuantities: z.record(z.guid(), z.number().int().min(1)).optional(),
+  addOnQuantities: z
+    .record(
+      z.guid(),
+      z
+        .number(errors.addOnQuantityInvalid)
+        .int(errors.addOnQuantityInvalid)
+        .min(1, errors.addOnQuantityInvalid)
+    )
+    .optional(),
   cateringAccepted: mustAccept(errors.cateringAcceptRequired),
 };
 

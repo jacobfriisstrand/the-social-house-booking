@@ -71,18 +71,20 @@ select is(
   'the catalogue keeps the House Host base price (#7 override)');
 
 -- #119: coffee for 4 of 10 — the line may carry fewer than the headcount,
--- and the sync trigger follows the smaller total; the line is removed
--- again so the fixture totals stay as the later asserts expect.
+-- and the sync trigger follows the smaller total. The lunch line already
+-- exists for this booking (the pair is the primary key), so the case is
+-- an UPDATE of that line — the write path the flow uses — and a plain
+-- update restores it for the later asserts.
 select lives_ok(
-  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666001'', ''55555555-5555-5555-5555-555555555001'', 22500, 4, 90000)',
+  'update public.booking_addons set booking_addon_quantity = 4, booking_addon_total_ore = 90000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001'' and booking_addon_addon_id = ''55555555-5555-5555-5555-555555555001''',
   'a per-participant line may carry fewer than the participant count (#119)');
 select is(
   (select booking_addon_total_ore from public.bookings where booking_id = '66666666-6666-6666-6666-666666666001'),
-  465000,
-  'the add-on total follows the partial quantity while it exists');
-delete from public.booking_addons
+  240000,
+  'the add-on total follows the partial quantity');
+update public.booking_addons set booking_addon_quantity = 10, booking_addon_total_ore = 225000
 where booking_addon_booking_id = '66666666-6666-6666-6666-666666666001'
-  and booking_addon_quantity = 4;
+  and booking_addon_addon_id = '55555555-5555-5555-5555-555555555001';
 
 -- A participant-count change before confirmation rewrites the lines; the
 -- sync trigger follows (booking first, then the lines).

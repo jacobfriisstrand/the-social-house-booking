@@ -177,7 +177,9 @@ export function BookingDetailSheet({
                 discountPercent: row.discountPercent,
                 manualAmounts: row.manualAmounts,
                 roomTotalOre: row.roomPriceOre,
-                totalOre: (parts.memberPriceOre ?? 0) + row.addonTotalOre,
+                // #126: the stored total — an admin's explicit price shows
+                // here exactly as set, not recomputed from the parts.
+                totalOre: row.expectedTotalOre,
               })}
             />
           )}

@@ -47,6 +47,7 @@ const row: AdminBookingRow = {
   companyName: "Rituals",
   discountPercent: 0,
   endAt: "2026-10-13T10:00:00Z",
+  expectedTotalOre: 100_000,
   invoiceDate: null,
   invoiceNumber: null,
   invoicingStatus: "not_invoiced",

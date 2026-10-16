@@ -45,6 +45,7 @@ const row = (overrides: Partial<AdminBookingRow>): AdminBookingRow => ({
   companyName: "Firma",
   discountPercent: 0,
   endAt: "2026-09-02T19:00:00Z",
+  expectedTotalOre: 62_500,
   invoiceDate: null,
   invoiceNumber: null,
   invoicingStatus: "not_invoiced",

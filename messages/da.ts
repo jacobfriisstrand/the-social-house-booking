@@ -173,6 +173,7 @@ export const messages = {
       addOnInvalid:
         "Et af de valgte tilkøb hører ikke til dette lokale. Fjern det og prøv igen.",
       addOnQuantity: (max: number) => `Vælg et antal mellem 1 og ${max}.`,
+      addOnQuantityInvalid: "Antallet skal være et helt tal på mindst 1.",
       beyondHorizon: "Der kan bookes op til 12 måneder frem.",
       cateringAcceptRequired:
         "Du skal acceptere reglerne for forplejning, før du kan booke.",
