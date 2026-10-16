@@ -37,6 +37,7 @@ const booking = (
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member" as const,
+  practicalNotes: null,
   roomId: "r1",
   roomName: "Room of Power",
   roomPriceOre: 100_000,

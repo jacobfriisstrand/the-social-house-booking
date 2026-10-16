@@ -32,6 +32,7 @@ const baseRow: AdminBookingRow = {
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  practicalNotes: null,
   roomId: "r1",
   roomName: "Lokalet",
   roomPriceOre: 62_500,

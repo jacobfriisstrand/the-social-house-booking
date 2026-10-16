@@ -147,6 +147,12 @@ export function BookingDetailSheet({
                 value={`${formatDate(row.cancelledAt)} · ${formatTime(row.cancelledAt)}`}
               />
             ) : null}
+            {row.practicalNotes ? (
+              <DetailRow
+                label={bookingsCopy.sheet.practicalNotes}
+                value={row.practicalNotes}
+              />
+            ) : null}
             <DetailRow
               label={copy.markInvoiced.date}
               value={

@@ -99,6 +99,7 @@ interface AdminBookingQueryRow {
   booking_invoice_number: string | null;
   booking_invoicing_status: BookingInvoicingStatus;
   booking_number: string;
+  booking_practical_notes: string | null;
   booking_room_price_ore: number;
   booking_start_at: string;
   booking_status: BookingStatus;
@@ -169,6 +170,7 @@ function toAdminBookingRow(
       0
     ),
     membershipStatus: row.companies?.company_membership_status ?? "external",
+    practicalNotes: row.booking_practical_notes,
     roomId: room.roomId,
     roomName: room.roomName,
     roomPriceOre: row.booking_room_price_ore,
@@ -215,7 +217,7 @@ function withBookingStates<
 // The admin row's columns: the list and the calendar read the same shape,
 // so a calendar entry can open the same detail sheet the table does.
 const ADMIN_BOOKING_SELECT =
-  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_company_id, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name, addon_description)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)";
+  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_company_id, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_practical_notes, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name, addon_description)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)";
 
 export async function listAdminBookings(
   supabase: Client,

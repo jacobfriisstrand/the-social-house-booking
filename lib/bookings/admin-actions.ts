@@ -9,7 +9,7 @@
 // (companies_external_no_discount). Mail 8 tells admin about the booking;
 // Mail 4 to the booker is wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
-import type { AddOnLine } from "@/lib/domain/addons";
+import { type AddOnLine, linesTotalOre } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AdminBookingValues,
@@ -24,6 +24,7 @@ import {
 } from "./addon-lines";
 import {
   confirmPendingBooking,
+  expectedTotalWithOverride,
   insertPendingBooking,
   type SessionClient,
   type Step,
@@ -85,12 +86,20 @@ async function insertConfirmedBooking(
   roomHourlyPriceOre: number,
   lines: AddOnLine[]
 ): Promise<AdminBookingState> {
+  // #126: the admin's total overrides the computed one; the sync trigger
+  // lands on it once the lines are written.
+  const overrideTotalOre = expectedTotalWithOverride(
+    input.totalPriceOre,
+    lines
+  );
   const inserted = await insertPendingBooking(
     supabase,
     company,
     input,
     roomHourlyPriceOre,
-    {}
+    overrideTotalOre === undefined
+      ? {}
+      : { booking_expected_total_ore: overrideTotalOre }
   );
   if (!inserted.ok) {
     return {
@@ -149,6 +158,18 @@ export async function createAdminBooking(
   const validated = await findRoomAndAddOns(supabase, parsed.data);
   if (!validated.ok) {
     return validated.state;
+  }
+  // #126: the override lands as the stored total only when it can absorb
+  // the add-on lines — the database rejects a negative expected total.
+  if (
+    parsed.data.totalPriceOre !== undefined &&
+    parsed.data.totalPriceOre < linesTotalOre(validated.lines)
+  ) {
+    return {
+      error: errors.totalPriceBelowAddOns,
+      fieldErrors: { totalPriceOre: [errors.totalPriceBelowAddOns] },
+      status: "error",
+    };
   }
   return insertConfirmedBooking(
     supabase,

@@ -35,15 +35,25 @@ export interface AddOnLineOptions {
   // price for this line only. The catalogue keeps its base price, so every
   // new booking still defaults to it (#7).
   overrideUnitPriceOre?: number | null;
+  // #119: the customer's chosen quantity for a per-participant add-on
+  // (coffee for 4 of 8 people), 1..participantCount — the caller
+  // (selectAddOnLines) validates the range. A fixed add-on stays at 1
+  // whatever this carries.
+  quantity?: number | null;
 }
 
 // The quantity the booking_addons row carries: the participant count for a
-// per-participant add-on, 1 for a fixed one.
+// per-participant add-on unless the customer chose fewer (#119), 1 for a
+// fixed one.
 export function addonQuantity(
   pricingModel: AddOnPricingModel,
-  participantCount: number
+  participantCount: number,
+  quantity?: number | null
 ): number {
-  return pricingModel === "per_participant" ? participantCount : 1;
+  if (pricingModel === "fixed") {
+    return 1;
+  }
+  return quantity ?? participantCount;
 }
 
 export function addonLine(
@@ -52,7 +62,11 @@ export function addonLine(
   options: AddOnLineOptions = {}
 ): AddOnLine {
   const unitPriceOre = options.overrideUnitPriceOre ?? addOn.priceOre;
-  const quantity = addonQuantity(addOn.pricingModel, participantCount);
+  const quantity = addonQuantity(
+    addOn.pricingModel,
+    participantCount,
+    options.quantity
+  );
   return {
     addonId: addOn.addonId,
     quantity,

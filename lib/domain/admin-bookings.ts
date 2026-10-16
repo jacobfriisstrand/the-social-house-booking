@@ -48,6 +48,8 @@ export interface AdminBookingRow {
   manualAmounts: ManualAmountEntry[];
   manualAmountsOre: number;
   membershipStatus: AdminMembership;
+  // The customer's note from the booking flow (#114); null when empty.
+  practicalNotes: string | null;
   roomId: string;
   roomName: string;
   roomPriceOre: number;

@@ -72,6 +72,7 @@ export const messages = {
       empty: "Dette lokale har ingen tilkøb.",
       fixed: "Fast pris",
       perParticipant: "pr. deltager",
+      quantityLabel: "Antal",
       title: "Tilkøb",
     },
     admin: {
@@ -85,6 +86,8 @@ export const messages = {
       fields: {
         company: "Virksomhed",
         companyPlaceholder: "Vælg virksomhed",
+        totalPrice: "Totalpris (ekskl. moms)",
+        totalPriceHint: "Efterlad tom for den beregnede pris.",
       },
       submit: "Opret booking",
       submitting: "Opretter …",
@@ -169,6 +172,7 @@ export const messages = {
     errors: {
       addOnInvalid:
         "Et af de valgte tilkøb hører ikke til dette lokale. Fjern det og prøv igen.",
+      addOnQuantity: (max: number) => `Vælg et antal mellem 1 og ${max}.`,
       beyondHorizon: "Der kan bookes op til 12 måneder frem.",
       cateringAcceptRequired:
         "Du skal acceptere reglerne for forplejning, før du kan booke.",
@@ -200,6 +204,8 @@ export const messages = {
       tooManyResends:
         "Der kan ikke sendes flere koder til denne booking. Start bookingen forfra.",
       tooShort: "Bookingen skal vare mindst 30 minutter.",
+      totalPriceBelowAddOns:
+        "Totalprisen kan ikke være lavere end tilkøbets beløb.",
       verifyFailed: "Koden kunne ikke bekræftes. Prøv igen.",
     },
     fields: {
@@ -209,6 +215,7 @@ export const messages = {
       code: "Bekræftelseskode",
       endAt: "Slut",
       participantCount: "Antal deltagere",
+      practicalNotes: "Bemærkninger",
       room: "Lokale",
       startAt: "Start",
     },
@@ -446,6 +453,7 @@ export const messages = {
       invoiceDate: "Fakturadato",
       invoiceNumber: "Fakturanummer",
       participants: (count: number) => `${count} deltagere`,
+      practicalNotes: "Bemærkninger",
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
       successWithoutFee: "Bookingen er aflyst, og lokalet er frigivet.",

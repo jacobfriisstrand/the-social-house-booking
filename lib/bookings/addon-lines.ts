@@ -52,21 +52,50 @@ export async function listRoomAddOns(
 
 export type AddOnSelection =
   | { ok: true; lines: AddOnLine[]; selected: AddOn[] }
-  | { error: string; ok: false };
+  | { error: string; field: "addOnIds" | "addOnQuantities"; ok: false };
 
 // The chosen ids → lines in the add-ons' display order (so the confirmation
-// renders them stably). Duplicates collapse; unknown ids fail.
+// renders them stably). Duplicates collapse; unknown ids fail. A
+// per-participant add-on carries the customer's chosen quantity (#119) —
+// 1..participantCount, the participant count itself the default; the
+// schema guarantees an integer ≥ 1, so only the upper bound is checked
+// here. A fixed add-on ignores quantities entirely.
 export function selectAddOnLines(
   available: AddOn[],
   selectedIds: string[],
-  participantCount: number
+  participantCount: number,
+  quantities: Record<string, number> = {}
 ): AddOnSelection {
   const uniqueIds = new Set(selectedIds);
   const selected = available.filter((addOn) => uniqueIds.has(addOn.addonId));
   if (selected.length !== uniqueIds.size) {
-    return { error: errors.addOnInvalid, ok: false };
+    return { error: errors.addOnInvalid, field: "addOnIds", ok: false };
   }
-  return { lines: addonLines(selected, participantCount), ok: true, selected };
+  for (const addOn of selected) {
+    const quantity = quantities[addOn.addonId];
+    if (
+      addOn.pricingModel === "per_participant" &&
+      quantity !== undefined &&
+      quantity > participantCount
+    ) {
+      return {
+        error: errors.addOnQuantity(participantCount),
+        field: "addOnQuantities",
+        ok: false,
+      };
+    }
+  }
+  const optionsByAddonId = new Map(
+    selected.map((addOn) => [
+      addOn.addonId,
+      { quantity: quantities[addOn.addonId] },
+    ])
+  );
+  return {
+    lines: addonLines(selected, participantCount, optionsByAddonId),
+    ok: true,
+    selected,
+  };
 }
 
 export interface AddOnLineInsert {
@@ -96,7 +125,7 @@ export const lineInserts = (
 // state with the field error on addOnIds.
 export interface AddOnSelectionState {
   error: string;
-  fieldErrors: { addOnIds: string[] };
+  fieldErrors: { addOnIds: string[] } | { addOnQuantities: string[] };
   status: "error";
 }
 
@@ -104,14 +133,23 @@ export async function checkedAddOnLines(
   supabase: SupabaseClient<Database>,
   roomId: string,
   selectedIds: string[],
-  participantCount: number
+  participantCount: number,
+  quantities: Record<string, number> = {}
 ): Promise<{ lines: AddOnLine[] } | AddOnSelectionState> {
   const roomAddOns = await listRoomAddOns(supabase, roomId);
-  const selection = selectAddOnLines(roomAddOns, selectedIds, participantCount);
+  const selection = selectAddOnLines(
+    roomAddOns,
+    selectedIds,
+    participantCount,
+    quantities
+  );
   if (!selection.ok) {
     return {
       error: selection.error,
-      fieldErrors: { addOnIds: [selection.error] },
+      fieldErrors:
+        selection.field === "addOnQuantities"
+          ? { addOnQuantities: [selection.error] }
+          : { addOnIds: [selection.error] },
       status: "error",
     };
   }
@@ -127,7 +165,10 @@ export type RoomAndAddOns =
 
 export async function findRoomAndAddOns(
   supabase: SessionClient,
-  input: BookableRoomInput & { addOnIds: string[] }
+  input: BookableRoomInput & {
+    addOnIds: string[];
+    addOnQuantities?: Record<string, number>;
+  }
 ): Promise<RoomAndAddOns> {
   const room = await findBookableRoom(supabase, input);
   if (!room.ok) {
@@ -137,7 +178,8 @@ export async function findRoomAndAddOns(
     supabase,
     input.roomId,
     input.addOnIds,
-    input.participantCount
+    input.participantCount,
+    input.addOnQuantities
   );
   if (!("lines" in selection)) {
     return { ok: false, state: selection };

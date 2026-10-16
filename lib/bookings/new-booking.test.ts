@@ -8,7 +8,11 @@
 import { describe, expect, it } from "vitest";
 import type { CancellationBasis } from "@/lib/domain/cancellation";
 import { memberPriceOreForBooking } from "@/lib/domain/cancellation";
-import { bookingPriceOverview, newBookingRow } from "./new-booking";
+import {
+  bookingPriceOverview,
+  expectedTotalWithOverride,
+  newBookingRow,
+} from "./new-booking";
 
 // The reported booking: Room of Power, 4 h, House Service + Lunch for 8,
 // Rituals (50 %). Room 3.200 kr, add-ons 2.300 kr, discount 1.600 kr —
@@ -90,5 +94,38 @@ describe("the frozen room price is the room's total for the booked hours", () =>
     expect(model.roomNormalTotalOre - model.savingsOre + model.addOnsOre).toBe(
       model.totalOre
     );
+  });
+});
+
+describe("the admin's total-price override (#126)", () => {
+  const lines = [{ totalOre: 230_000 }];
+
+  it("starts the insert at the override minus the lines, so the sync trigger lands on the override", () => {
+    expect(expectedTotalWithOverride(390_000, lines)).toBe(160_000);
+  });
+
+  it("passes the override through unchanged without lines", () => {
+    expect(expectedTotalWithOverride(200_000, [])).toBe(200_000);
+  });
+
+  it("is undefined without an override, keeping the computed snapshot", () => {
+    expect(expectedTotalWithOverride(undefined, lines)).toBeUndefined();
+  });
+});
+
+describe("the customer's note on the booking (#114)", () => {
+  it("is written through, and blank becomes null", () => {
+    const row = newBookingRow(
+      { ...holdInput, practicalNotes: "  Kaffe til 4 af 8  " },
+      50,
+      80_000
+    );
+    expect(row.booking_practical_notes).toBe("Kaffe til 4 af 8");
+    const blank = newBookingRow(
+      { ...holdInput, practicalNotes: "   " },
+      50,
+      80_000
+    );
+    expect(blank.booking_practical_notes).toBeNull();
   });
 });

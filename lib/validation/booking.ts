@@ -31,6 +31,8 @@ export const bookerFields = {
   bookerEmail: z.email(errors.emailInvalid),
   bookerName: required,
   bookerPhone: required,
+  // #114: the customer's free-text note on the booking; blank stays null.
+  practicalNotes: z.string().trim().max(500, errors.tooLong).optional(),
 };
 
 // Room, period and headcount: what any booking needs besides the booker.
@@ -54,8 +56,12 @@ const mustAccept = (message: string) =>
 // hospitality"): catering is ordered only through The Social House and the
 // booker must actively accept it — an unchecked checkbox fails the parse,
 // so the acceptance timestamp is only ever written from a parsed true.
+// #119: the quantities the customer chose for the selected per-participant
+// add-ons (1..participantCount — the upper bound is checked against the
+// booking's participant count in the action, the schema cannot know it).
 export const addOnFields = {
   addOnIds: z.array(z.guid()).max(50),
+  addOnQuantities: z.record(z.guid(), z.number().int().min(1)).optional(),
   cateringAccepted: mustAccept(errors.cateringAcceptRequired),
 };
 
@@ -107,15 +113,30 @@ export const createHoldSchema = z
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
 
 // The dialog's form for a company: the same fields, with the company id
-// carried along empty so one form type serves both viewers.
+// carried along empty so one form type serves both viewers. totalPriceOre
+// is the admin's price override (#126), declared here only so the shared
+// form type carries the field — the company action parses with
+// createHoldSchema, which has no totalPriceOre and strips it, so a
+// customer can never price their own booking. Only createAdminBooking
+// reads it.
 export const bookingFormSchema = z
-  .object({ ...bookingFields, companyId: z.string() })
+  .object({
+    ...bookingFields,
+    companyId: z.string(),
+    totalPriceOre: z.number().int().min(0).optional(),
+  })
   .superRefine(bookingWindowRule);
 
 // Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
-// which company, and confirmed at once without a verification code.
+// which company, and confirmed at once without a verification code. The
+// total-price override (#126) is admin-only: it never joins bookingFields,
+// so the company flow's schema cannot carry it.
 export const adminBookingSchema = z
-  .object({ ...bookingFields, companyId: z.guid(errors.required) })
+  .object({
+    ...bookingFields,
+    companyId: z.guid(errors.required),
+    totalPriceOre: z.number().int().min(0).optional(),
+  })
   .superRefine(bookingWindowRule);
 
 export type AdminBookingValues = z.infer<typeof adminBookingSchema>;

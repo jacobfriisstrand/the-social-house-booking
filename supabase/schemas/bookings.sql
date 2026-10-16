@@ -371,13 +371,13 @@ create trigger booking_addons_snapshot_immutable
   for each row
   execute function public.enforce_addon_snapshot_immutable();
 
--- Line values (#7, ADR-0011): quantity is the headcount for a
--- per-participant add-on and 1 for a fixed one. Checked in Postgres so
--- every write path obeys it; the line total is guarded by the
--- booking_addon_total_check constraint. A per-participant line must be
--- written after the booking row carries the participant count it belongs
--- to (the natural order: booking first, then its lines), so changing the
--- headcount means updating bookings first, then the lines.
+-- Line values (#7, ADR-0011): quantity is the customer's choice between 1
+-- and the headcount for a per-participant add-on (#119), and 1 for a fixed
+-- one. Checked in Postgres so every write path obeys it; the line total is
+-- guarded by the booking_addon_total_check constraint. A per-participant
+-- line must be written after the booking row carries the participant count
+-- it belongs to (the natural order: booking first, then its lines), so
+-- changing the headcount means updating bookings first, then the lines.
 create or replace function public.enforce_addon_line_values()
 returns trigger
 language plpgsql
@@ -395,10 +395,13 @@ begin
   where b.booking_id = new.booking_addon_booking_id;
 
   if v_model = 'per_participant'
-    and new.booking_addon_quantity is distinct from v_participant_count
+    and (
+      new.booking_addon_quantity < 1
+      or new.booking_addon_quantity > v_participant_count
+    )
   then
     raise exception
-      'a per-participant add-on''s quantity must equal the booking''s participant count'
+      'a per-participant add-on''s quantity must be between 1 and the booking''s participant count'
       using errcode = 'P0001';
   end if;
 

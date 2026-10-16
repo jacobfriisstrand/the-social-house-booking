@@ -4,17 +4,19 @@
 // checkbox per add-on with its price (fixed total or per participant,
 // ADR-0011) and description. House Service and House Host are plain
 // add-ons; any guidance lives in their description (ADR-0015), which folds
-// out from "Læs om <tilkøb>" so the list stays short (#4 review). Below the
+// out from "Læs om <tilkøb>" so the list stays short (#4 review). A chosen
+// per-participant add-on carries the quantity to order (#119). Below the
 // list, the catering rule with its required acceptance checkbox: catering
 // is ordered only through The Social House, and the acceptance timestamp
 // is what Mail 4 (#11) repeats. The booking dialog (#4) reuses these
 // fields.
-import { useCallback, useState } from "react";
+import { type ChangeEvent, useCallback, useState } from "react";
 import {
   type Control,
   type FieldValues,
   type Path,
   useController,
+  useWatch,
 } from "react-hook-form";
 import { formatAddonPrice } from "@/components/rooms/addon-price";
 import {
@@ -32,6 +34,7 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import type { AddOnPricingModel } from "@/lib/domain/addons";
 import { messages } from "@/messages/da";
 
@@ -88,25 +91,90 @@ interface AddOnCheckboxListProps<Values extends FieldValues> {
   control: Control<Values>;
   error?: string;
   name: Path<Values>;
+  // #119: the participant-count field, watched for the quantity inputs'
+  // bounds and default. Each quantity input binds its own
+  // `addOnQuantities.<id>` field; quantityError carries the record's own
+  // message.
+  participantsName: Path<Values>;
+  quantityError?: string;
 }
 
-interface AddOnRowProps {
+interface AddOnRowProps<Values extends FieldValues> {
   addOn: AddOnView;
   checked: boolean;
+  control: Control<Values>;
   onAboutChange: (addonId: string | null) => void;
   onChange: (addonId: string, checked: boolean) => void;
   open: boolean;
+  participantCount: number;
+}
+
+// #119: the quantity the customer orders of a per-participant add-on,
+// 1..participantCount. Empty shows the default (the participant count) and
+// writes nothing — the server then prices the line at the full headcount.
+function AddOnQuantityInput<Values extends FieldValues>({
+  addonId,
+  control,
+  participantCount,
+}: {
+  addonId: string;
+  control: Control<Values>;
+  participantCount: number;
+}) {
+  const { field, fieldState } = useController({
+    control,
+    name: `addOnQuantities.${addonId}` as Path<Values>,
+  });
+  const id = `add-on-quantity-${addonId}`;
+  const { onChange } = field;
+  const handleChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      const value = event.target.valueAsNumber;
+      onChange(Number.isNaN(value) ? undefined : value);
+    },
+    [onChange]
+  );
+
+  return (
+    <div className="flex items-center gap-2 pl-7">
+      <label className="text-muted-foreground text-xs" htmlFor={id}>
+        {copy.quantityLabel}
+      </label>
+      <Input
+        aria-invalid={fieldState.invalid}
+        className="h-8 w-16"
+        id={id}
+        inputMode="numeric"
+        max={participantCount}
+        min={1}
+        name={field.name}
+        onBlur={field.onBlur}
+        onChange={handleChange}
+        ref={field.ref}
+        type="number"
+        value={
+          typeof field.value === "number" && !Number.isNaN(field.value)
+            ? field.value
+            : participantCount
+        }
+      />
+      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+    </div>
+  );
 }
 
 // One add-on row: the checkbox, the price chip ("+ 500 kr", "Gratis",
-// "+ 225 kr / person", DESIGN.md), and the fold-out description.
-function AddOnRow({
+// "+ 225 kr / person", DESIGN.md), the fold-out description, and — on a
+// checked per-participant add-on — the quantity input (#119).
+function AddOnRow<Values extends FieldValues>({
   addOn,
   checked,
+  control,
   onAboutChange,
   onChange,
   open,
-}: AddOnRowProps) {
+  participantCount,
+}: AddOnRowProps<Values>) {
   const id = `add-on-${addOn.addonId}`;
   const handleCheckedChange = useCallback(
     (isChecked: boolean): void => {
@@ -134,6 +202,13 @@ function AddOnRow({
           </Badge>
         </FieldLabel>
       </div>
+      {checked && addOn.pricingModel === "per_participant" ? (
+        <AddOnQuantityInput
+          addonId={addOn.addonId}
+          control={control}
+          participantCount={participantCount}
+        />
+      ) : null}
       {addOn.description ? (
         <AddOnAbout
           description={addOn.description}
@@ -151,9 +226,12 @@ export function AddOnCheckboxList<Values extends FieldValues>({
   control,
   error,
   name,
+  participantsName,
+  quantityError,
 }: AddOnCheckboxListProps<Values>) {
   const { field } = useController({ control, name });
   const selected = Array.isArray(field.value) ? (field.value as string[]) : [];
+  const participantCount = useWatch({ control, name: participantsName });
   // The add-on whose description is folded out; opening another closes it.
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -180,14 +258,19 @@ export function AddOnCheckboxList<Values extends FieldValues>({
           <AddOnRow
             addOn={addOn}
             checked={selected.includes(addOn.addonId)}
+            control={control}
             key={addOn.addonId}
             onAboutChange={setOpenId}
             onChange={toggle}
             open={openId === addOn.addonId}
+            participantCount={Number(participantCount) || 0}
           />
         ))}
       </div>
       {error ? <FieldError errors={[{ message: error }]} /> : null}
+      {quantityError ? (
+        <FieldError errors={[{ message: quantityError }]} />
+      ) : null}
     </FieldSet>
   );
 }

@@ -31,6 +31,7 @@ import type { z } from "zod";
 import { ChoiceSelect } from "@/components/forms/choice-select";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextField } from "@/components/forms/text-field";
+import { TextareaField } from "@/components/forms/textarea-field";
 import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -98,9 +99,9 @@ const idleState: BookingState = { status: "idle" };
 // these, and a server error on one of them returns to its step.
 const STEP_FIELDS: readonly (readonly Path<BookingFormValues>[])[] = [
   ["startAt", "endAt", "participantCount"],
-  ["addOnIds", "cateringAccepted"],
-  ["companyId", "bookerName", "bookerEmail", "bookerPhone"],
-  ["termsAccepted"],
+  ["addOnIds", "addOnQuantities", "cateringAccepted"],
+  ["bookerName", "bookerEmail", "bookerPhone", "companyId", "practicalNotes"],
+  ["termsAccepted", "totalPriceOre"],
 ];
 export const FORM_STEP_COUNT = STEP_FIELDS.length;
 const LAST_STEP = FORM_STEP_COUNT - 1;
@@ -133,6 +134,7 @@ const defaultValues = (
   terms: CurrentTerms
 ): BookingFormValues => ({
   addOnIds: [],
+  addOnQuantities: {},
   bookerEmail: "",
   bookerName: "",
   bookerPhone: "",
@@ -140,6 +142,7 @@ const defaultValues = (
   companyId: "",
   endAt: prefillInstant(prefill.date, prefill.to),
   participantCount: prefill.participants ?? DEFAULT_PARTICIPANTS,
+  practicalNotes: "",
   roomId: room.roomId,
   startAt: prefillInstant(prefill.date, prefill.from),
   termsAccepted: false,
@@ -252,17 +255,23 @@ const livePriceOverview = (
   room: DialogRoom,
   values: Pick<
     BookingFormValues,
-    "addOnIds" | "endAt" | "participantCount" | "startAt"
+    "addOnIds" | "addOnQuantities" | "endAt" | "participantCount" | "startAt"
   >,
   discountPercent: number
 ): PriceOverviewModel => {
   const hours = hoursOf(values.startAt, values.endAt);
+  const selected = selectedAddOns(room, values.addOnIds);
+  // #119: the chosen quantities ride into the lines; an add-on without an
+  // explicit choice prices at the full headcount.
+  const optionsByAddonId = new Map(
+    selected.map((addOn) => [
+      addOn.addonId,
+      { quantity: values.addOnQuantities?.[addOn.addonId] },
+    ])
+  );
   const input = {
     addOnsOre: linesTotalOre(
-      addonLines(
-        selectedAddOns(room, values.addOnIds),
-        values.participantCount || 0
-      )
+      addonLines(selected, values.participantCount || 0, optionsByAddonId)
     ),
     discountPercent,
     hours,
@@ -559,6 +568,12 @@ function ExtrasStep({
         control={control}
         error={errors.addOnIds?.message}
         name="addOnIds"
+        participantsName="participantCount"
+        quantityError={
+          typeof errors.addOnQuantities?.root?.message === "string"
+            ? errors.addOnQuantities.root.message
+            : undefined
+        }
       />
       <CateringAcceptance
         control={control}
@@ -589,6 +604,13 @@ function BookerStep({
         <CompanyField control={control} viewer={viewer} />
       ) : null}
       <BookerFields control={control} />
+      {/* #114: the customer's note to the house; blank stays null. */}
+      <TextareaField
+        control={control}
+        label={messages.booking.fields.practicalNotes}
+        name="practicalNotes"
+        required={false}
+      />
     </div>
   );
 }
@@ -666,6 +688,19 @@ function OverviewStep({
           />
         </dl>
       </div>
+      {/* #126: the admin sets the whole booking's price before it is
+          created; the company flow never sees the field. */}
+      {viewer.kind === "admin" ? (
+        <TextField
+          control={control}
+          description={messages.booking.admin.fields.totalPriceHint}
+          inputMode="numeric"
+          label={messages.booking.admin.fields.totalPrice}
+          name="totalPriceOre"
+          required={false}
+          type="number"
+        />
+      ) : null}
       <PriceOverview model={price} />
     </div>
   );
@@ -786,15 +821,39 @@ export function BookingForm({
   });
   useStepForErrors(state, onStepChange);
   const markAttempted = useStepRevalidation(form, step);
-  const [participantCount, addOnIds, companyId] = useWatch({
+  const [
+    participantCount,
+    addOnIds,
+    addOnQuantities,
+    companyId,
+    totalPriceOre,
+  ] = useWatch({
     control,
-    name: ["participantCount", "addOnIds", "companyId"],
+    name: [
+      "participantCount",
+      "addOnIds",
+      "addOnQuantities",
+      "companyId",
+      "totalPriceOre",
+    ],
   });
-  const price = livePriceOverview(
+  const live = livePriceOverview(
     room,
-    { addOnIds, endAt: slot.endAt, participantCount, startAt: slot.startAt },
+    {
+      addOnIds,
+      addOnQuantities,
+      endAt: slot.endAt,
+      participantCount,
+      startAt: slot.startAt,
+    },
     discountFor(viewer, companyId)
   );
+  // #126: the admin's explicit total replaces the computed one in the
+  // overview — the computed rows stay as the basis it was set from.
+  const price =
+    viewer.kind === "admin" && typeof totalPriceOre === "number"
+      ? { ...live, totalOre: totalPriceOre }
+      : live;
   const back = useCallback(() => onStepChange(step - 1), [onStepChange, step]);
   const next = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {

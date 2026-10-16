@@ -53,6 +53,7 @@ const row: AdminBookingRow = {
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  practicalNotes: null,
   roomId: "r1",
   roomName: "Room of Ideas",
   roomPriceOre: 100_000,

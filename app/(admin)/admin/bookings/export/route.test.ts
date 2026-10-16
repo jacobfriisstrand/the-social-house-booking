@@ -51,6 +51,7 @@ const row = (overrides: Partial<AdminBookingRow>): AdminBookingRow => ({
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  practicalNotes: null,
   roomId: "r",
   roomName: "Lokale",
   roomPriceOre: 62_500,
