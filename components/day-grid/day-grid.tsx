@@ -96,8 +96,10 @@ const rangeLabel = (drag: SlotDrag): string =>
   `${ROW_LABELS[drag.startRow]} - ${ROW_END_LABELS[drag.endRow]}`;
 
 // The grid's rows keep their height and never highlight (DESIGN.md: no
-// hover effects beyond the cursor).
-const ROW_CLASS = "h-9 hover:bg-transparent";
+// hover effects beyond the cursor). On the phone the hairline between the
+// slots reads as a see-through tint against the card (#115), so there it
+// takes the background color; the desktop keeps the border-token hairline.
+const ROW_CLASS = "h-9 max-sm:border-b-transparent hover:bg-transparent";
 // A block fills its cell, spanned rows included, with a small inset.
 const BLOCK_CELL_CLASS = "relative border-l p-0";
 const BLOCK_CLASS = "absolute inset-0.5 rounded-lg border";
