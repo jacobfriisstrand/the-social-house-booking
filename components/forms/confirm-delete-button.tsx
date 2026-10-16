@@ -5,7 +5,8 @@
 // serves notices and House Events; the caller supplies the Server Action
 // and the copy.
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useTransition } from "react";
+import { useControlledOpen } from "@/components/forms/use-controlled-open";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,15 +36,21 @@ export function ConfirmDeleteButton({
   copy,
   id,
   onDelete,
+  onOpenChange,
+  open,
 }: {
   copy: ConfirmDeleteCopy;
   id: string;
   onDelete: (id: string) => Promise<DeleteResult>;
+  // Controlled mode: the dialog opens from a row's ⋯ menu, no trigger.
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setOpen] = useControlledOpen(open, onOpenChange);
+  const isControlled = onOpenChange !== undefined;
   const [pending, startTransition] = useTransition();
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => setOpen(false), [setOpen]);
 
   const confirm = useCallback(() => {
     startTransition(async () => {
@@ -56,15 +63,17 @@ export function ConfirmDeleteButton({
       }
       toast.add({ title: result.error, type: "error" });
     });
-  }, [copy.deleted, id, onDelete, router]);
+  }, [copy.deleted, id, onDelete, router, setOpen]);
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger
-        render={<Button size="sm" type="button" variant="outline" />}
-      >
-        {copy.delete}
-      </DialogTrigger>
+    <Dialog onOpenChange={setOpen} open={dialogOpen}>
+      {isControlled ? null : (
+        <DialogTrigger
+          render={<Button size="sm" type="button" variant="outline" />}
+        >
+          {copy.delete}
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{copy.deleteTitle}</DialogTitle>

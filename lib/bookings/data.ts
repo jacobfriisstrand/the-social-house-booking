@@ -30,6 +30,8 @@ type BookingRow = Pick<
   | "booking_expected_total_ore"
   | "booking_hold_expires_at"
   | "booking_id"
+  | "booking_invoice_date"
+  | "booking_invoice_number"
   | "booking_invoicing_status"
   | "booking_number"
   | "booking_room_id"
@@ -57,7 +59,7 @@ type BookingRow = Pick<
 };
 
 const BOOKING_COLUMNS =
-  "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
+  "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoice_date, booking_invoice_number, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
 
 // The fee the sheet's cancel flow states (#5): only for a confirmed booking
 // whose start has not passed — a past booking and a hold have nothing to
@@ -104,6 +106,10 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     ),
     cancelledAt: booking.booking_cancelled_at,
     endAt: booking.booking_end_at,
+    // The invoice fields ride along (#122): the sheet shows them only
+    // while the status is invoiced.
+    invoiceDate: booking.booking_invoice_date,
+    invoiceNumber: booking.booking_invoice_number,
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
     price: bookingPriceOverview(booking, addOns),

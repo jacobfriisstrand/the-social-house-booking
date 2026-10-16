@@ -2,11 +2,12 @@
 
 // The add-on catalogue's create/edit sheet (#7): the general admin edit
 // pattern (DESIGN.md) — edit in a sheet on the page, no dedicated route.
-import { type ComponentProps, useCallback, useState } from "react";
+import { type ComponentProps, useCallback } from "react";
 import {
   AddonForm,
   type AddonFormInitial,
 } from "@/components/addons/addon-form";
+import { useControlledOpen } from "@/components/forms/use-controlled-open";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -19,30 +20,36 @@ import { messages } from "@/messages/da";
 
 export function AddonSheet({
   initial,
+  onOpenChange,
+  open,
   triggerLabel,
   triggerSize = "sm",
   triggerVariant = "outline",
 }: {
   // The add-on in edit mode; null in create mode.
   initial: AddonFormInitial | null;
+  // Controlled mode: the sheet opens from a row's ⋯ menu, no trigger.
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
   triggerLabel: string;
   triggerSize?: ComponentProps<typeof Button>["size"];
   triggerVariant?: ComponentProps<typeof Button>["variant"];
 }) {
-  const [open, setOpen] = useState(false);
-  const close = useCallback((): void => {
-    setOpen(false);
-  }, []);
+  const [currentOpen, setOpen] = useControlledOpen(open, onOpenChange);
+  const isControlled = onOpenChange !== undefined;
+  const close = useCallback((): void => setOpen(false), [setOpen]);
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
-      <SheetTrigger
-        render={
-          <Button size={triggerSize} type="button" variant={triggerVariant} />
-        }
-      >
-        {triggerLabel}
-      </SheetTrigger>
+    <Sheet onOpenChange={setOpen} open={currentOpen}>
+      {isControlled ? null : (
+        <SheetTrigger
+          render={
+            <Button size={triggerSize} type="button" variant={triggerVariant} />
+          }
+        >
+          {triggerLabel}
+        </SheetTrigger>
+      )}
       <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{initial ? copy.editTitle : copy.createTitle}</SheetTitle>

@@ -29,14 +29,13 @@ export default async function AdminHouseEventsPage() {
 
   return (
     <>
-      <PageHeader title={copy.title} />
+      {/* The create button rides the shell header like the other admin
+          pages (2026-10-16, the rooms page's pattern). */}
+      <PageHeader title={copy.title}>
+        <HouseEventSheet initial={null} rooms={rooms} />
+      </PageHeader>
       <PagePanel>
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-end">
-            <HouseEventSheet initial={null} rooms={rooms} />
-          </div>
-          <HouseEventTable events={events} rooms={rooms} />
-        </div>
+        <HouseEventTable events={events} rooms={rooms} />
       </PagePanel>
     </>
   );

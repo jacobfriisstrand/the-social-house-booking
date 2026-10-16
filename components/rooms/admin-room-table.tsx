@@ -168,7 +168,7 @@ export function AdminRoomTable({
 
   return (
     <Card className="gap-0 py-0">
-      <Table className="min-w-[52rem] table-fixed">
+      <Table className="min-w-[52rem] table-fixed" sticky>
         <TableHeader>
           <TableRow>
             <TableHead className="w-20" />

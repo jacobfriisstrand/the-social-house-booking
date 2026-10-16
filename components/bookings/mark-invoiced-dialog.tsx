@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { markBookingsInvoiced } from "@/lib/bookings/invoicing-actions";
+import { dateToIso } from "@/lib/calendar-date";
 import {
   type MarkInvoicedValues,
   markInvoicedSchema,
@@ -139,7 +140,9 @@ export function MarkInvoicedDialog({
       bookingIds: ids,
       companyMode: true,
       companyNumbers: {},
-      invoiceDate: "",
+      // Today preselected (2026-10-16): an invoice is dated the day it is
+      // written; the admin only moves it when e-conomic says otherwise.
+      invoiceDate: dateToIso(new Date()),
       invoiceNumbers: {},
     },
     resolver: zodResolver(markInvoicedSchema),
@@ -160,7 +163,7 @@ export function MarkInvoicedDialog({
         bookingIds: ids,
         companyMode: true,
         companyNumbers: {},
-        invoiceDate: "",
+        invoiceDate: dateToIso(new Date()),
         invoiceNumbers: {},
       });
     }

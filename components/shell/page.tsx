@@ -35,14 +35,14 @@ export function PageHeader({
         <SidebarToggle />
         <h1 className="font-semibold text-xl">{title}</h1>
       </div>
-      {children}
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   );
 }
 
 export function PagePanel({ children }: { children?: ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col gap-6 rounded-xl bg-muted p-3 md:min-h-0 md:overflow-y-auto">
+    <div className="flex flex-1 flex-col gap-6 rounded-xl border bg-muted p-3 shadow-xs md:min-h-0 md:overflow-y-auto">
       {children}
     </div>
   );

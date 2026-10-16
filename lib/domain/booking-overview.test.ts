@@ -180,6 +180,8 @@ describe("sortBookingOverview", () => {
     bookingNumber: bookingId,
     cancellationFeeOre: null,
     cancelledAt: null,
+    invoiceDate: null,
+    invoiceNumber: null,
     liveCancellationFeeOre: null,
     price: {
       addOnLines: [],

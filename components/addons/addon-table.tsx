@@ -11,15 +11,22 @@ import { useSortable } from "@dnd-kit/react/sortable";
 // and the fixed-vs-per-participant badge on one row (ADR-0011); House
 // Service and House Host are plain add-ons whose guidance lives in the
 // description (ADR-0015). Same @dnd-kit pattern as the room image list.
-import { GripVerticalIcon } from "lucide-react";
+import {
+  BanIcon,
+  CircleCheckIcon,
+  EllipsisIcon,
+  GripVerticalIcon,
+  PencilIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { AddonActiveButton } from "@/components/addons/addon-active-button";
 import { AddonSheet } from "@/components/addons/addon-sheet";
+import { useActiveToggleAction } from "@/components/forms/active-toggle-button";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import {
   Table,
   TableBody,
@@ -29,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
-import { reorderAddons } from "@/lib/addons/actions";
+import { reorderAddons, setAddonActive } from "@/lib/addons/actions";
 import type { AddonDetail } from "@/lib/addons/data";
 import { formatKroner } from "@/lib/format";
 import { slicePage } from "@/lib/pagination";
@@ -66,14 +73,67 @@ function NameCell({ addon }: { addon: AddonDetail }) {
   return <TableCell className="font-medium">{addon.name}</TableCell>;
 }
 
+// One row's ⋯ menu, the bookings list's pattern: the edit sheet and the
+// active toggle in one place. The toggle is reversible (no confirm); the
+// drag grip stays outside, in its own cell.
+function AddonRowMenu({
+  addon,
+  onEdit,
+}: {
+  addon: AddonDetail;
+  onEdit: (addon: AddonDetail) => void;
+}) {
+  const { pending, run } = useActiveToggleAction(
+    setAddonActive,
+    copy.statusUpdated
+  );
+  const edit = useCallback(() => onEdit(addon), [onEdit, addon]);
+  const toggle = useCallback(
+    () => run(addon.addonId, !addon.isActive),
+    [addon, run]
+  );
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            aria-label={copy.actions.open(addon.name)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={edit}>
+          <PencilIcon aria-hidden="true" />
+          {copy.editLabel}
+        </MenuItem>
+        <MenuItem disabled={pending} onClick={toggle}>
+          {addon.isActive ? (
+            <BanIcon aria-hidden="true" />
+          ) : (
+            <CircleCheckIcon aria-hidden="true" />
+          )}
+          {addon.isActive ? copy.deactivate : copy.activate}
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  );
+}
+
 interface SortableAddonRowProps {
   addon: AddonDetail;
   index: number;
+  onEdit: (addon: AddonDetail) => void;
 }
 
 // One draggable row: the grip handle is the only drag activator (the
-// status badge and the edit/deactivate buttons stay clickable).
-function SortableAddonRow({ addon, index }: SortableAddonRowProps) {
+// status badge and the actions menu stay clickable).
+function SortableAddonRow({ addon, index, onEdit }: SortableAddonRowProps) {
   const sortable = useSortable({
     id: addon.addonId,
     index,
@@ -106,24 +166,8 @@ function SortableAddonRow({ addon, index }: SortableAddonRowProps) {
           <Badge variant="destructive">{messages.rooms.inactiveLabel}</Badge>
         )}
       </TableCell>
-      <TableCell className="w-40">
-        <div className="flex items-center justify-end gap-2 *:basis-1/2">
-          <AddonSheet
-            initial={{
-              addonId: addon.addonId,
-              description: addon.description ?? "",
-              isActive: addon.isActive,
-              name: addon.name,
-              priceOre: addon.priceOre,
-              pricingModel: addon.pricingModel,
-            }}
-            triggerLabel={copy.editLabel}
-          />
-          <AddonActiveButton
-            addonId={addon.addonId}
-            isActive={addon.isActive}
-          />
-        </div>
+      <TableCell className="w-14">
+        <AddonRowMenu addon={addon} onEdit={onEdit} />
       </TableCell>
     </TableRow>
   );
@@ -136,6 +180,18 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
   const paged = useTablePagination(rows.length);
   const start = (paged.page - 1) * paged.pageSize;
   const visible = slicePage(rows, paged.page, paged.pageSize);
+  // The row's ⋯ menu opens the edit sheet: the picked add-on rides here,
+  // the sheet mounts its form fresh on every open.
+  const [editing, setEditing] = useState<AddonDetail | null>(null);
+  const openEditor = useCallback(
+    (addon: AddonDetail): void => setEditing(addon),
+    []
+  );
+  const closeEditor = useCallback((open: boolean) => {
+    if (!open) {
+      setEditing(null);
+    }
+  }, []);
 
   // Pick up refreshed add-ons (edit, status toggle) without resetting the
   // drag order — the persisted order equals the server's order.
@@ -180,28 +236,53 @@ export function AddonTable({ addons }: { addons: AddonDetail[] }) {
   );
 
   return (
-    <Card className="gap-0 py-0">
-      <Table className="min-w-[48rem] table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12" />
-            <TableHead>{copy.nameColumn}</TableHead>
-            <TableHead>{copy.pricingColumn}</TableHead>
-            <TableHead>{copy.activeColumn}</TableHead>
-            <TableHead className="w-40" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <DragDropProvider onDragEnd={handleDragEnd}>
-            {visible.map((row, index) => (
-              <SortableAddonRow addon={row.addon} index={index} key={row.id} />
-            ))}
-          </DragDropProvider>
-        </TableBody>
-      </Table>
-      <CardFooter className="px-2 py-1">
-        <TablePagination paged={paged} totalItems={rows.length} />
-      </CardFooter>
-    </Card>
+    <>
+      <Card className="gap-0 py-0">
+        <Table className="min-w-[48rem] table-fixed" sticky>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12" />
+              <TableHead>{copy.nameColumn}</TableHead>
+              <TableHead>{copy.pricingColumn}</TableHead>
+              <TableHead>{copy.activeColumn}</TableHead>
+              <TableHead className="w-14" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <DragDropProvider onDragEnd={handleDragEnd}>
+              {visible.map((row, index) => (
+                <SortableAddonRow
+                  addon={row.addon}
+                  index={index}
+                  key={row.id}
+                  onEdit={openEditor}
+                />
+              ))}
+            </DragDropProvider>
+          </TableBody>
+        </Table>
+        <CardFooter className="px-2 py-1">
+          <TablePagination paged={paged} totalItems={rows.length} />
+        </CardFooter>
+      </Card>
+      {/* The rows' edit sheet, opened from the ⋯ menu. */}
+      <AddonSheet
+        initial={
+          editing
+            ? {
+                addonId: editing.addonId,
+                description: editing.description ?? "",
+                isActive: editing.isActive,
+                name: editing.name,
+                priceOre: editing.priceOre,
+                pricingModel: editing.pricingModel,
+              }
+            : null
+        }
+        onOpenChange={closeEditor}
+        open={editing !== null}
+        triggerLabel={copy.editLabel}
+      />
+    </>
   );
 }

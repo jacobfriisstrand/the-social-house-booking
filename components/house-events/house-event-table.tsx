@@ -1,10 +1,18 @@
-// The admin's House Events from today on (Opslag, "House Events" tab, #12):
-// date, time, the rooms it blocks, the title, and the row actions.
+"use client";
 
+// The admin's House Events from today on (Opslag, "House Events" tab, #12):
+// date, time, the rooms it blocks, and the row's ⋯ menu — the edit sheet
+// and the confirm-guarded delete, the bookings list's pattern.
+
+import { EllipsisIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { useCallback } from "react";
 import { EmptyCard } from "@/components/empty-card";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
+import { useMenuDialogs } from "@/components/forms/use-menu-dialogs";
 import { HouseEventSheet } from "@/components/house-events/house-event-sheet";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import {
   Table,
   TableBody,
@@ -33,12 +41,59 @@ const toFormValues = (event: HouseEvent): HouseEventFormValues => ({
   title: event.title ?? "",
 });
 
-function HouseEventRow({
+// One row's ⋯ menu: the edit sheet and the delete, which opens the
+// confirm dialog (DESIGN.md "Confirm before destroying").
+function HouseEventRowMenu({
   event,
-  rooms,
+  onDelete,
+  onEdit,
 }: {
   event: HouseEvent;
-  rooms: HouseEventRoom[];
+  onDelete: (event: HouseEvent) => void;
+  onEdit: (event: HouseEvent) => void;
+}) {
+  const openDelete = useCallback(() => onDelete(event), [onDelete, event]);
+  const openEdit = useCallback(() => onEdit(event), [onEdit, event]);
+  const label = event.title ?? messages.home.houseEventBadge;
+  return (
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            aria-label={copy.actions.open(label)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={openEdit}>
+          <PencilIcon aria-hidden="true" />
+          {copy.editLabel}
+        </MenuItem>
+        <MenuItem
+          className="text-destructive data-[highlighted]:text-destructive"
+          onClick={openDelete}
+        >
+          <Trash2Icon aria-hidden="true" />
+          {copy.delete}
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function HouseEventRow({
+  event,
+  onDelete,
+  onEdit,
+}: {
+  event: HouseEvent;
+  onDelete: (event: HouseEvent) => void;
+  onEdit: (event: HouseEvent) => void;
 }) {
   return (
     <TableRow>
@@ -54,15 +109,8 @@ function HouseEventRow({
       <TableCell className="truncate font-medium">
         {event.title ?? messages.home.houseEventBadge}
       </TableCell>
-      <TableCell className="w-48">
-        <div className="flex items-center justify-end gap-2">
-          <HouseEventSheet initial={toFormValues(event)} rooms={rooms} />
-          <ConfirmDeleteButton
-            copy={copy}
-            id={event.houseEventId}
-            onDelete={deleteHouseEvent}
-          />
-        </div>
+      <TableCell className="w-14">
+        <HouseEventRowMenu event={event} onDelete={onDelete} onEdit={onEdit} />
       </TableCell>
     </TableRow>
   );
@@ -75,36 +123,64 @@ export function HouseEventTable({
   events: HouseEvent[];
   rooms: HouseEventRoom[];
 }) {
+  // The row menu's picks: the sheet and the confirm dialog are mounted
+  // once, at the table's level, opened from the ⋯ menu.
+  const {
+    closeDelete,
+    closeEditor,
+    deleting,
+    editing,
+    setDeleting,
+    setEditing,
+  } = useMenuDialogs<HouseEvent>();
+
   if (events.length === 0) {
     return (
       <EmptyCard description={copy.emptyDescription} title={copy.emptyTitle} />
     );
   }
   return (
-    <Card className="py-0">
-      {/* table-fixed: the columns between the first and the last share the
-          remaining width evenly (DESIGN.md "Components"); the room list and
-          the title truncate instead of pushing into the next column. */}
-      <Table className="min-w-[48rem] table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead>{copy.columns.date}</TableHead>
-            <TableHead>{copy.columns.time}</TableHead>
-            <TableHead>{copy.columns.rooms}</TableHead>
-            <TableHead>{copy.columns.title}</TableHead>
-            <TableHead className="w-48" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {events.map((event) => (
-            <HouseEventRow
-              event={event}
-              key={event.houseEventId}
-              rooms={rooms}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+    <>
+      <Card className="py-0">
+        <Table className="min-w-[48rem] table-fixed" sticky>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{copy.columns.date}</TableHead>
+              <TableHead>{copy.columns.time}</TableHead>
+              <TableHead>{copy.columns.rooms}</TableHead>
+              <TableHead>{copy.columns.title}</TableHead>
+              <TableHead className="w-14" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {events.map((event) => (
+              <HouseEventRow
+                event={event}
+                key={event.houseEventId}
+                onDelete={setDeleting}
+                onEdit={setEditing}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+      {/* The rows' edit sheet, opened from the ⋯ menu. */}
+      <HouseEventSheet
+        initial={editing ? toFormValues(editing) : null}
+        onOpenChange={closeEditor}
+        open={editing !== null}
+        rooms={rooms}
+      />
+      {/* The delete, confirm-guarded, opened from the ⋯ menu. */}
+      {deleting ? (
+        <ConfirmDeleteButton
+          copy={copy}
+          id={deleting.houseEventId}
+          onDelete={deleteHouseEvent}
+          onOpenChange={closeDelete}
+          open
+        />
+      ) : null}
+    </>
   );
 }

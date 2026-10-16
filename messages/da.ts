@@ -7,6 +7,9 @@ export const messages = {
   // (ADR-0007) and House Service/House Host are ordinary add-ons, seeded
   // into every environment (ADR-0015).
   addons: {
+    actions: {
+      open: (name: string) => `Handlinger for ${name}`,
+    },
     activate: "Aktiver",
     activeColumn: "Status",
     activeLabel: "Aktiv",
@@ -93,6 +96,10 @@ export const messages = {
       date: "Dato",
       description: "Bookingen er bekræftet, og lokalet er reserveret.",
       heading: "Tak for din booking",
+      // The invoice read-back (#122): a booking visited here after it has
+      // been invoiced shows the number and date.
+      invoiceDate: "Fakturadato",
+      invoiceNumber: "Fakturanummer",
       participants: "Deltagere",
       room: "Lokale",
       time: "Tidspunkt",
@@ -265,6 +272,12 @@ export const messages = {
         title: (room: string, company: string) =>
           `Afbook ${room} for ${company}?`,
       },
+      // The header total (#121) and the per-company cash flow (#120):
+      // what the currently filtered — or the ticked — bookings can still
+      // be invoiced for.
+      cashFlow: {
+        title: "Faktureringsklar pr. virksomhed",
+      },
       columns: {
         company: "Virksomhed",
         discount: "Rabat",
@@ -428,6 +441,10 @@ export const messages = {
       cancel: "Aflys booking",
       cancelledAt: "Afbooket",
       date: "Dato",
+      // The invoice read-back (#122): shown only while the booking is
+      // invoiced.
+      invoiceDate: "Fakturadato",
+      invoiceNumber: "Fakturanummer",
       participants: (count: number) => `${count} deltagere`,
       successWithFee: (fee: string) =>
         `Bookingen er aflyst. Afbestillingsgebyr: ${fee} ekskl. moms.`,
@@ -751,6 +768,9 @@ export const messages = {
   // explanation. Title and explanation are member-visible. An event may
   // not overlap a booking, buffer included (decided in #12).
   houseEvents: {
+    actions: {
+      open: (title: string) => `Handlinger for ${title}`,
+    },
     clearAll: "Fravælg alle",
     columns: {
       date: "Dato",
@@ -861,6 +881,9 @@ export const messages = {
   // admin switches a notice on or off and may pick the last day it shows
   // (decided in #12). Every logged-in member sees the ones that are on.
   notices: {
+    actions: {
+      open: (title: string) => `Handlinger for ${title}`,
+    },
     activate: "Slå til",
     clearLastDay: "Fjern dato",
     columns: {
@@ -1102,6 +1125,9 @@ export const messages = {
     statistics: "Statistik",
     terms: "Betingelser",
     toggleSidebar: "Vis eller skjul sidepanel",
+    // The member badge's read (#8): what the number beside Bookinger counts.
+    upcomingBadge: "Vis kommende bookinger",
+    upcomingBadgeTooltip: "Kommende bookinger",
     worklistBadge: "Vis bookinger der kan faktureres",
     worklistBadgeTooltip: "Bookinger der kan faktureres",
   },

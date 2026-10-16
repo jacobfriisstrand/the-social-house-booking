@@ -8,6 +8,9 @@ import {
   adminTotals,
   breakdownAdminRows,
   canAdminCancel,
+  companyCashFlow,
+  invoiceReadyOre,
+  invoiceReadyTotalOre,
   invoicingActionAllowance,
   shiftRangeIds,
   sortAdminRows,
@@ -344,5 +347,185 @@ describe("canAdminCancel", () => {
     expect(canAdminCancel(booking({ bookingStatus: "cancelled" }), now)).toBe(
       false
     );
+  });
+});
+
+describe("invoiceReadyOre", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+  // The factory's row has already ended at 11:00; an unended booking ends
+  // after the now instant.
+  const unended = { endAt: "2026-10-01T13:00:00Z" };
+
+  it("counts an ended, uninvoiced booking at its whole basis", () => {
+    expect(
+      invoiceReadyOre(
+        booking({
+          addonTotalOre: 15_000,
+          manualAmountsOre: 2500,
+          roomPriceOre: 100_000,
+        }),
+        now
+      )
+    ).toBe(117_500);
+  });
+
+  it("counts nothing before the booking has ended", () => {
+    expect(invoiceReadyOre(booking(unended), now)).toBe(0);
+  });
+
+  it("counts nothing once invoiced or refused", () => {
+    expect(invoiceReadyOre(booking({ invoicingStatus: "invoiced" }), now)).toBe(
+      0
+    );
+    expect(
+      invoiceReadyOre(booking({ invoicingStatus: "not_invoicable" }), now)
+    ).toBe(0);
+  });
+
+  it("counts a cancelled booking at its payable fee alone", () => {
+    expect(
+      invoiceReadyOre(
+        booking({
+          bookingStatus: "cancelled",
+          cancellationFeeOre: 50_000,
+        }),
+        now
+      )
+    ).toBe(50_000);
+  });
+
+  it("counts a waived or feeless cancellation as zero", () => {
+    expect(
+      invoiceReadyOre(
+        booking({
+          bookingStatus: "cancelled",
+          cancellationFeeOre: 50_000,
+          cancellationFeeWaived: true,
+        }),
+        now
+      )
+    ).toBe(0);
+    expect(invoiceReadyOre(booking({ bookingStatus: "cancelled" }), now)).toBe(
+      0
+    );
+  });
+});
+
+describe("invoiceReadyTotalOre", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+  const unended = { endAt: "2026-10-01T13:00:00Z" };
+
+  it("sums the invoice-ready rows only", () => {
+    expect(
+      invoiceReadyTotalOre(
+        [
+          booking({ bookingId: "b1", roomPriceOre: 10_000 }),
+          // Not ended yet.
+          booking({ bookingId: "b2", roomPriceOre: 20_000, ...unended }),
+          // Invoiced.
+          booking({
+            bookingId: "b3",
+            invoicingStatus: "invoiced",
+            roomPriceOre: 40_000,
+          }),
+          // Cancelled with a payable fee.
+          booking({
+            bookingId: "b4",
+            bookingStatus: "cancelled",
+            cancellationFeeOre: 5000,
+          }),
+        ],
+        now
+      )
+    ).toBe(15_000);
+  });
+});
+
+describe("companyCashFlow", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+
+  it("groups the invoice-ready bookings per company, biggest first", () => {
+    expect(
+      companyCashFlow(
+        [
+          booking({
+            bookingId: "b1",
+            companyId: "c1",
+            companyName: "Rituals",
+            roomPriceOre: 10_000,
+          }),
+          booking({
+            bookingId: "b2",
+            companyId: "c2",
+            companyName: "Beta A/S",
+            roomPriceOre: 40_000,
+          }),
+          booking({
+            bookingId: "b3",
+            companyId: "c1",
+            companyName: "Rituals",
+            roomPriceOre: 7000,
+          }),
+        ],
+        now
+      )
+    ).toEqual([
+      {
+        bookingCount: 1,
+        companyId: "c2",
+        companyName: "Beta A/S",
+        totalOre: 40_000,
+      },
+      {
+        bookingCount: 2,
+        companyId: "c1",
+        companyName: "Rituals",
+        totalOre: 17_000,
+      },
+    ]);
+  });
+
+  it("breaks an amount tie by company name", () => {
+    const rows = [
+      booking({
+        bookingId: "b1",
+        companyId: "c1",
+        companyName: "Zeta ApS",
+        roomPriceOre: 10_000,
+      }),
+      booking({
+        bookingId: "b2",
+        companyId: "c2",
+        companyName: "Alpha ApS",
+        roomPriceOre: 10_000,
+      }),
+    ];
+    expect(
+      companyCashFlow(rows, now).map((entry) => entry.companyName)
+    ).toEqual(["Alpha ApS", "Zeta ApS"]);
+  });
+
+  it("gives a company with nothing invoice-ready no line", () => {
+    expect(
+      companyCashFlow(
+        [
+          // Cancelled without a fee: contributes zero.
+          booking({
+            bookingId: "b1",
+            bookingStatus: "cancelled",
+            companyId: "c1",
+            companyName: "Rituals",
+          }),
+          // Not ended yet.
+          booking({
+            bookingId: "b2",
+            companyId: "c1",
+            endAt: "2026-10-01T13:00:00Z",
+            roomPriceOre: 10_000,
+          }),
+        ],
+        now
+      )
+    ).toEqual([]);
   });
 });

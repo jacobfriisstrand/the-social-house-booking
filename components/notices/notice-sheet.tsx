@@ -146,10 +146,24 @@ function NoticeForm({
   );
 }
 
-// The notice in edit mode; null in create mode.
-export function NoticeSheet({ initial }: { initial: NoticeFormValues | null }) {
+// The notice in edit mode; null in create mode. Controlled mode opens the
+// sheet from a row's ⋯ menu, no trigger.
+export function NoticeSheet({
+  initial,
+  onOpenChange,
+  open,
+}: {
+  initial: NoticeFormValues | null;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
+}) {
   return (
-    <FormSheet copy={copy} editing={initial !== null}>
+    <FormSheet
+      copy={copy}
+      editing={initial !== null}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
       {(close) => (
         <NoticeForm initial={initial ?? EMPTY_NOTICE} onSaved={close} />
       )}
