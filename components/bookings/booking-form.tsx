@@ -309,6 +309,19 @@ const addOnReadBack = (
         : addOn.name,
   }));
 
+// #126: the admin's explicit total replaces the computed one in the
+// overview — the computed rows stay as the basis it was set from. A
+// non-finite value (the number input reports NaN while cleared) falls
+// back to the computed total instead of rendering "NaN".
+const overviewPrice = (
+  admin: boolean,
+  live: PriceOverviewModel,
+  totalPriceOre: number | undefined
+): PriceOverviewModel =>
+  admin && typeof totalPriceOre === "number" && Number.isFinite(totalPriceOre)
+    ? { ...live, totalOre: totalPriceOre }
+    : live;
+
 const companyName = (
   viewer: BookingViewer,
   companyId: string
@@ -953,16 +966,7 @@ export function BookingForm({
     },
     discountFor(viewer, companyId)
   );
-  // #126: the admin's explicit total replaces the computed one in the
-  // overview — the computed rows stay as the basis it was set from. A
-  // non-finite value (the number input reports NaN while cleared) falls
-  // back to the computed total instead of rendering "NaN".
-  const price =
-    viewer.kind === "admin" &&
-    typeof totalPriceOre === "number" &&
-    Number.isFinite(totalPriceOre)
-      ? { ...live, totalOre: totalPriceOre }
-      : live;
+  const price = overviewPrice(viewer.kind === "admin", live, totalPriceOre);
   const back = useCallback(() => onStepChange(step - 1), [onStepChange, step]);
   const next = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
