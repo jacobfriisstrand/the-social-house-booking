@@ -31,6 +31,19 @@ export function formatKroner(ore: number): string {
   return `${kronerFormatter.format(ore / 100)} kr`;
 }
 
+// formatKronerDecimal(62500) → "625,00" — kroner with comma decimals and
+// no grouping or unit, the form spreadsheet cells can sum (the exports,
+// #123): da-DK decimals without the " kr" unit and the thousands dots.
+const kronerDecimalFormatter = new Intl.NumberFormat("da-DK", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  useGrouping: false,
+});
+
+export function formatKronerDecimal(ore: number): string {
+  return kronerDecimalFormatter.format(ore / 100);
+}
+
 const kronerFormatter = new Intl.NumberFormat("da-DK", {
   maximumFractionDigits: 0,
 });

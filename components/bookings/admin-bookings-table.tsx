@@ -42,6 +42,7 @@ import {
   InvoicingStatusBadge,
 } from "@/components/bookings/booking-overview";
 import { MarkInvoicedDialog } from "@/components/bookings/mark-invoiced-dialog";
+import { ExportSelectionMenu } from "@/components/export-menu";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Button } from "@/components/ui/button";
@@ -783,6 +784,12 @@ export function AdminBookingsTable({
               >
                 {copy.markInvoiced.notInvoicableButton}
               </Button>
+              <ExportSelectionMenu
+                bodyKey="bookingIds"
+                endpoint="/admin/bookings/export"
+                fallbackBase="bookinger"
+                ids={selectedEntries.map((row) => row.bookingId)}
+              />
               <Button
                 aria-label={copy.selection.clear}
                 onClick={clearSelection}

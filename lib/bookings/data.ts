@@ -43,7 +43,9 @@ type BookingRow = Pick<
       | "booking_addon_addon_id"
       | "booking_addon_quantity"
       | "booking_addon_total_ore"
-    > & { addons: { addon_name: string } | null }
+    > & {
+      addons: { addon_name: string; addon_description: string | null } | null;
+    }
   >;
   manual_amounts: Array<{
     manual_amount_amount_ore: number;
@@ -82,6 +84,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
 
   const addOns: BookingAddonOverview[] = booking.booking_addons.map((line) => ({
     addonId: line.booking_addon_addon_id,
+    description: line.addons?.addon_description ?? null,
     name: line.addons?.addon_name ?? null,
     quantity: line.booking_addon_quantity,
     totalOre: line.booking_addon_total_ore,
@@ -122,7 +125,7 @@ export async function listOwnBookingOverview(
   const bookingResult = await supabase
     .from("bookings")
     .select(
-      `${BOOKING_COLUMNS}, rooms(room_name), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_id, manual_amount_note)`
+      `${BOOKING_COLUMNS}, rooms(room_name), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name, addon_description)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_id, manual_amount_note)`
     )
     .eq("booking_company_id", companyId)
     .order("booking_addon_addon_id", {

@@ -14,19 +14,21 @@ export interface ManualAmountPriceRow {
   note: string;
 }
 
-// One add-on line in the overview's hover card (ADR-0011): the name and
-// its line total — unit × quantity, the headcount for a per-participant
-// add-on and 1 for a fixed one. The id keys the row.
+// One add-on line in the overview's add-on breakdown (ADR-0011): the name
+// and its line total — unit × quantity, the headcount for a
+// per-participant add-on and 1 for a fixed one. The id keys the row. The
+// description, when the caller carries it, shows in the line's info hover.
 export interface AddOnPriceRow {
   addonId: string;
+  description?: string | null;
   name: string | null;
   quantity: number;
   totalOre: number;
 }
 
 export interface PriceOverviewModel {
-  // The add-on lines for the hover card, in the booking's order — empty
-  // when the caller has no lines to show.
+  // The add-on lines for the breakdown under the add-ons summary, in the
+  // booking's order — empty when the caller has no lines to show.
   addOnLines: AddOnPriceRow[];
   addOnsOre: number;
   discountPercent: number;

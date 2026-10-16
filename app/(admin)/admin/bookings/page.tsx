@@ -2,17 +2,20 @@ import {
   AdminBookingsView,
   type AdminCalendarModel,
 } from "@/components/bookings/admin-bookings-view";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { requireSession } from "@/lib/auth/require-session";
 import { buildAdminCalendarCells } from "@/lib/bookings/admin-calendar";
 import {
   type AdminOverviewFilter,
-  listAdminBookingDetails,
   listAdminBookings,
   listAdminCalendarEntries,
   listAdminFilterOptions,
 } from "@/lib/bookings/admin-data";
-import { parseAdminViewParams } from "@/lib/bookings/admin-view-params";
+import {
+  adminOverviewFilter,
+  parseAdminViewParams,
+} from "@/lib/bookings/admin-view-params";
 import { cphDate } from "@/lib/domain/opening-hours";
 import { calendarDates, calendarWindow } from "@/lib/domain/periods";
 import { createClient } from "@/lib/supabase/server";
@@ -35,20 +38,26 @@ export default async function AdminBookingsPage({
   const [rawParams] = await Promise.all([searchParams, requireSession()]);
   const now = new Date();
   const today = cphDate(now);
-  const params = parseAdminViewParams(await rawParams, today);
+  const search = await rawParams;
+  const params = parseAdminViewParams(search, today);
   const supabase = await createClient();
 
-  const filter: AdminOverviewFilter = {
-    bookingStates: params.bookingStates,
-    companyIds: params.companyIds,
-    invoicingStatuses: params.invoicingStatuses,
-    memberships: params.memberships,
-    now,
-    periodFrom: params.periodFrom,
-    periodTo: params.periodTo,
-    roomIds: params.roomIds,
-    worklist: params.worklist,
-  };
+  // The export takes the URL's own filters: the download link forwards
+  // the page's search, so the CSV carries the same rows the list shows.
+  const exportSearch = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (typeof value === "string") {
+      exportSearch.set(key, value);
+    } else if (Array.isArray(value)) {
+      for (const entry of value) {
+        exportSearch.append(key, entry);
+      }
+    }
+  }
+  const exportQuery = exportSearch.toString();
+  const exportHref = `/admin/bookings/export${exportQuery ? `?${exportQuery}` : ""}`;
+
+  const filter: AdminOverviewFilter = adminOverviewFilter(params, now);
 
   const options = await listAdminFilterOptions(supabase);
 
@@ -62,25 +71,28 @@ export default async function AdminBookingsPage({
       fromDate: window.fromDate,
       toDate: window.toDate,
     };
-    const [entries, details] = await Promise.all([
-      listAdminCalendarEntries(supabase, { ...calendarFilter, options }),
-      listAdminBookingDetails(supabase, window.fromDate, window.toDate),
-    ]);
+    const { entries, rows: calendarRows } = await listAdminCalendarEntries(
+      supabase,
+      { ...calendarFilter, options }
+    );
 
     const calendar: AdminCalendarModel = {
       cells: buildAdminCalendarCells({
         dates: calendarDates(params.view, params.focusDate),
-        details,
         entries,
       }),
     };
 
+    // The export is the list's export: no button in the month view, where
+    // the calendar's own window is what shows — the list filters would not
+    // match what the admin is looking at.
     return (
       <>
         <PageHeader title={messages.shell.bookings} />
         <PagePanel>
           <AdminBookingsView
             calendar={calendar}
+            calendarRows={calendarRows}
             options={options}
             params={params}
             rows={[]}
@@ -98,10 +110,13 @@ export default async function AdminBookingsPage({
 
   return (
     <>
-      <PageHeader title={messages.shell.bookings} />
+      <PageHeader title={messages.shell.bookings}>
+        <ExportMenu href={exportHref} />
+      </PageHeader>
       <PagePanel>
         <AdminBookingsView
           calendar={null}
+          calendarRows={[]}
           options={options}
           params={params}
           rows={rows}

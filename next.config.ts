@@ -56,6 +56,9 @@ const nextConfig: NextConfig = {
       { hostname: "**.supabase.co", protocol: "https" as const },
     ],
   },
+  // The PDF exports' renderer reads its built-in fonts from its own module
+  // tree at runtime (pdfkit's .afm files); bundling it loses them.
+  serverExternalPackages: ["@react-pdf/renderer"],
 };
 
 export default withSentryConfig(nextConfig, {

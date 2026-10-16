@@ -3,10 +3,12 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 // The admin calendar (#9): the month grid — one cell per date, each
 // holding its blocks in start order with their company, room and
-// timeslot, a booking in primary. A block opens the same entry sheet. The
-// stepper and the month name live in the header above the grid.
+// timeslot, a booking in primary. A block opens the same detail sheet the
+// table opens. The stepper and the month name live in the header above
+// the grid.
 import { useCallback, useState } from "react";
-import { EntrySheet } from "@/components/day-grid/entry-sheet";
+import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
+import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { Card } from "@/components/ui/card";
 import {
   Popover,
@@ -34,6 +36,7 @@ import {
   movedPeriod,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
+import type { AdminBookingRow } from "@/lib/domain/admin-bookings";
 import { weekdayIndexMondayFirst } from "@/lib/domain/periods";
 import { formatDateString } from "@/lib/format";
 import type { GridEntryView } from "@/lib/notice-board/view";
@@ -317,6 +320,7 @@ export function AdminCalendarGrid({
   monthLabel,
   onPeriodChange,
   params,
+  rows,
   today,
 }: {
   // Null while a switch from the list is still loading — the skeleton
@@ -331,14 +335,21 @@ export function AdminCalendarGrid({
   // skeletons and the accumulated params live in one place.
   onPeriodChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
+  // The rows behind the month's entries: a click opens the same detail
+  // sheet the table opens, fed with the same AdminBookingRow.
+  rows: AdminBookingRow[];
   today: string;
 }) {
-  const [openEntry, setOpenEntry] = useState<GridEntryView | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
   const onOpen = useCallback((view: GridEntryView) => {
-    setOpenEntry(view);
+    setOpenId(view.id);
     setSheetOpen(true);
   }, []);
+  const closeCancel = useCallback(() => setCancelId(null), []);
+  const openRow = rows.find((row) => row.bookingId === openId) ?? null;
+  const cancelRow = rows.find((row) => row.bookingId === cancelId) ?? null;
 
   return (
     <>
@@ -374,11 +385,15 @@ export function AdminCalendarGrid({
           />
         </div>
       </Card>
-      <EntrySheet
-        entry={openEntry}
+      <BookingDetailSheet
+        onCancel={setCancelId}
         onOpenChange={setSheetOpen}
         open={sheetOpen}
+        row={openRow}
       />
+      {cancelRow ? (
+        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
+      ) : null}
     </>
   );
 }

@@ -6,7 +6,6 @@
 // row, but the hold still blocks its room and shows on the calendar.
 // The calendar reads the same window with the live statuses.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import type {
   AdminBookingRow,
   AdminBookingState,
@@ -14,7 +13,7 @@ import type {
 } from "@/lib/domain/admin-bookings";
 import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
 import { periodUtcWindow } from "@/lib/domain/periods";
-import type { BookingDetail, DayEntry } from "@/lib/notice-board/data";
+import type { DayEntry } from "@/lib/notice-board/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { selectedCompanyIds } from "./admin-company-filter";
 import { adminDisplayNames, listRoomOptions, type RoomOption } from "./data";
@@ -41,6 +40,10 @@ type BookingStatus = Database["public"]["Enums"]["booking_status"];
  * range). The worklist toggle (?worklist=1, the sidebar badge's set)
  * IS a list tool like the date range: the calendar ignores it. */
 export interface AdminOverviewFilter {
+  // The POST export's picked ids (#123): the ticked bookings, read under
+  // RLS and exported in the given order — the order the table displayed
+  // them. The GET path never carries them.
+  bookingIds?: string[];
   bookingStates: AdminBookingState[];
   companyIds: string[];
   fromDate?: string;
@@ -80,7 +83,7 @@ function requiredName(
 interface AdminBookingQueryRow {
   booking_addon_total_ore: number;
   booking_addons: Array<{
-    addons: { addon_name: string } | null;
+    addons: { addon_name: string; addon_description: string | null } | null;
     booking_addon_addon_id: string;
     booking_addon_quantity: number;
     booking_addon_total_ore: number;
@@ -88,6 +91,7 @@ interface AdminBookingQueryRow {
   booking_cancellation_fee_ore: number | null;
   booking_cancellation_fee_waived: boolean;
   booking_cancelled_at: string | null;
+  booking_company_id: string;
   booking_discount_percent: number;
   booking_end_at: string;
   booking_id: string;
@@ -140,6 +144,7 @@ function toAdminBookingRow(
   return {
     addOns: (row.booking_addons ?? []).map((line) => ({
       addonId: line.booking_addon_addon_id,
+      description: line.addons?.addon_description ?? null,
       name: line.addons?.addon_name ?? null,
       quantity: line.booking_addon_quantity,
       totalOre: line.booking_addon_total_ore,
@@ -207,6 +212,11 @@ function withBookingStates<
 // (ADR-0021) through the UTC window; company, room and invoicing status
 // are the SQL filters. The options carry the membership → company-ids
 // resolution (see selectedCompanyIds).
+// The admin row's columns: the list and the calendar read the same shape,
+// so a calendar entry can open the same detail sheet the table does.
+const ADMIN_BOOKING_SELECT =
+  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_company_id, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name, addon_description)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)";
+
 export async function listAdminBookings(
   supabase: Client,
   filter: AdminOverviewFilter & { options: AdminFilterOptions }
@@ -214,9 +224,7 @@ export async function listAdminBookings(
   const { options } = filter;
   let query = supabase
     .from("bookings")
-    .select(
-      "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_id, booking_invoice_date, booking_invoicing_status, booking_invoice_number, booking_number, booking_room_price_ore, booking_start_at, booking_status, rooms(room_id, room_name), companies(company_id, company_display_name, company_membership_status), booking_addons(booking_addon_addon_id, booking_addon_quantity, booking_addon_total_ore, addons(addon_name)), manual_amounts(manual_amount_amount_ore, manual_amount_created_at, manual_amount_created_by, manual_amount_id, manual_amount_note)"
-    )
+    .select(ADMIN_BOOKING_SELECT)
     .in("booking_status", ["confirmed", "cancelled"])
     .order("booking_addon_addon_id", {
       ascending: true,
@@ -263,6 +271,9 @@ export async function listAdminBookings(
   }
   if (filter.invoicingStatuses.length > 0) {
     query = query.in("booking_invoicing_status", filter.invoicingStatuses);
+  }
+  if (filter.bookingIds !== undefined) {
+    query = query.in("booking_id", filter.bookingIds);
   }
 
   // The Bookingstatus buckets: cancelled, or confirmed with the end (not)
@@ -334,16 +345,6 @@ export interface AdminCalendarEntry extends DayEntry {
   companyId: string | null;
 }
 
-interface CalendarBookingQueryRow {
-  booking_company_id: string;
-  booking_end_at: string;
-  booking_id: string;
-  booking_invoicing_status: BookingInvoicingStatus;
-  booking_start_at: string;
-  booking_status: BookingStatus;
-  rooms: { room_id: string; room_name: string } | null;
-}
-
 // The instant window the calendar shows: entries OVERLAP it, so a booking
 // that started the evening before still shows on the next morning's cell.
 export function calendarUtcWindow(
@@ -353,7 +354,8 @@ export function calendarUtcWindow(
   return periodUtcWindow(fromDate, toDate);
 }
 
-/** Every live booking touching the window, per room. */
+/** Every live booking touching the window, per room — with the same rows
+ * the list reads, so a click opens the table's own detail sheet (#123). */
 export async function listAdminCalendarEntries(
   supabase: Client,
   filter: AdminOverviewFilter & {
@@ -361,7 +363,7 @@ export async function listAdminCalendarEntries(
     toDate: string;
     options: AdminFilterOptions;
   }
-): Promise<AdminCalendarEntry[]> {
+): Promise<{ entries: AdminCalendarEntry[]; rows: AdminBookingRow[] }> {
   const { options } = filter;
   const window = calendarUtcWindow(filter.fromDate, filter.toDate);
   const fromIso = window.startUtc.toISOString();
@@ -370,9 +372,7 @@ export async function listAdminCalendarEntries(
 
   let bookingsQuery = supabase
     .from("bookings")
-    .select(
-      "booking_company_id, booking_end_at, booking_id, booking_invoicing_status, booking_start_at, booking_status, rooms(room_id, room_name)"
-    )
+    .select(ADMIN_BOOKING_SELECT)
     .in("booking_status", ["pending_verification", "confirmed"])
     .lt("booking_start_at", toIso)
     .gt("booking_end_at", fromIso)
@@ -386,7 +386,7 @@ export async function listAdminCalendarEntries(
   const companyIds = selectedCompanyIds(filter, options);
   if (companyIds !== null && companyIds.length === 0) {
     // The active company-ish filter resolves to no ids: nothing matches.
-    return [];
+    return { entries: [], rows: [] };
   }
   if (companyIds !== null) {
     bookingsQuery = bookingsQuery.in("booking_company_id", companyIds);
@@ -407,11 +407,11 @@ export async function listAdminCalendarEntries(
   if (filter.bookingStates.length > 0) {
     const cuts = adminCalendarStateCuts(filter.bookingStates, nowIso);
     if (cuts === "") {
-      return [];
+      return { entries: [], rows: [] };
     }
     bookingsQuery = bookingsQuery.or(cuts);
   }
-  const bookings = rowsOrThrow<CalendarBookingQueryRow>(
+  const bookings = rowsOrThrow<AdminBookingQueryRow>(
     await bookingsQuery,
     "calendar bookings"
   );
@@ -422,7 +422,7 @@ export async function listAdminCalendarEntries(
     options.companies.map((company) => [company.companyId, company.displayName])
   );
 
-  return bookings.flatMap((row) => {
+  const entries = bookings.flatMap((row) => {
     if (!row.rooms) {
       return [];
     }
@@ -443,44 +443,18 @@ export async function listAdminCalendarEntries(
       },
     ];
   });
-}
 
-// The detail lines the calendar's sheets show for an admin (#12): the same
-// projection lib/notice-board/data.ts lists for a day, here for the whole
-// visible window so a week or month can open a sheet too.
-export async function listAdminBookingDetails(
-  supabase: Client,
-  fromDate: string,
-  toDate: string
-): Promise<Map<string, BookingDetail>> {
-  const window = calendarUtcWindow(fromDate, toDate);
-  const rows = rowsOrThrow(
-    await supabase
-      .from("bookings")
-      .select(
-        "booking_id, booking_number, booking_booker_name, booking_booker_email, booking_booker_phone, booking_participant_count, booking_practical_notes, booking_internal_note, booking_status, booking_addon_total_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_room_price_ore, booking_start_at"
+  // The rows behind the entries: the detail sheet reads them, so the
+  // calendar's click shows the same sheet the table does.
+  const adminNames = await adminDisplayNames(
+    supabase,
+    bookings.flatMap((row) =>
+      (row.manual_amounts ?? []).map(
+        (amount) => amount.manual_amount_created_by
       )
-      .in("booking_status", ["pending_verification", "confirmed"])
-      .lt("booking_start_at", window.endUtc.toISOString())
-      .gt("booking_end_at", window.startUtc.toISOString())
-      .limit(1000),
-    "calendar booking details"
+    )
   );
-  return new Map(
-    rows.map((row) => [
-      row.booking_id,
-      {
-        bookerEmail: row.booking_booker_email,
-        bookerName: row.booking_booker_name,
-        bookerPhone: row.booking_booker_phone,
-        bookingNumber: row.booking_number,
-        internalNote: row.booking_internal_note,
-        kind: "admin" as const,
-        participantCount: row.booking_participant_count,
-        practicalNotes: row.booking_practical_notes,
-        price: bookingPriceOverview(row),
-        status: row.booking_status,
-      },
-    ])
-  );
+  const rows = bookings.map((row) => toAdminBookingRow(row, adminNames));
+
+  return { entries, rows };
 }
