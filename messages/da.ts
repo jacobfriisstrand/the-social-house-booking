@@ -1094,6 +1094,10 @@ export const messages = {
     heroImageRemoved: "Billedet er fjernet",
     heroImageSection: "Offentligt billede",
     passwordCopied: "Adgangskode kopieret",
+    passwordDescription:
+      "Ændr din egen adgangskode. Du forbliver logget ind efter ændringen.",
+    passwordSaved: "Adgangskoden er ændret",
+    passwordSection: "Adgangskode",
     pickImage: "Vælg billede",
     removeImage: "Fjern billede",
     saved: "Indstillingerne er gemt",
