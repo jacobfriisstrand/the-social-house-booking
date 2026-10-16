@@ -24,6 +24,21 @@ import { messages } from "@/messages/da";
 
 const copy = messages.companies;
 
+// Cells without a value show an em dash, not an empty cell — a blank cell
+// reads as "forgotten to render", a dash as "no data".
+const NO_VALUE = "—";
+
+// company_billing_interval is free-text with one value in v1.0 (the rule
+// sits in lib/domain/company-master-data.ts); unknown values render raw.
+function billingIntervalLabel(value: string | null): string {
+  if (!value) {
+    return NO_VALUE;
+  }
+  return value in copy.billingIntervals
+    ? copy.billingIntervals[value as keyof typeof copy.billingIntervals]
+    : value;
+}
+
 export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const paged = useTablePagination(companies.length);
   const rows = slicePage(companies, paged.page, paged.pageSize);
@@ -42,8 +57,10 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
       onMouseDown={selection.stopShiftTextSelect}
     >
       {/* table-fixed: the columns between the first and the last share the
-          remaining width evenly (DESIGN.md "Components"). */}
-      <Table className="min-w-[48rem] table-fixed" sticky>
+          remaining width evenly (DESIGN.md "Components"). #113 widened the
+          table with the master-data columns; the card scrolls sideways and
+          the min-width keeps every column readable. */}
+      <Table className="min-w-[128rem] table-fixed" sticky>
         <TableHeader>
           <TableRow>
             {/* Both axes, as the admin tick column: the cell rides the stuck
@@ -59,8 +76,10 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
             </TableHead>
             {selectionCount > 0 ? (
               // The bulk header: the export stands where the column titles
-              // were, and swaps back when the selection clears.
-              <TableHead colSpan={5}>
+              // were, and swaps back when the selection clears. The span is
+              // the data column count — every column addition updates it
+              // with the header list below.
+              <TableHead colSpan={16}>
                 <div className="flex items-center gap-2">
                   <p className="whitespace-nowrap text-sm">
                     {copy.selection.selected(selectionCount)}
@@ -87,11 +106,22 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
             ) : (
               <>
                 <TableHead>{copy.columns.displayName}</TableHead>
+                <TableHead>{copy.columns.legalName}</TableHead>
                 <TableHead>{copy.columns.email}</TableHead>
                 <TableHead>{copy.columns.status}</TableHead>
                 <TableHead className="text-right">
                   {copy.columns.discount}
                 </TableHead>
+                <TableHead>{copy.columns.cvrNumber}</TableHead>
+                <TableHead>{copy.columns.contactName}</TableHead>
+                <TableHead>{copy.columns.contactPhone}</TableHead>
+                <TableHead>{copy.columns.invoiceEmail}</TableHead>
+                <TableHead>{copy.columns.attention}</TableHead>
+                <TableHead>{copy.columns.department}</TableHead>
+                <TableHead>{copy.columns.reference}</TableHead>
+                <TableHead>{copy.columns.billingInterval}</TableHead>
+                <TableHead>{copy.columns.economicCustomerNumber}</TableHead>
+                <TableHead>{copy.columns.internalNote}</TableHead>
                 <TableHead className="w-56 max-w-56 text-right">
                   {copy.columns.masterData}
                 </TableHead>
@@ -118,6 +148,9 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
                 <CompanySheet company={company} />
               </TableCell>
               <TableCell className="truncate">
+                {company.company_legal_name ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
                 {company.company_email}
               </TableCell>
               <TableCell>
@@ -127,6 +160,36 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {company.company_discount_percent} %
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_cvr_number ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_contact_name ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_contact_phone ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_invoice_email ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_attention ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_department ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_reference ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {billingIntervalLabel(company.company_billing_interval)}
+              </TableCell>
+              <TableCell className="truncate tabular-nums">
+                {company.company_economic_customer_number ?? NO_VALUE}
+              </TableCell>
+              <TableCell className="truncate">
+                {company.company_internal_note ?? NO_VALUE}
               </TableCell>
               <TableCell className="text-right">
                 {company.company_master_data_completed_at ? (
