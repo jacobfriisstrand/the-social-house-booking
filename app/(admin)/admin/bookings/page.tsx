@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AdminBookingsView,
   type AdminCalendarModel,
@@ -7,21 +8,75 @@ import { PageHeader, PagePanel } from "@/components/shell/page";
 import { requireSession } from "@/lib/auth/require-session";
 import { buildAdminCalendarCells } from "@/lib/bookings/admin-calendar";
 import {
+  type AdminFilterOptions,
   type AdminOverviewFilter,
   listAdminBookings,
   listAdminCalendarEntries,
   listAdminFilterOptions,
 } from "@/lib/bookings/admin-data";
 import {
+  type AdminViewParams,
+  adminExportHref,
   adminOverviewFilter,
   parseAdminViewParams,
 } from "@/lib/bookings/admin-view-params";
 import { cphDate } from "@/lib/domain/opening-hours";
 import { calendarDates, calendarWindow } from "@/lib/domain/periods";
+import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+// The month view's server branch (#9): the calendar's cells and the rows
+// its detail sheet reads — the table's own sheet, so a click in the grid
+// opens what the list opens.
+async function AdminBookingsMonth({
+  filter,
+  options,
+  params,
+  supabase,
+  today,
+  view,
+}: {
+  filter: AdminOverviewFilter;
+  options: AdminFilterOptions;
+  params: AdminViewParams;
+  supabase: SupabaseClient<Database>;
+  today: string;
+  // The month branch only serves this view; the narrow type is what the
+  // calendar helpers take.
+  view: "month";
+}) {
+  // The calendar shows its own visible range — the month the focus date
+  // sits in — so the arrows move the whole period and the list follows
+  // (the period filter is shared, #9).
+  const window = calendarWindow(view, params.focusDate);
+  const { entries, rows } = await listAdminCalendarEntries(supabase, {
+    ...filter,
+    fromDate: window.fromDate,
+    options,
+    toDate: window.toDate,
+  });
+  const calendar: AdminCalendarModel = {
+    cells: buildAdminCalendarCells({
+      dates: calendarDates(view, params.focusDate),
+      entries,
+    }),
+  };
+  return (
+    <PagePanel>
+      <AdminBookingsView
+        calendar={calendar}
+        calendarRows={rows}
+        options={options}
+        params={params}
+        rows={[]}
+        today={today}
+      />
+    </PagePanel>
+  );
+}
 
 // Bookinger (admin) — the invoicing view (#9, DESIGN.md "Bookinger
 // (admin)"): every booking as a list and as a calendar on one page, with
@@ -41,64 +96,27 @@ export default async function AdminBookingsPage({
   const search = await rawParams;
   const params = parseAdminViewParams(search, today);
   const supabase = await createClient();
-
-  // The export takes the URL's own filters: the download link forwards
-  // the page's search, so the CSV carries the same rows the list shows.
-  const exportSearch = new URLSearchParams();
-  for (const [key, value] of Object.entries(search)) {
-    if (typeof value === "string") {
-      exportSearch.set(key, value);
-    } else if (Array.isArray(value)) {
-      for (const entry of value) {
-        exportSearch.append(key, entry);
-      }
-    }
-  }
-  const exportQuery = exportSearch.toString();
-  const exportHref = `/admin/bookings/export${exportQuery ? `?${exportQuery}` : ""}`;
+  const exportHref = adminExportHref(search);
 
   const filter: AdminOverviewFilter = adminOverviewFilter(params, now);
 
   const options = await listAdminFilterOptions(supabase);
 
-  // The calendar shows its own visible range — the month the focus date
-  // sits in — so the arrows move the whole period and the list follows
-  // (the period filter is shared, #9).
   if (params.view !== "list") {
-    const window = calendarWindow(params.view, params.focusDate);
-    const calendarFilter = {
-      ...filter,
-      fromDate: window.fromDate,
-      toDate: window.toDate,
-    };
-    const { entries, rows: calendarRows } = await listAdminCalendarEntries(
-      supabase,
-      { ...calendarFilter, options }
-    );
-
-    const calendar: AdminCalendarModel = {
-      cells: buildAdminCalendarCells({
-        dates: calendarDates(params.view, params.focusDate),
-        entries,
-      }),
-    };
-
     // The export is the list's export: no button in the month view, where
     // the calendar's own window is what shows — the list filters would not
     // match what the admin is looking at.
     return (
       <>
         <PageHeader title={messages.shell.bookings} />
-        <PagePanel>
-          <AdminBookingsView
-            calendar={calendar}
-            calendarRows={calendarRows}
-            options={options}
-            params={params}
-            rows={[]}
-            today={today}
-          />
-        </PagePanel>
+        <AdminBookingsMonth
+          filter={filter}
+          options={options}
+          params={params}
+          supabase={supabase}
+          today={today}
+          view={params.view}
+        />
       </>
     );
   }

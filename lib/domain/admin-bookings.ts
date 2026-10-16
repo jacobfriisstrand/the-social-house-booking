@@ -272,14 +272,16 @@ export function sortAdminRows(
  * not invoicable); un-invoicing needs every booking invoiced or not
  * invoicable; refusing accepts anything not already refused — a future
  * booking included. Empty allows nothing. */
-export function invoicingActionAllowance(
-  rows: readonly Pick<AdminBookingRow, "endAt" | "invoicingStatus">[],
-  now: Date
-): {
+export interface InvoicingActionAllowance {
   canInvoice: boolean;
   canNotInvoicable: boolean;
   canNotInvoiced: boolean;
-} {
+}
+
+export function invoicingActionAllowance(
+  rows: readonly Pick<AdminBookingRow, "endAt" | "invoicingStatus">[],
+  now: Date
+): InvoicingActionAllowance {
   if (rows.length === 0) {
     return {
       canInvoice: false,

@@ -314,6 +314,39 @@ function PeriodControl({
   );
 }
 
+// The month view's sheet pair: the table's own detail sheet over the
+// clicked entry's row, with the cancel confirm beside it. The picked row
+// stays after close so the exit animation plays over it — the table's
+// own overlay pattern.
+function CalendarDetailSheets({
+  onClose,
+  open,
+  row,
+  rows,
+}: {
+  onClose: (open: boolean) => void;
+  open: boolean;
+  row: AdminBookingRow | null;
+  rows: AdminBookingRow[];
+}) {
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const closeCancel = useCallback(() => setCancelId(null), []);
+  const cancelRow = rows.find((r) => r.bookingId === cancelId) ?? null;
+  return (
+    <>
+      <BookingDetailSheet
+        onCancel={setCancelId}
+        onOpenChange={onClose}
+        open={open}
+        row={row}
+      />
+      {cancelRow ? (
+        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
+      ) : null}
+    </>
+  );
+}
+
 export function AdminCalendarGrid({
   calendar,
   loading,
@@ -341,15 +374,23 @@ export function AdminCalendarGrid({
   today: string;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [cancelId, setCancelId] = useState<string | null>(null);
-  const onOpen = useCallback((view: GridEntryView) => {
-    setOpenId(view.id);
-    setSheetOpen(true);
+  // The picked row stays after close so the exit animation plays over it
+  // — the table's own overlay pattern.
+  const [sheetRow, setSheetRow] = useState<AdminBookingRow | null>(null);
+  const onOpen = useCallback(
+    (view: GridEntryView) => {
+      setSheetRow(rows.find((row) => row.bookingId === view.id) ?? null);
+      setOpenId(view.id);
+    },
+    [rows]
+  );
+  // Clearing the id closes the sheet; the picked row stays in the sheet
+  // pair below, so the exit animation plays over it.
+  const closeSheet = useCallback((open: boolean) => {
+    if (!open) {
+      setOpenId(null);
+    }
   }, []);
-  const closeCancel = useCallback(() => setCancelId(null), []);
-  const openRow = rows.find((row) => row.bookingId === openId) ?? null;
-  const cancelRow = rows.find((row) => row.bookingId === cancelId) ?? null;
 
   return (
     <>
@@ -385,15 +426,12 @@ export function AdminCalendarGrid({
           />
         </div>
       </Card>
-      <BookingDetailSheet
-        onCancel={setCancelId}
-        onOpenChange={setSheetOpen}
-        open={sheetOpen}
-        row={openRow}
+      <CalendarDetailSheets
+        onClose={closeSheet}
+        open={openId !== null}
+        row={sheetRow}
+        rows={rows}
       />
-      {cancelRow ? (
-        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
-      ) : null}
     </>
   );
 }

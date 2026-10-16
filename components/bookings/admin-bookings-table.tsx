@@ -26,14 +26,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  type MouseEvent,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
 import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
@@ -45,6 +38,11 @@ import { MarkInvoicedDialog } from "@/components/bookings/mark-invoiced-dialog";
 import { ExportSelectionMenu } from "@/components/export-menu";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
+import {
+  type RowSelection,
+  RowTick,
+  useRowSelection,
+} from "@/components/selection/row-selection";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,8 +77,8 @@ import {
   type AdminSortKey,
   adminRowParts,
   canAdminCancel,
+  type InvoicingActionAllowance,
   invoicingActionAllowance,
-  shiftRangeIds,
   sortAdminRows,
 } from "@/lib/domain/admin-bookings";
 import type { BookingInvoicingStatus } from "@/lib/domain/booking-overview";
@@ -377,27 +375,12 @@ function BookingRow({
   // The invoice mark waits for the end time; refusing and un-invoicing do
   // not.
   const ended = new Date(row.endAt).getTime() <= now.getTime();
-  // Shift-click range selection: the modifier is read in the capture phase
-  // on the checkbox root itself — a click there is what triggers the
-  // change (the label forwards it to the hidden input, a sibling, whose
-  // click would otherwise reset the flag) — and consumed by the change it
-  // triggers. Keyboard toggles never pass a click through the root, so
-  // the flag stays unset.
-  const shiftKey = useRef(false);
-  const readShift = useCallback((event: MouseEvent): void => {
-    shiftKey.current = event.shiftKey;
-  }, []);
-  const onToggle = useCallback(() => {
-    const shift = shiftKey.current;
-    shiftKey.current = false;
-    toggle(row.bookingId, shift);
-  }, [toggle, row.bookingId]);
   const checkbox = (
-    <Checkbox
-      aria-label={copy.selection.selectRow(row.bookingNumber)}
+    <RowTick
       checked={selected}
-      onCheckedChange={onToggle}
-      onClickCapture={readShift}
+      id={row.bookingId}
+      label={copy.selection.selectRow(row.bookingNumber)}
+      toggle={toggle}
     />
   );
   const openRow = useCallback(
@@ -498,6 +481,159 @@ function SkeletonRow() {
   );
 }
 
+// The header row: the select-all and — when rows are ticked — the bulk
+// actions standing where the column titles were, swapping back when the
+// selection clears. Left-aligned so the actions stay reachable at phone
+// width, right after the sticky checkbox column.
+function HeaderRow({
+  allowance,
+  moving,
+  moveSelectedNotInvoiced,
+  moveSelectedNotInvoicable,
+  onParamChange,
+  openBulkDialog,
+  params,
+  selection,
+  selectionCount,
+}: {
+  allowance: InvoicingActionAllowance;
+  moving: boolean;
+  moveSelectedNotInvoiced: () => void;
+  moveSelectedNotInvoicable: () => void;
+  onParamChange: (changes: Partial<AdminViewParams>) => void;
+  openBulkDialog: () => void;
+  params: AdminViewParams;
+  selection: RowSelection<AdminBookingRow>;
+  selectionCount: number;
+}) {
+  return (
+    <TableHeader>
+      <TableRow>
+        <TableHead className="sticky left-0 z-10 w-10">
+          <Checkbox
+            aria-label={copy.selection.selectAll}
+            checked={selection.allSelected}
+            indeterminate={selection.someSelected && !selection.allSelected}
+            onCheckedChange={selection.toggleAll}
+          />
+        </TableHead>
+        {selectionCount > 0 ? (
+          <TableHead colSpan={COLUMNS.length + 1}>
+            <div className="flex items-center gap-2">
+              <p className="whitespace-nowrap text-sm">
+                {copy.selection.selected(selectionCount)}
+              </p>
+              <Button
+                disabled={moving || !allowance.canInvoice}
+                onClick={openBulkDialog}
+                size="sm"
+                type="button"
+              >
+                {copy.markInvoiced.button}
+              </Button>
+              <Button
+                disabled={moving || !allowance.canNotInvoiced}
+                onClick={moveSelectedNotInvoiced}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {copy.markInvoiced.notInvoicedButton}
+              </Button>
+              <Button
+                disabled={moving || !allowance.canNotInvoicable}
+                onClick={moveSelectedNotInvoicable}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {copy.markInvoiced.notInvoicableButton}
+              </Button>
+              <ExportSelectionMenu
+                bodyKey="bookingIds"
+                endpoint="/admin/bookings/export"
+                fallbackBase="bookinger"
+                ids={selection.selectedEntries.map((row) => row.bookingId)}
+              />
+              <Button
+                aria-label={copy.selection.clear}
+                onClick={selection.clearSelection}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <XIcon aria-hidden="true" />
+              </Button>
+            </div>
+          </TableHead>
+        ) : (
+          <>
+            {COLUMNS.map((column) => (
+              <SortHead
+                column={column}
+                key={column.key}
+                onParamChange={onParamChange}
+                params={params}
+              />
+            ))}
+            <TableHead className="w-14" />
+          </>
+        )}
+      </TableRow>
+    </TableHeader>
+  );
+}
+
+// The row-scoped overlays (detail sheet, edit sheet) share one state: the
+// overlay content stays set after close — the exit animation plays over
+// it — and a new open replaces it. `overlayOpen` drives the mount.
+function useBookingOverlay(rows: AdminBookingRow[]) {
+  const [overlay, setOverlay] = useState<Overlay | null>(null);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const detailRow = useMemo(
+    () =>
+      bookingRowById(
+        rows,
+        overlay?.kind === "detail" ? overlay.bookingId : null
+      ),
+    [rows, overlay]
+  );
+  const editRow = useMemo(
+    () =>
+      bookingRowById(rows, overlay?.kind === "edit" ? overlay.bookingId : null),
+    [rows, overlay]
+  );
+  const openOverlay = useCallback(
+    (bookingId: string, kind: Overlay["kind"]): void => {
+      setOverlay({ bookingId, kind });
+      setOverlayOpen(true);
+    },
+    []
+  );
+  const openDetail = useCallback(
+    (bookingId: string): void => openOverlay(bookingId, "detail"),
+    [openOverlay]
+  );
+  const openEdit = useCallback(
+    (bookingId: string): void => openOverlay(bookingId, "edit"),
+    [openOverlay]
+  );
+  const closeOverlay = useCallback((open: boolean): void => {
+    if (!open) {
+      setOverlayOpen(false);
+    }
+  }, []);
+  return {
+    closeOverlay,
+    detailRow,
+    editRow,
+    openDetail,
+    openEdit,
+    overlay,
+    overlayOpen,
+  };
+}
+
 export function AdminBookingsTable({
   loading,
   onParamChange,
@@ -523,105 +659,32 @@ export function AdminBookingsTable({
   );
   const visible = slicePage(sorted, paged.page, paged.pageSize);
 
-  // The selection holds booking ids; a fresh row set (a filter, a mark, a
-  // period change) starts a new selection. The trigger is the id list, not
-  // the rows identity: a sort re-reads the same rows and must keep the
-  // ticks. The reset runs at render time when the key changes — React's
-  // documented pattern for resetting state on a prop change.
-  const rowKey = rows.map((row) => row.bookingId).join("\n");
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  // The anchor for shift-click ranges: the last clicked row. A fresh row
-  // set (a filter, a mark, a period change) starts both over.
-  const [anchorId, setAnchorId] = useState<string | null>(null);
-  const [keyRead, setKeyRead] = useState(rowKey);
-  if (rowKey !== keyRead) {
-    setKeyRead(rowKey);
-    setSelected(new Set());
-    setAnchorId(null);
-  }
-
-  // Every booking participates — a future one too, so the admin can take
-  // it out of the basis before it is held.
-  const allSelected =
-    sorted.length > 0 && sorted.every((row) => selected.has(row.bookingId));
-  const someSelected = sorted.some((row) => selected.has(row.bookingId));
+  const selection = useRowSelection(
+    rows.map((row) => row.bookingId),
+    sorted,
+    visible,
+    (row) => row.bookingId
+  );
   // The ticked rows decide which bulk action can run — the same rules the
   // server re-checks: the invoice mark needs every row ended and open for
   // an invoice, un-invoicing every row invoiced or refused, refusing any
   // row not already refused, a future booking included.
-  const selectedEntries = useMemo(
-    () => sorted.filter((row) => selected.has(row.bookingId)),
-    [sorted, selected]
-  );
   const allowance = useMemo(
-    () => invoicingActionAllowance(selectedEntries, now),
-    [selectedEntries, now]
+    () => invoicingActionAllowance(selection.selectedEntries, now),
+    [selection.selectedEntries, now]
   );
 
-  // A plain click toggles one row and becomes the anchor. With shift held
-  // it adds the range from the anchor to the clicked row and never
-  // unticks; without an anchor on this page it falls back to the plain
-  // toggle.
-  const toggle = useCallback(
-    (bookingId: string, shiftKey: boolean): void => {
-      const visibleIds = visible.map((row) => row.bookingId);
-      setSelected((current) => {
-        const range = shiftKey
-          ? shiftRangeIds(visibleIds, anchorId, bookingId)
-          : null;
-        if (range) {
-          return new Set([...current, ...range]);
-        }
-        const next = new Set(current);
-        if (next.has(bookingId)) {
-          next.delete(bookingId);
-        } else {
-          next.add(bookingId);
-        }
-        return next;
-      });
-      setAnchorId(bookingId);
-    },
-    [anchorId, visible]
-  );
-  const toggleAll = useCallback((): void => {
-    setSelected(() =>
-      allSelected ? new Set() : new Set(sorted.map((row) => row.bookingId))
-    );
-  }, [allSelected, sorted]);
-
-  // Shift-click extends the browser's own text selection from the last
-  // pressed tick across the range, so the row text lights up alongside
-  // the ticks. Cancelling that mousedown default keeps the highlight off
-  // while the click still toggles the checkbox.
-  const stopShiftTextSelect = useCallback((event: MouseEvent): void => {
-    if (
-      event.shiftKey &&
-      event.target instanceof Element &&
-      event.target.closest('[data-slot="checkbox"]') !== null
-    ) {
-      event.preventDefault();
-    }
-  }, []);
-
-  // The row-scoped overlays (detail sheet, edit sheet) share one state:
-  // the overlay content stays set after close — the exit animation plays
-  // over it — and a new open replaces it. `overlayOpen` drives the mount.
-  const [overlay, setOverlay] = useState<Overlay | null>(null);
-  const [overlayOpen, setOverlayOpen] = useState(false);
-  const detailRow = useMemo(
-    () =>
-      bookingRowById(
-        rows,
-        overlay?.kind === "detail" ? overlay.bookingId : null
-      ),
-    [rows, overlay]
-  );
-  const editRow = useMemo(
-    () =>
-      bookingRowById(rows, overlay?.kind === "edit" ? overlay.bookingId : null),
-    [rows, overlay]
-  );
+  // The row-scoped overlays read the rows through their hook; `overlayOpen`
+  // drives the mount.
+  const {
+    closeOverlay,
+    detailRow,
+    editRow,
+    openDetail,
+    openEdit,
+    overlay,
+    overlayOpen,
+  } = useBookingOverlay(rows);
   // The invoice dialog: one instance for the bulk mark and the ⋯ menu's
   // single-row mark. `dialogIds` is set on open only, so its identity —
   // and the dialog's reset effect — stays put while it is open. The
@@ -662,7 +725,7 @@ export function AdminBookingsTable({
             type: "success",
           });
           if (clear) {
-            setSelected(new Set());
+            selection.clearSelection();
           }
           router.refresh();
           return;
@@ -676,22 +739,7 @@ export function AdminBookingsTable({
         });
       });
     },
-    [router]
-  );
-  const openOverlay = useCallback(
-    (bookingId: string, kind: Overlay["kind"]): void => {
-      setOverlay({ bookingId, kind });
-      setOverlayOpen(true);
-    },
-    []
-  );
-  const openDetail = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "detail"),
-    [openOverlay]
-  );
-  const openEdit = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "edit"),
-    [openOverlay]
+    [router, selection.clearSelection]
   );
   // The booking picked for the cancel confirm, if any.
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -700,35 +748,29 @@ export function AdminBookingsTable({
     []
   );
   const closeCancel = useCallback((): void => setCancelId(null), []);
-  const closeOverlay = useCallback((open: boolean): void => {
-    if (!open) {
-      setOverlayOpen(false);
-    }
-  }, []);
   const closeDialog = useCallback((open: boolean): void => {
     if (!open) {
       setDialogIds(null);
     }
   }, []);
   const openBulkDialog = useCallback(
-    (): void => setDialogIds([...selected]),
-    [selected]
+    (): void => setDialogIds([...selection.selected]),
+    [selection.selected]
   );
   const openRowInvoice = useCallback(
     (bookingId: string): void => setDialogIds([bookingId]),
     []
   );
-  const clearSelection = useCallback((): void => setSelected(new Set()), []);
   const moveSelectedNotInvoiced = useCallback(
-    (): void => move([...selected], "not_invoiced", true),
-    [move, selected]
+    (): void => move([...selection.selected], "not_invoiced", true),
+    [move, selection.selected]
   );
   const moveSelectedNotInvoicable = useCallback(
-    (): void => move([...selected], "not_invoicable", true),
-    [move, selected]
+    (): void => move([...selection.selected], "not_invoicable", true),
+    [move, selection.selected]
   );
 
-  const selectionCount = selected.size;
+  const selectionCount = selection.selected.size;
 
   // The table's head is the same in both states — the caption, the column
   // grid, and the header row (the selection's bulk actions included, so a
@@ -738,84 +780,17 @@ export function AdminBookingsTable({
     <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
   );
   const tableHeader = (
-    <TableHeader>
-      <TableRow>
-        <TableHead className="sticky left-0 z-10 w-10">
-          <Checkbox
-            aria-label={copy.selection.selectAll}
-            checked={allSelected}
-            indeterminate={someSelected && !allSelected}
-            onCheckedChange={toggleAll}
-          />
-        </TableHead>
-        {selectionCount > 0 ? (
-          // The bulk header: the actions stand where the column titles
-          // were, and swap back when the selection clears.
-          <TableHead colSpan={COLUMNS.length + 1}>
-            {/* Left-aligned: the actions start right after the sticky
-                checkbox column, reachable even at phone width. */}
-            <div className="flex items-center gap-2">
-              <p className="whitespace-nowrap text-sm">
-                {copy.selection.selected(selectionCount)}
-              </p>
-              <Button
-                disabled={moving || !allowance.canInvoice}
-                onClick={openBulkDialog}
-                size="sm"
-                type="button"
-              >
-                {copy.markInvoiced.button}
-              </Button>
-              <Button
-                disabled={moving || !allowance.canNotInvoiced}
-                onClick={moveSelectedNotInvoiced}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {copy.markInvoiced.notInvoicedButton}
-              </Button>
-              <Button
-                disabled={moving || !allowance.canNotInvoicable}
-                onClick={moveSelectedNotInvoicable}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {copy.markInvoiced.notInvoicableButton}
-              </Button>
-              <ExportSelectionMenu
-                bodyKey="bookingIds"
-                endpoint="/admin/bookings/export"
-                fallbackBase="bookinger"
-                ids={selectedEntries.map((row) => row.bookingId)}
-              />
-              <Button
-                aria-label={copy.selection.clear}
-                onClick={clearSelection}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <XIcon aria-hidden="true" />
-              </Button>
-            </div>
-          </TableHead>
-        ) : (
-          <>
-            {COLUMNS.map((column) => (
-              <SortHead
-                column={column}
-                key={column.key}
-                onParamChange={onParamChange}
-                params={params}
-              />
-            ))}
-            <TableHead className="w-14" />
-          </>
-        )}
-      </TableRow>
-    </TableHeader>
+    <HeaderRow
+      allowance={allowance}
+      moveSelectedNotInvoicable={moveSelectedNotInvoicable}
+      moveSelectedNotInvoiced={moveSelectedNotInvoiced}
+      moving={moving}
+      onParamChange={onParamChange}
+      openBulkDialog={openBulkDialog}
+      params={params}
+      selection={selection}
+      selectionCount={selectionCount}
+    />
   );
   // The column grid stated once, up front: table-fixed takes the widths
   // from the cols instead of whichever header row renders first, so the
@@ -884,7 +859,7 @@ export function AdminBookingsTable({
       <Card className="min-w-0 gap-0 py-0">
         <Table
           className="min-w-[58rem] table-fixed"
-          onMouseDownCapture={stopShiftTextSelect}
+          onMouseDownCapture={selection.stopShiftTextSelect}
         >
           {columnGrid}
           {tableCaption}
@@ -901,8 +876,8 @@ export function AdminBookingsTable({
                 onInvoice={openRowInvoice}
                 onMove={move}
                 row={row}
-                selected={selected.has(row.bookingId)}
-                toggle={toggle}
+                selected={selection.selected.has(row.bookingId)}
+                toggle={selection.toggle}
               />
             ))}
           </TableBody>
@@ -914,7 +889,7 @@ export function AdminBookingsTable({
 
       <MarkInvoicedDialog
         bookings={dialogBookings}
-        onDone={clearSelection}
+        onDone={selection.clearSelection}
         onOpenChange={closeDialog}
         open={dialogIds !== null}
       />
