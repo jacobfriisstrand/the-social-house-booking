@@ -72,6 +72,8 @@ export const messages = {
       empty: "Dette lokale har ingen tilkøb.",
       fixed: "Fast pris",
       perParticipant: "pr. deltager",
+      quantityDecrease: "Én færre",
+      quantityIncrease: "Én mere",
       quantityLabel: "Antal",
       title: "Tilkøb",
     },
@@ -205,8 +207,6 @@ export const messages = {
       tooManyResends:
         "Der kan ikke sendes flere koder til denne booking. Start bookingen forfra.",
       tooShort: "Bookingen skal vare mindst 30 minutter.",
-      totalPriceBelowAddOns:
-        "Totalprisen kan ikke være lavere end tilkøbets beløb.",
       verifyFailed: "Koden kunne ikke bekræftes. Prøv igen.",
     },
     fields: {

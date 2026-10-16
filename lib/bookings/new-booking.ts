@@ -14,7 +14,7 @@ import { buildSnapshot } from "@/lib/domain/snapshot";
 import { hoursBetween } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
 import type { createClient } from "@/lib/supabase/server";
-import type { CreateHoldValues } from "@/lib/validation/booking";
+import type { PendingBookingInput } from "@/lib/validation/booking";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { loadRoomOpening } from "./availability";
@@ -121,7 +121,7 @@ type BookingInsert = Omit<
 // lines. Status, hold expiry, catering acceptance and company are the
 // caller's.
 export const newBookingRow = (
-  input: CreateHoldValues,
+  input: PendingBookingInput,
   discountPercent: number,
   roomHourlyPriceOre: number
 ): BookingInsert => {
@@ -172,13 +172,15 @@ export const expectedTotalWithOverride = (
 
 // The pending booking row both booking actions insert (#7, ADR-0023): the
 // snapshot (ADR-0005) from the company's discount and the active catering
-// acceptance (the parse cannot produce false). `extra` carries what
+// acceptance — written only from an explicit true: the company flow's
+// parse cannot produce false, and the admin flow has no accepting
+// member, so its row stays unaccepted (ADR-0023). `extra` carries what
 // differs — the hold's expiry for the company flow, nothing for the admin,
 // which confirms at once (and its overridden total, #126).
 export async function insertPendingBooking(
   supabase: SessionClient,
   company: { company_discount_percent: number; company_id: string },
-  input: CreateHoldValues,
+  input: PendingBookingInput,
   roomHourlyPriceOre: number,
   extra: Partial<
     Pick<
@@ -198,7 +200,9 @@ export async function insertPendingBooking(
         company.company_discount_percent,
         roomHourlyPriceOre
       ),
-      booking_catering_accepted_at: new Date().toISOString(),
+      ...(input.cateringAccepted === true
+        ? { booking_catering_accepted_at: new Date().toISOString() }
+        : {}),
       booking_company_id: company.company_id,
       booking_status: "pending_verification",
       ...extra,

@@ -73,6 +73,25 @@ export const addOnFields = {
   cateringAccepted: mustAccept(errors.cateringAcceptRequired),
 };
 
+// The client-side form keeps registered keys with undefined values — an
+// untouched stepper registers one and RHF never unregisters — which the
+// strict record above would reject. The server never sees them: undefined
+// properties do not survive server-action serialization. The booking form
+// prunes them before validating, because an absent quantity is the
+// "follow the headcount" default, never an invalid number (#119).
+export const pruneAddOnQuantities = <
+  Values extends { addOnQuantities?: Record<string, number | undefined> },
+>(
+  values: Values
+): Values => ({
+  ...values,
+  addOnQuantities: Object.fromEntries(
+    Object.entries(values.addOnQuantities ?? {}).filter(
+      ([, quantity]) => quantity !== undefined
+    )
+  ) as Record<string, number>,
+});
+
 // The booking terms and privacy policy (DESIGN.md "Booking dialog"), and
 // the versions the dialog showed: #15 records those for a member's booking
 // once lib/domain/terms.ts has found them published.
@@ -120,6 +139,15 @@ export const createHoldSchema = z
 
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
 
+// The booking fields the pending-booking row reads, shared by both flows.
+// The admin schema carries no member acceptance (ADR-0023), so the row
+// builder cannot require one — the catering timestamp is written only
+// from an explicit true.
+export type PendingBookingInput = Omit<
+  CreateHoldValues,
+  "cateringAccepted" | "termsAccepted" | "termsVersionIds"
+> & { cateringAccepted?: boolean };
+
 // The dialog's form for a company: the same fields, with the company id
 // carried along empty so one form type serves both viewers. totalPriceOre
 // is the admin's price override (#126), declared here only so the shared
@@ -135,13 +163,18 @@ export const bookingFormSchema = z
   })
   .superRefine(bookingWindowRule);
 
-// Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
-// which company, and confirmed at once without a verification code. The
-// total-price override (#126) is admin-only: it never joins bookingFields,
-// so the company flow's schema cannot carry it.
+// Admin books on a company's behalf (#14, ADR-0023): nobody in the dialog
+// is the member the house's rules address, so the member-only acceptances
+// are not part of the admin flow at all — the catering rule and the
+// terms/privacy checkbox belong to the booker (#7, #15), and the keys are
+// dropped rather than made optional so a forged acceptance cannot enter
+// through the admin path either.
 export const adminBookingSchema = z
   .object({
-    ...bookingFields,
+    ...bookerFields,
+    ...slotFields,
+    addOnIds: addOnFields.addOnIds,
+    addOnQuantities: addOnFields.addOnQuantities,
     companyId: z.guid(errors.required),
     totalPriceOre: z.number().int().min(0).optional(),
   })

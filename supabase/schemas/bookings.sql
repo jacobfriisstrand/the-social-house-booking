@@ -46,7 +46,11 @@ create table public.bookings (
   booking_discount_percent integer not null default 0
     check (booking_discount_percent between 0 and 100),
   booking_addon_total_ore integer not null default 0 check (booking_addon_total_ore >= 0),
-  booking_expected_total_ore integer not null default 0 check (booking_expected_total_ore >= 0),
+  booking_expected_total_ore integer not null default 0
+    check (
+      booking_status <> 'confirmed'
+      or booking_expected_total_ore >= 0
+    ),
   booking_cancellation_terms text,
   -- Cancellation (ADR-0006): fee on the member price, set at cancellation time.
   -- The fee is recomputed server-side at the confirm moment, so the column
@@ -73,8 +77,9 @@ create table public.bookings (
   booking_updated_at timestamptz not null default now(),
   -- Catering rule (Bilag 1 "Forplejning og hospitality", #7): the flow
   -- requires active acceptance; the confirmation mail (#11, Mail 4) repeats
-  -- the rule. Null never happens through the app — the schema requires the
-  -- checkbox — but the column stays nullable so fixtures and admin SQL do
+  -- the rule. A member booking stamps the instant; an admin-entered row
+  -- stays null, because the admin accepts nothing on the company's behalf
+  -- (ADR-0023). The column stays nullable so fixtures and admin SQL do
   -- not have to fake an instant.
   booking_catering_accepted_at timestamptz,
   check (booking_end_at > booking_start_at)

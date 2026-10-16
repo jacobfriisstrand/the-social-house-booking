@@ -10,7 +10,8 @@
 // is ordered only through The Social House, and the acceptance timestamp
 // is what Mail 4 (#11) repeats. The booking dialog (#4) reuses these
 // fields.
-import { type ChangeEvent, useCallback, useState } from "react";
+import { MinusIcon, PlusIcon } from "lucide-react";
+import { useCallback, useState } from "react";
 import {
   type Control,
   type FieldValues,
@@ -26,6 +27,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -34,7 +36,6 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import type { AddOnPricingModel } from "@/lib/domain/addons";
 import { messages } from "@/messages/da";
 
@@ -110,9 +111,12 @@ interface AddOnRowProps<Values extends FieldValues> {
 }
 
 // #119: the quantity the customer orders of a per-participant add-on,
-// 1..participantCount. Empty shows the default (the participant count) and
-// writes nothing — the server then prices the line at the full headcount.
-function AddOnQuantityInput<Values extends FieldValues>({
+// 1..participantCount, shown as a −/+ stepper next to the label. It shows
+// the participant count until the customer changes it, and writes nothing
+// until then — the server prices the untouched line at the full headcount.
+// The form's resolver prunes the untouched record key before the strict
+// record schema reads it (pruneAddOnQuantities in booking-form).
+function AddOnQuantitySelector<Values extends FieldValues>({
   addonId,
   control,
   participantCount,
@@ -121,51 +125,60 @@ function AddOnQuantityInput<Values extends FieldValues>({
   control: Control<Values>;
   participantCount: number;
 }) {
-  const { field, fieldState } = useController({
+  const { field } = useController({
     control,
     name: `addOnQuantities.${addonId}` as Path<Values>,
   });
-  const id = `add-on-quantity-${addonId}`;
-  const { onChange } = field;
-  const handleChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>): void => {
-      const value = event.target.valueAsNumber;
-      onChange(Number.isNaN(value) ? undefined : value);
+  const value =
+    typeof field.value === "number" && !Number.isNaN(field.value)
+      ? field.value
+      : participantCount;
+  // A cleared participants field must not push the stepper below 1 —
+  // the server still validates the real bound against its own count.
+  const max = Math.max(1, participantCount);
+  const set = useCallback(
+    (next: number): void => {
+      field.onChange(Math.min(Math.max(1, next), max));
     },
-    [onChange]
+    [field, max]
   );
+  const decrease = useCallback(() => set(value - 1), [set, value]);
+  const increase = useCallback(() => set(value + 1), [set, value]);
 
   return (
-    <div className="flex items-center gap-2 pl-7">
-      <label className="text-muted-foreground text-xs" htmlFor={id}>
-        {copy.quantityLabel}
-      </label>
-      <Input
-        aria-invalid={fieldState.invalid}
-        className="h-8 w-16"
-        id={id}
-        inputMode="numeric"
-        max={participantCount}
-        min={1}
-        name={field.name}
-        onBlur={field.onBlur}
-        onChange={handleChange}
-        ref={field.ref}
-        type="number"
-        value={
-          typeof field.value === "number" && !Number.isNaN(field.value)
-            ? field.value
-            : participantCount
-        }
-      />
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
-    </div>
+    <fieldset
+      aria-label={copy.quantityLabel}
+      className="-mt-0.5 flex items-center gap-1"
+    >
+      <Button
+        aria-label={copy.quantityDecrease}
+        disabled={value <= 1}
+        onClick={decrease}
+        size="icon-xs"
+        type="button"
+        variant="outline"
+      >
+        <MinusIcon aria-hidden="true" />
+      </Button>
+      <span className="min-w-5 text-center text-sm tabular-nums">{value}</span>
+      <Button
+        aria-label={copy.quantityIncrease}
+        disabled={value >= max}
+        onClick={increase}
+        size="icon-xs"
+        type="button"
+        variant="outline"
+      >
+        <PlusIcon aria-hidden="true" />
+      </Button>
+    </fieldset>
   );
 }
 
 // One add-on row: the checkbox, the price chip ("+ 500 kr", "Gratis",
 // "+ 225 kr / person", DESIGN.md), the fold-out description, and — on a
-// checked per-participant add-on — the quantity input (#119).
+// checked per-participant add-on — the quantity stepper beside the label
+// (#119).
 function AddOnRow<Values extends FieldValues>({
   addOn,
   checked,
@@ -201,14 +214,14 @@ function AddOnRow<Values extends FieldValues>({
             {formatAddonPrice(addOn)}
           </Badge>
         </FieldLabel>
+        {checked && addOn.pricingModel === "per_participant" ? (
+          <AddOnQuantitySelector
+            addonId={addOn.addonId}
+            control={control}
+            participantCount={participantCount}
+          />
+        ) : null}
       </div>
-      {checked && addOn.pricingModel === "per_participant" ? (
-        <AddOnQuantityInput
-          addonId={addOn.addonId}
-          control={control}
-          participantCount={participantCount}
-        />
-      ) : null}
       {addOn.description ? (
         <AddOnAbout
           description={addOn.description}

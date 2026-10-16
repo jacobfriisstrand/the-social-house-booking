@@ -9,7 +9,7 @@
 // (companies_external_no_discount). Mail 8 tells admin about the booking;
 // Mail 4 to the booker is wired by #11.
 import { requireAdmin } from "@/lib/auth/require-admin";
-import { type AddOnLine, linesTotalOre } from "@/lib/domain/addons";
+import type { AddOnLine } from "@/lib/domain/addons";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AdminBookingValues,
@@ -159,18 +159,12 @@ export async function createAdminBooking(
   if (!validated.ok) {
     return validated.state;
   }
-  // #126: the override lands as the stored total only when it can absorb
-  // the add-on lines — the database rejects a negative expected total.
-  if (
-    parsed.data.totalPriceOre !== undefined &&
-    parsed.data.totalPriceOre < linesTotalOre(validated.lines)
-  ) {
-    return {
-      error: errors.totalPriceBelowAddOns,
-      fieldErrors: { totalPriceOre: [errors.totalPriceBelowAddOns] },
-      status: "error",
-    };
-  }
+  // #126: the override may sit below the add-on lines — the admin sets the
+  // whole booking's price (everything selected, total 1 kr). The row
+  // starts at the override minus the lines' sum and the sync trigger lands
+  // exactly on it; the CHECK only demands a non-negative total once the
+  // booking is confirmed, so pending and released rows may hold the
+  // negative intermediate.
   return insertConfirmedBooking(
     supabase,
     company.value,
