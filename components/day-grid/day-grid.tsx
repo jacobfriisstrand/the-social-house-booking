@@ -96,10 +96,15 @@ const rangeLabel = (drag: SlotDrag): string =>
   `${ROW_LABELS[drag.startRow]} - ${ROW_END_LABELS[drag.endRow]}`;
 
 // The grid's rows keep their height and never highlight (DESIGN.md: no
-// hover effects beyond the cursor).
+// hover effects beyond the cursor). The hairline between the slots is the
+// border token on every width (#115): without it the rows read as one
+// sheet, and on the phone the horizontally scrolling bookings have
+// nothing to separate them.
 const ROW_CLASS = "h-9 hover:bg-transparent";
-// A block fills its cell, spanned rows included, with a small inset.
-const BLOCK_CELL_CLASS = "relative border-l p-0";
+// A block fills its cell, spanned rows included, with a small inset. The
+// border-b is the row separator: on a border-separate table the hairlines
+// belong to the cells, not the rows (see the Table comment).
+const BLOCK_CELL_CLASS = "relative border-b border-l p-0";
 const BLOCK_CLASS = "absolute inset-0.5 rounded-lg border";
 // Everything the room is not available in — the buffer and the past,
 // closed and blocked slots — wears the muted block with a diagonal hatch,
@@ -329,8 +334,11 @@ function GridRow({
 }) {
   return (
     <TableRow className={ROW_CLASS} data-row={row}>
+      {/* border-b on the cell itself: it travels with the sticky label, so
+          the row separator is there under the time column too (#115). The
+          after-line is the vertical one, same travel. */}
       <TableHead
-        className="sticky left-0 z-10 h-9 bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums"
+        className="sticky left-0 z-10 h-9 border-b bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border"
         scope="row"
       >
         {label}
@@ -503,9 +511,18 @@ export function DayGrid({
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
+        {/* border-separate: with collapse, WebKit misrenders the sticky time
+            labels — on the phone the bookings slide in behind them (#115).
+            Separated borders put each hairline on the cell that owns it, so
+            they travel with the sticky cells; the spacing stays at 0. The
+            hairlines therefore live on the cells (block cells and headers),
+            not on the rows, which cannot carry borders in this model. */}
         <Table
           aria-label={copy.gridLabel(dateLabel)}
-          className={cn("table-fixed", drag && "cursor-row-resize select-none")}
+          className={cn(
+            "table-fixed border-separate border-spacing-0",
+            drag && "cursor-row-resize select-none"
+          )}
           style={{ minWidth: `calc(72px + ${columns.length} * 9rem)` }}
         >
           <colgroup>
@@ -514,9 +531,11 @@ export function DayGrid({
               <col key={column.room.roomId} />
             ))}
           </colgroup>
-          <TableHeader>
+          <TableHeader className="[&_th]:border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 h-14 bg-card">
+              {/* The after-line overlaps the first room column's own border-l
+                  at rest and stays while it slides behind (#115). */}
+              <TableHead className="sticky left-0 z-10 h-14 bg-card after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border">
                 <span className="sr-only">{copy.sheet.time}</span>
               </TableHead>
               {columns.map((column) => (
@@ -524,7 +543,7 @@ export function DayGrid({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0">
             {rows.map((cells, row) => (
               <GridRow
                 cells={cells}
