@@ -109,12 +109,13 @@ function BookingAddOnsCell({ booking }: { booking: BookingOverviewRow }) {
 }
 
 // The two badges stack vertically (2026-09-29): the row keeps its height,
-// and neither badge pushes the other wide. The column is the table's last,
-// which always sits right-aligned (DESIGN.md "Components", 2026-10-02).
+// and neither badge pushes the other wide. The column leads the table
+// (2026-10-16) and sticks while the table scrolls sideways, where the
+// booking number used to.
 function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
   return (
-    <TableCell>
-      <div className="flex flex-col items-end gap-1">
+    <TableCell className="sticky left-0 z-10 bg-card">
+      <div className="flex flex-col items-start gap-1">
         <BookingStatusBadge status={booking.bookingStatus} />
         <InvoicingStatusBadge status={booking.invoicingStatus} />
       </div>
@@ -124,9 +125,10 @@ function BookingStatusCell({ booking }: { booking: BookingOverviewRow }) {
 
 // The card is as tall as its content (changed 2026-09-29 from the #81
 // fill-the-panel scroll): with pagination the rows fit the page, and a
-// list taller than the panel scrolls the panel as before. The vertical
-// sticky header is gone with the internal scroll; the horizontal scroll
-// keeps the sticky booking-number column. Rows are separated by 1px
+// list taller than the panel scrolls the panel as before. The table
+// region caps at 70vh and scrolls within itself, so the header row stays
+// visible while the rows scroll (2026-10-16); the horizontal scroll keeps
+// the sticky status column. Rows are separated by 1px
 // lines in the border token, the near-white hairline every other line
 // uses — no vertical lines (2026-09-29). The header row sits on the
 // muted/50 ground like every table (2026-09-29), and every title aligns
@@ -159,14 +161,20 @@ interface ColumnDef {
   label: string;
 }
 
-// Every column sorts, as on the admin list; the booking number stays put
-// when the table scrolls sideways.
+// Every column sorts, as on the admin list; the status badges stay put
+// when the table scrolls sideways (2026-10-16: the status column moved
+// first and took over the sticky lead from the booking number).
 const COLUMNS: ColumnDef[] = [
   {
-    className: "sticky left-0 z-10 w-36",
-    key: "bookingNumber",
-    label: copy.columns.bookingNumber,
+    // Both axes: the header cell rides the stuck header row's top while its
+    // own left-0 holds the column's edge when the table scrolls sideways.
+    // Its own muted ground keeps the neighbours' titles from showing
+    // through — the thead's background scrolls with the table.
+    className: "sticky left-0 top-0 z-10 w-40 bg-muted",
+    key: "status",
+    label: copy.columns.status,
   },
+  { key: "bookingNumber", label: copy.columns.bookingNumber },
   { key: "room", label: copy.columns.room },
   { key: "date", label: copy.columns.dateTime },
   { key: "booker", label: copy.columns.booker },
@@ -174,7 +182,6 @@ const COLUMNS: ColumnDef[] = [
   { align: "right", key: "discount", label: copy.columns.discount },
   { align: "right", key: "addOns", label: copy.columns.addOns },
   { align: "right", key: "fee", label: copy.columns.cancellationFee },
-  { align: "right", key: "status", label: copy.columns.status },
 ];
 
 const SORT_ICONS = {
@@ -236,9 +243,8 @@ function BookingRow({
       tabIndex={0}
       {...openBookingWith(booking, onOpen)}
     >
-      <TableCell className="sticky left-0 z-10 bg-card font-mono">
-        {booking.bookingNumber}
-      </TableCell>
+      <BookingStatusCell booking={booking} />
+      <TableCell className="font-mono">{booking.bookingNumber}</TableCell>
       <TableCell className="truncate font-medium">{booking.roomName}</TableCell>
       <BookingDateCells booking={booking} />
       <TableCell className="truncate">{booking.bookerName}</TableCell>
@@ -250,7 +256,6 @@ function BookingRow({
           ? copy.noCancellationFee
           : formatOre(booking.cancellationFeeOre)}
       </TableCell>
-      <BookingStatusCell booking={booking} />
     </TableRow>
   );
 }
@@ -328,7 +333,7 @@ function BookingTable({
           remaining width evenly, and the min-width keeps the table wide
           enough for its nowrap headers — the card scrolls it sideways when
           the screen narrows (DESIGN.md "Components"). */}
-      <Table aria-busy={loading} className="min-w-[88rem] table-fixed">
+      <Table aria-busy={loading} className="min-w-[88rem] table-fixed" sticky>
         <TableCaption className="sr-only">{copy.tableCaption}</TableCaption>
         <TableHeader>
           <TableRow>
@@ -345,9 +350,9 @@ function BookingTable({
         <BookingTableBody loading={loading} onOpen={onOpen} rows={rows} />
       </Table>
       <CardFooter className="px-2 py-1">
-        {/* The "ekskl. moms" line sits directly above the pagination arrows,
-            inside the pagination block, so the row hugs the table
-            (2026-09-29). */}
+        {/* The note owns its own line flush right above the footer line
+            (2026-10-16); the footer spreads the rows-per-page field and the
+            pager. */}
         <TablePagination
           note={copy.allPricesExclVat}
           paged={paged}

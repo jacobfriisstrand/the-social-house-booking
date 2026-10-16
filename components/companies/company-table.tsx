@@ -43,10 +43,13 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
     >
       {/* table-fixed: the columns between the first and the last share the
           remaining width evenly (DESIGN.md "Components"). */}
-      <Table className="min-w-[48rem] table-fixed">
+      <Table className="min-w-[48rem] table-fixed" sticky>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 w-10">
+            {/* Both axes, as the admin tick column: the cell rides the stuck
+                header row top and the scroll's left edge, on its own muted
+                ground so nothing shows through sideways. */}
+            <TableHead className="sticky top-0 left-0 z-10 w-10 bg-muted">
               <Checkbox
                 aria-label={copy.selection.selectAll}
                 checked={selection.allSelected}
@@ -99,7 +102,11 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
         <TableBody>
           {rows.map((company) => (
             <TableRow key={company.company_id}>
-              <TableCell>
+              {/* Sticky sideways with its header cell — horizontally only,
+                  a top inset would pin the cell while its row scrolls away —
+                  on its own opaque card ground (the bookings table's status
+                  column leads the way). */}
+              <TableCell className="sticky left-0 z-10 bg-card">
                 <RowTick
                   checked={selection.selected.has(company.company_id)}
                   id={company.company_id}

@@ -309,6 +309,77 @@ export function invoicingActionAllowance(
   };
 }
 
+/** One row's invoice-ready amount (#120, #121): what the booking can
+ * still be invoiced for, zero unless it has ended and still waits for an
+ * invoice — the worklist's set (outstandingInvoicesFilter,
+ * countOutstandingInvoices). The amount is the row's whole basis
+ * (adminRowParts): the frozen expected total plus manual amounts on
+ * a confirmed booking, the payable cancellation fee alone on a cancelled
+ * one (ADR-0006). An invoiced or refused row counts nothing — invoiced
+ * bookings must not be re-summed as open (the manual-amounts guard,
+ * migration 20261002073814) — and so does a booking that has not ended.
+ * Shares the basis with outstandingInvoiceBasisOre
+ * (lib/domain/booking-invoicing.ts): expected total and parts agree by
+ * construction (lib/domain/snapshot.ts). */
+export function invoiceReadyOre(row: AdminBookingRow, now: Date): number {
+  if (row.invoicingStatus !== "not_invoiced") {
+    return 0;
+  }
+  if (new Date(row.endAt).getTime() > now.getTime()) {
+    return 0;
+  }
+  return adminRowParts(row).basisOre;
+}
+
+/** The invoice-ready amount of a set: the table header's total over the
+ * filtered rows, or over the ticked rows alone (#121). */
+export function invoiceReadyTotalOre(
+  rows: readonly AdminBookingRow[],
+  now: Date
+): number {
+  return rows.reduce((sum, row) => sum + invoiceReadyOre(row, now), 0);
+}
+
+/** One company's line of the cash flow (#120): its invoice-ready bookings
+ * and what they sum to. */
+export interface CompanyCashFlow {
+  bookingCount: number;
+  companyId: string;
+  companyName: string;
+  totalOre: number;
+}
+
+/** The cash flow per company for the filtered set's invoice-ready
+ * bookings (#120): the biggest amount first, ties by company name.
+ * A company with nothing invoice-ready — a cancelled booking without
+ * a fee counts zero — has no line. */
+export function companyCashFlow(
+  rows: readonly AdminBookingRow[],
+  now: Date
+): CompanyCashFlow[] {
+  const groups = new Map<string, CompanyCashFlow>();
+  for (const row of rows) {
+    const amountOre = invoiceReadyOre(row, now);
+    if (amountOre === 0) {
+      continue;
+    }
+    const group = groups.get(row.companyId) ?? {
+      bookingCount: 0,
+      companyId: row.companyId,
+      companyName: row.companyName,
+      totalOre: 0,
+    };
+    group.bookingCount += 1;
+    group.totalOre += amountOre;
+    groups.set(row.companyId, group);
+  }
+  return [...groups.values()].sort(
+    (left, right) =>
+      right.totalOre - left.totalOre ||
+      left.companyName.localeCompare(right.companyName, "da")
+  );
+}
+
 /** The ids a shift-click adds to the selection: the rows from the last
  * clicked row (the anchor) to the clicked one, in the order the page
  * renders them — 1 through 5 for a shift from the first to the fifth.

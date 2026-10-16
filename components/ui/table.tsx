@@ -3,14 +3,41 @@
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  sticky = false,
+  ...props
+}: React.ComponentProps<"table"> & { sticky?: boolean }) {
   return (
     <div
-      className="relative w-full overflow-x-auto"
+      className={cn(
+        "relative w-full",
+        // A sticky header needs a scrolling ancestor: the capped region
+        // scrolls both ways and the header row holds its top. The day
+        // grid and the calendar keep the plain horizontal wrapper.
+        sticky ? "max-h-[70vh] overflow-auto" : "overflow-x-auto"
+      )}
       data-slot="table-container"
     >
       <table
-        className={cn("w-full min-w-[40rem] caption-bottom text-sm", className)}
+        className={cn(
+          "w-full min-w-[40rem] caption-bottom text-sm",
+          // The header's bottom line travels with the stuck header: Tailwind's
+          // preflight collapses table borders, and a collapsed border is
+          // painted at the table's grid position, not the stuck one — and
+          // box-shadows on table cells under collapsed borders are not
+          // reliably painted either. Each header cell draws its own 1px line
+          // as an ::after (the sticky cell is its containing block, so the
+          // line travels with it; the cells tile it edge to edge into one
+          // continuous line), and the row's own border is dropped to keep
+          // the line 1px in both states. The thead sits above the sticky
+          // first-column cells (z-10 in the tables' bodies): equal z would
+          // let the later tbody paint over the stuck header when both axes
+          // scroll.
+          sticky &&
+            "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-20 [&_thead_th]:after:absolute [&_thead_th]:after:inset-x-0 [&_thead_th]:after:bottom-0 [&_thead_th]:after:h-px [&_thead_th]:after:bg-border [&_thead_tr]:border-b-0",
+          className
+        )}
         data-slot="table"
         {...props}
       />
@@ -96,7 +123,7 @@ function TableCaption({
 }: React.ComponentProps<"caption">) {
   return (
     <caption
-      className={cn("mt-4 text-muted-foreground text-sm", className)}
+      className={cn("m-2 text-muted-foreground text-sm", className)}
       data-slot="table-caption"
       {...props}
     />

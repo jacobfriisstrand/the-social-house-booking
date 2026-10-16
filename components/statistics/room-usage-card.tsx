@@ -58,7 +58,7 @@ function OccupancyCell({ room }: { room: RoomUsage }) {
 
 function RoomTable({ rooms }: { rooms: RoomUsage[] }) {
   return (
-    <Table>
+    <Table sticky>
       <TableHeader>
         <TableRow>
           <TableHead>{copy.columns.room}</TableHead>

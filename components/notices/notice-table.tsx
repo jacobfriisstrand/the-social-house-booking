@@ -1,12 +1,27 @@
-// The admin's notices (Opslag, "Beskeder" tab, #12): title, whether the
-// notice board shows it, the last day it shows, and the row actions.
+"use client";
 
+// The admin's notices (Opslag, "Beskeder" tab, #12): title, whether the
+// notice board shows it, the last day it shows, and the row's ⋯ menu —
+// the edit sheet, the visibility toggle and the confirm-guarded delete,
+// the bookings list's pattern.
+
+import {
+  BanIcon,
+  CircleCheckIcon,
+  EllipsisIcon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { useCallback } from "react";
 import { EmptyCard } from "@/components/empty-card";
-import { ActiveToggleButton } from "@/components/forms/active-toggle-button";
+import { useActiveToggleAction } from "@/components/forms/active-toggle-button";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
+import { useMenuDialogs } from "@/components/forms/use-menu-dialogs";
 import { NoticeSheet } from "@/components/notices/notice-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import {
   Table,
   TableBody,
@@ -35,7 +50,77 @@ const STATUS_BADGE = {
   shown: "success",
 } as const;
 
-function NoticeRow({ row }: { row: NoticeTableRow }) {
+// One row's ⋯ menu: the edit sheet, the reversible visibility toggle and
+// the delete, which opens the confirm dialog (DESIGN.md "Confirm before
+// destroying").
+function NoticeRowMenu({
+  onDelete,
+  onEdit,
+  row,
+}: {
+  onDelete: (row: NoticeTableRow) => void;
+  onEdit: (row: NoticeTableRow) => void;
+  row: NoticeTableRow;
+}) {
+  const { pending, run } = useActiveToggleAction(
+    setNoticeActive,
+    copy.statusUpdated
+  );
+  const openDelete = useCallback(() => onDelete(row), [onDelete, row]);
+  const openEdit = useCallback(() => onEdit(row), [onEdit, row]);
+  const toggle = useCallback(
+    () => run(row.noticeId, !row.values.isActive),
+    [row, run]
+  );
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            aria-label={copy.actions.open(row.values.title)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={openEdit}>
+          <PencilIcon aria-hidden="true" />
+          {copy.editLabel}
+        </MenuItem>
+        <MenuItem disabled={pending} onClick={toggle}>
+          {row.values.isActive ? (
+            <BanIcon aria-hidden="true" />
+          ) : (
+            <CircleCheckIcon aria-hidden="true" />
+          )}
+          {row.values.isActive ? copy.deactivate : copy.activate}
+        </MenuItem>
+        <MenuItem
+          className="text-destructive data-[highlighted]:text-destructive"
+          onClick={openDelete}
+        >
+          <Trash2Icon aria-hidden="true" />
+          {copy.delete}
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function NoticeRow({
+  onDelete,
+  onEdit,
+  row,
+}: {
+  onDelete: (row: NoticeTableRow) => void;
+  onEdit: (row: NoticeTableRow) => void;
+  row: NoticeTableRow;
+}) {
   const { lastDay, title } = row.values;
   return (
     <TableRow>
@@ -48,51 +133,94 @@ function NoticeRow({ row }: { row: NoticeTableRow }) {
       <TableCell className="tabular-nums">
         {lastDay ? formatDateString(lastDay) : copy.noLastDay}
       </TableCell>
-      <TableCell className="w-72">
-        <div className="flex items-center justify-end gap-2">
-          <NoticeSheet initial={row.values} />
-          <ActiveToggleButton
-            activateLabel={copy.activate}
-            deactivateLabel={copy.deactivate}
-            id={row.noticeId}
-            isActive={row.values.isActive}
-            onToggle={setNoticeActive}
-            updatedTitle={copy.statusUpdated}
-          />
-          <ConfirmDeleteButton
-            copy={copy}
-            id={row.noticeId}
-            onDelete={deleteNotice}
-          />
-        </div>
+      <TableCell className="w-14">
+        <NoticeRowMenu onDelete={onDelete} onEdit={onEdit} row={row} />
       </TableCell>
     </TableRow>
   );
 }
 
+// The row menu's sheets: the controlled edit sheet and the
+// confirm-guarded delete, opened from the ⋯ menu, mounted beside the
+// table card.
+function NoticeDialogs({
+  closeDelete,
+  closeEditor,
+  deleting,
+  editing,
+}: {
+  closeDelete: (open: boolean) => void;
+  closeEditor: (open: boolean) => void;
+  deleting: NoticeTableRow | null;
+  editing: NoticeTableRow | null;
+}) {
+  return (
+    <>
+      <NoticeSheet
+        initial={editing?.values ?? null}
+        onOpenChange={closeEditor}
+        open={editing !== null}
+      />
+      {deleting ? (
+        <ConfirmDeleteButton
+          copy={copy}
+          id={deleting.noticeId}
+          onDelete={deleteNotice}
+          onOpenChange={closeDelete}
+          open
+        />
+      ) : null}
+    </>
+  );
+}
+
 export function NoticeTable({ rows }: { rows: NoticeTableRow[] }) {
+  // The row menu's picks, shared hook: the sheet and the confirm dialog
+  // are mounted once, opened from the ⋯ menu.
+  const {
+    closeDelete,
+    closeEditor,
+    deleting,
+    editing,
+    setDeleting,
+    setEditing,
+  } = useMenuDialogs<NoticeTableRow>();
+
   if (rows.length === 0) {
     return (
       <EmptyCard description={copy.emptyDescription} title={copy.emptyTitle} />
     );
   }
   return (
-    <Card className="py-0">
-      <Table className="min-w-[52rem] table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead>{copy.columns.title}</TableHead>
-            <TableHead>{copy.columns.status}</TableHead>
-            <TableHead>{copy.columns.lastDay}</TableHead>
-            <TableHead className="w-72" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <NoticeRow key={row.noticeId} row={row} />
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+    <>
+      <Card className="py-0">
+        <Table className="min-w-[52rem] table-fixed" sticky>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{copy.columns.title}</TableHead>
+              <TableHead>{copy.columns.status}</TableHead>
+              <TableHead>{copy.columns.lastDay}</TableHead>
+              <TableHead className="w-14" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <NoticeRow
+                key={row.noticeId}
+                onDelete={setDeleting}
+                onEdit={setEditing}
+                row={row}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+      <NoticeDialogs
+        closeDelete={closeDelete}
+        closeEditor={closeEditor}
+        deleting={deleting}
+        editing={editing}
+      />
+    </>
   );
 }

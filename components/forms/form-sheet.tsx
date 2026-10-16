@@ -5,7 +5,8 @@
 // The trigger is the primary create button or a small outline edit
 // button. The form mounts with the sheet, so every open starts from the
 // saved values, and closes the sheet once saved.
-import { type ReactNode, useCallback, useState } from "react";
+import type { ReactNode } from "react";
+import { useControlledOpen } from "@/components/forms/use-controlled-open";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -39,18 +40,27 @@ export function FormSheet({
   children,
   copy,
   editing,
+  onOpenChange,
+  open,
 }: {
   children: (close: () => void) => ReactNode;
   copy: FormSheetCopy;
   editing: boolean;
+  // Controlled mode: the sheet opens from the caller (a row's ⋯ menu
+  // opening the edit form) and no trigger renders.
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const [currentOpen, setOpen] = useControlledOpen(open, onOpenChange);
+  const isControlled = onOpenChange !== undefined;
+  const close = (): void => setOpen(false);
   const mode = modes(copy)[editing ? "edit" : "create"];
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
-      <SheetTrigger render={mode.trigger}>{mode.triggerLabel}</SheetTrigger>
+    <Sheet onOpenChange={setOpen} open={currentOpen}>
+      {isControlled ? null : (
+        <SheetTrigger render={mode.trigger}>{mode.triggerLabel}</SheetTrigger>
+      )}
       <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{mode.title}</SheetTitle>

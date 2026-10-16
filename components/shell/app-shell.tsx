@@ -71,12 +71,33 @@ function CloseMobileSidebarOnNavigate() {
 }
 
 // Badges that deep-link into their set: the admin invoicing worklist
-// rides the Bookinger page's ?worklist=1 (a list-only filter there).
+// rides the Bookinger page's ?worklist=1 (a list-only filter there), the
+// member badge the page's Kommende bucket (?state=upcoming). Each carries
+// its own badge copy — the tooltip explains what the number counts.
 // Derived from the href, not passed per call site — ShellNavLinkItem is
 // the only badge renderer, so a nav group added later cannot drop the
 // link.
-function badgeLinkFor(href: string): string | undefined {
-  return href === "/admin/bookings" ? "/admin/bookings?worklist=1" : undefined;
+interface BadgeLink {
+  ariaLabel: string;
+  href: string;
+  tooltip: string;
+}
+
+const BADGE_LINKS: Record<string, BadgeLink> = {
+  "/admin/bookings": {
+    ariaLabel: messages.shell.worklistBadge,
+    href: "/admin/bookings?worklist=1",
+    tooltip: messages.shell.worklistBadgeTooltip,
+  },
+  "/bookings": {
+    ariaLabel: messages.shell.upcomingBadge,
+    href: "/bookings?state=upcoming",
+    tooltip: messages.shell.upcomingBadgeTooltip,
+  },
+};
+
+function badgeLinkFor(href: string): BadgeLink | undefined {
+  return BADGE_LINKS[href];
 }
 
 function ShellNavLinkItem({
@@ -111,15 +132,16 @@ function ShellNavLinkItem({
 }
 
 // The nav badge beside a menu item. The linked variant (the admin
-// worklist) renders the badge as its own anchor through Badge's render
-// prop — it keeps its absolute placement beside the menu button and
-// gains hover and focus states from the badge's anchor styles.
+// worklist, the member kommende count) renders the badge as its own
+// anchor through Badge's render prop — it keeps its absolute placement
+// beside the menu button and gains hover and focus states from the
+// badge's anchor styles.
 function ShellNavBadge({
   badge,
   badgeLink,
 }: {
   badge?: number;
-  badgeLink?: string;
+  badgeLink?: BadgeLink;
 }) {
   if (!badge) {
     return null;
@@ -132,16 +154,16 @@ function ShellNavBadge({
       <TooltipTrigger
         render={
           <SidebarMenuBadge
-            aria-label={messages.shell.worklistBadge}
+            aria-label={badgeLink.ariaLabel}
             className="pointer-events-auto"
-            render={<Link href={badgeLink} />}
+            render={<Link href={badgeLink.href} />}
             variant="default"
           >
             {badge}
           </SidebarMenuBadge>
         }
       />
-      <TooltipContent>{messages.shell.worklistBadgeTooltip}</TooltipContent>
+      <TooltipContent>{badgeLink.tooltip}</TooltipContent>
     </Tooltip>
   );
 }

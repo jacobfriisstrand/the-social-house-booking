@@ -46,7 +46,7 @@ function CompanyTable({
   companies: CompanyUsage[];
 }) {
   return (
-    <Table>
+    <Table sticky>
       <TableHeader>
         <TableRow>
           <TableHead>{copy.columns.company}</TableHead>

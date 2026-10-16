@@ -58,6 +58,11 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   // The instant the cancellation flow froze (null on a live booking); the
   // detail sheet shows it on a cancelled row.
   cancelledAt: string | null;
+  // The invoice the company can read on their booking (#122): set only
+  // while the status is invoiced — leaving invoiced clears both columns
+  // (the lifecycle trigger, migration 20261006081139).
+  invoiceDate: string | null;
+  invoiceNumber: string | null;
   // The fee as it stands at load, for the cancel flow (#5): set only for a
   // confirmed booking whose start has not passed. The confirm recomputes
   // the fee server-side at the exact moment; this is the number the

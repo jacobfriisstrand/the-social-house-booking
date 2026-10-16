@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { DetailRow } from "@/components/bookings/detail-row";
+import { InvoiceDetailRows } from "@/components/bookings/invoice-detail-rows";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +38,7 @@ async function loadConfirmedBooking(supabase: Supabase, bookingId: string) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "booking_number, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_expected_total_ore, rooms(room_name)"
+      "booking_number, booking_room_id, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_expected_total_ore, booking_invoice_date, booking_invoice_number, booking_invoicing_status, rooms(room_name)"
     )
     .eq("booking_id", bookingId)
     .eq("booking_status", "confirmed")
@@ -131,6 +132,15 @@ export default async function BookingConfirmedPage({
               <DetailRow
                 label={copy.total}
                 value={`${formatOre(booking.booking_expected_total_ore)} ${messages.format.exclVat}`}
+              />
+              {/* The invoice read-back (#122): a booking visited here after
+                  it has been invoiced shows the number and date; the
+                  lifecycle trigger clears both when the status leaves
+                  invoiced. */}
+              <InvoiceDetailRows
+                invoiceDate={booking.booking_invoice_date}
+                invoiced={booking.booking_invoicing_status === "invoiced"}
+                invoiceNumber={booking.booking_invoice_number}
               />
             </dl>
           </CardContent>

@@ -379,13 +379,23 @@ function HouseEventForm({
 // The event in edit mode; null in create mode.
 export function HouseEventSheet({
   initial,
+  onOpenChange,
+  open,
   rooms,
 }: {
   initial: HouseEventFormValues | null;
+  // Controlled mode: the sheet opens from a row's ⋯ menu, no trigger.
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
   rooms: HouseEventRoom[];
 }) {
   return (
-    <FormSheet copy={copy} editing={initial !== null}>
+    <FormSheet
+      copy={copy}
+      editing={initial !== null}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
       {(close) => (
         <HouseEventForm
           initial={initial ?? EMPTY_EVENT}

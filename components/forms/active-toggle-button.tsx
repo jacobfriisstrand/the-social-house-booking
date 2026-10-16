@@ -3,15 +3,38 @@
 // Deactivate/reactivate a catalogue row without a confirm dialog:
 // deactivation is reversible and never destroys history. One button serves
 // rooms and add-ons — the caller supplies the Server Action (id, next) and
-// the copy.
+// the copy. The row menus run the same move through useActiveToggleAction.
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
 export type ActiveToggleResult =
   | { status: "success" }
   | { status: "error"; error: string };
+
+export function useActiveToggleAction(
+  onToggle: (id: string, next: boolean) => Promise<ActiveToggleResult>,
+  updatedTitle: string
+): { pending: boolean; run: (id: string, next: boolean) => void } {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const run = useCallback(
+    (id: string, next: boolean): void => {
+      startTransition(async () => {
+        const result = await onToggle(id, next);
+        if (result.status === "success") {
+          toast.add({ title: updatedTitle, type: "success" });
+          router.refresh();
+        } else {
+          toast.add({ title: result.error, type: "error" });
+        }
+      });
+    },
+    [onToggle, router, updatedTitle]
+  );
+  return { pending, run };
+}
 
 export function ActiveToggleButton({
   activateLabel,
@@ -30,23 +53,11 @@ export function ActiveToggleButton({
   size?: "sm" | "default";
   updatedTitle: string;
 }) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-
-  const handleToggle = useCallback((): void => {
-    setPending(true);
-    const toggle = async (): Promise<void> => {
-      const result = await onToggle(id, !isActive);
-      setPending(false);
-      if (result.status === "success") {
-        toast.add({ title: updatedTitle, type: "success" });
-        router.refresh();
-      } else {
-        toast.add({ title: result.error, type: "error" });
-      }
-    };
-    toggle();
-  }, [id, isActive, onToggle, router, updatedTitle]);
+  const { pending, run } = useActiveToggleAction(onToggle, updatedTitle);
+  const handleToggle = useCallback(
+    () => run(id, !isActive),
+    [id, isActive, run]
+  );
 
   const label = isActive ? deactivateLabel : activateLabel;
 

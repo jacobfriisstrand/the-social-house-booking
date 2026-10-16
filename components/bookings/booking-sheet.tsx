@@ -9,6 +9,7 @@ import { useCallback, useState } from "react";
 import { CancelConfirmDialog } from "@/components/bookings/cancel-confirm-dialog";
 import { CancellationSummary } from "@/components/bookings/cancellation-summary";
 import { DetailRow } from "@/components/bookings/detail-row";
+import { InvoiceDetailRows } from "@/components/bookings/invoice-detail-rows";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Button } from "@/components/ui/button";
 import {
@@ -126,6 +127,14 @@ function BookingSheetDetails({
               value={`${formatDate(booking.cancelledAt)} · ${formatTime(booking.cancelledAt)}`}
             />
           ) : null}
+          {/* The invoice read-back (#122): the number Franz enters when
+              invoicing, shown to the company only while the booking is
+              invoiced — leaving invoiced clears both columns. */}
+          <InvoiceDetailRows
+            invoiceDate={booking.invoiceDate}
+            invoiced={booking.invoicingStatus === "invoiced"}
+            invoiceNumber={booking.invoiceNumber}
+          />
         </dl>
         <PriceOverview model={booking.price} />
         {booking.bookingStatus === "confirmed" ? <CancellationRules /> : null}

@@ -44,7 +44,13 @@ import {
   useRowSelection,
 } from "@/components/selection/row-selection";
 import { Button } from "@/components/ui/button";
-import { Card, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
@@ -77,7 +83,9 @@ import {
   type AdminSortKey,
   adminRowParts,
   canAdminCancel,
+  companyCashFlow,
   type InvoicingActionAllowance,
+  invoiceReadyTotalOre,
   invoicingActionAllowance,
   sortAdminRows,
 } from "@/lib/domain/admin-bookings";
@@ -397,7 +405,13 @@ function BookingRow({
     // Clicking the row opens the detail sheet; the tick and the ⋯ menu
     // opt out below.
     <TableRow className="cursor-pointer" onClick={openRow}>
-      <TableCell onClick={stopRowClick}>{checkbox}</TableCell>
+      {/* The tick sticks sideways with its header cell; horizontally only —
+          a top inset would pin the cell while its row scrolls away. Its own
+          opaque card ground keeps the columns' content from showing
+          through, as the member status column does. */}
+      <TableCell className="sticky left-0 z-10 bg-card" onClick={stopRowClick}>
+        {checkbox}
+      </TableCell>
       <TableCell>
         {/* Every row reserves the fullest badge stack — two badges plus
             the gap between them (2 × h-5 + gap-1 = min-h-11) — so a
@@ -509,7 +523,12 @@ function HeaderRow({
   return (
     <TableHeader>
       <TableRow>
-        <TableHead className="sticky left-0 z-10 w-10">
+        {/* The corner tick cell sticks on both axes: its own left-0 keeps it
+            at the left edge while the stuck header row holds it at the top
+            (a lone left-0 would scroll away vertically). Its own muted ground
+            keeps the columns' content from showing through when it sticks
+            sideways — the thead's background scrolls with the table. */}
+        <TableHead className="sticky top-0 left-0 z-10 w-10 bg-muted">
           <Checkbox
             aria-label={copy.selection.selectAll}
             checked={selection.allSelected}
@@ -772,6 +791,18 @@ export function AdminBookingsTable({
 
   const selectionCount = selection.selected.size;
 
+  // The overview under the table (#120, #121): the filtered set's cash
+  // flow, or — with rows ticked — the ticked rows' alone.
+  const overviewRows = selectionCount > 0 ? selection.selectedEntries : rows;
+  const invoiceableTotalOre = useMemo(
+    () => invoiceReadyTotalOre(overviewRows, now),
+    [now, overviewRows]
+  );
+  const cashFlow = useMemo(
+    () => companyCashFlow(overviewRows, now),
+    [now, overviewRows]
+  );
+
   // The table's head is the same in both states — the caption, the column
   // grid, and the header row (the selection's bulk actions included, so a
   // filter change mid-selection keeps its actions reachable) — and is
@@ -810,34 +841,62 @@ export function AdminBookingsTable({
     </colgroup>
   );
 
-  // While the rows re-read: the same head, one skeleton row per row on
-  // the stale page (at least four, so an empty set still shows movement),
-  // the pagination footer so the card's height holds, and a status line
-  // announcing the wait the way the day grid's spinner does.
+  // While the rows re-read: the overview card's loading shape above (the
+  // same silhouette, the amounts awaiting — #120), then the table with the
+  // same head, one skeleton row per row on the stale page (at least four,
+  // so an empty set still shows movement), the pagination footer so the
+  // card's height holds, and a status line announcing the wait the way the
+  // day grid's spinner does.
   if (loading) {
     const skeletonKeys = Array.from(
       { length: Math.max(visible.length, 4) },
       (_, index) => `skeleton-row-${index}`
     );
     return (
-      <Card className="min-w-0 gap-0 py-0">
-        <p className="sr-only" role="status">
-          {messages.common.loading}
-        </p>
-        <Table aria-busy className="min-w-[58rem] table-fixed">
-          {columnGrid}
-          {tableCaption}
-          {tableHeader}
-          <TableBody>
-            {skeletonKeys.map((key) => (
-              <SkeletonRow key={key} />
-            ))}
-          </TableBody>
-        </Table>
-        <CardFooter className="px-2 py-1">
-          <TablePagination paged={paged} totalItems={rows.length} />
-        </CardFooter>
-      </Card>
+      <div className="flex flex-col gap-6">
+        {cashFlow.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{copy.cashFlow.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col">
+                {["first", "second", "third", "fourth"].map((line) => (
+                  <div
+                    className="flex items-center justify-between gap-4 py-2"
+                    key={`cash-flow-skeleton-${line}`}
+                  >
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-4 pt-2">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+        <Card className="min-w-0 gap-0 py-0">
+          <p className="sr-only" role="status">
+            {messages.common.loading}
+          </p>
+          <Table aria-busy className="min-w-[58rem] table-fixed" sticky>
+            {columnGrid}
+            {tableCaption}
+            {tableHeader}
+            <TableBody>
+              {skeletonKeys.map((key) => (
+                <SkeletonRow key={key} />
+              ))}
+            </TableBody>
+          </Table>
+          <CardFooter className="px-2 py-1">
+            <TablePagination paged={paged} totalItems={rows.length} />
+          </CardFooter>
+        </Card>
+      </div>
     );
   }
 
@@ -856,10 +915,47 @@ export function AdminBookingsTable({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* The cash flow per company (#120), above the table: the overview
+          set's invoice-ready bookings split by company, the biggest amount
+          first — the filtered set, or the ticked rows' alone. Nothing
+          invoice-ready, no card. */}
+      {cashFlow.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{copy.cashFlow.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="flex flex-col">
+              {cashFlow.map((entry) => (
+                <div
+                  className="flex items-baseline justify-between gap-4 border-b py-2 last:border-b-0"
+                  key={entry.companyId}
+                >
+                  <dt className="text-sm">{entry.companyName}</dt>
+                  <dd className="tabular-nums">{formatOre(entry.totalOre)}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="flex items-baseline justify-between gap-4 pt-2 text-sm">
+              <span className="text-muted-foreground">
+                {messages.common.totalLabel}
+              </span>
+              <span className="font-medium tabular-nums">
+                {formatOre(invoiceableTotalOre)}{" "}
+                <span className="font-normal text-muted-foreground text-xs">
+                  {messages.format.exclVat}
+                </span>
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="min-w-0 gap-0 py-0">
         <Table
           className="min-w-[58rem] table-fixed"
           onMouseDownCapture={selection.stopShiftTextSelect}
+          sticky
         >
           {columnGrid}
           {tableCaption}
