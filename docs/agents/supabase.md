@@ -70,6 +70,7 @@ The service-role client (`lib/supabase/admin.ts`) may be imported in exactly the
 7. `lib/auth/recovery-actions.ts` — the generic forgot-password company lookup before asking Auth to send the recovery email.
 8. `app/api/jobs/send-reminders/route.ts` — the hourly job (#11) runs without a session: it calls `expire_stale_holds()` and reads the bookings due a reminder, passing its client to `lib/bookings/reminders.ts`.
 9. `app/api/jobs/sync-calendar/route.ts` — the Outlook sync job (#13) runs without a session: it reads the dirty `calendar_events` rows and writes back their Graph ids and flags, passing its client to `lib/outlook/sync.ts`.
+10. `lib/foyer/data.ts` — the foyer screen (#124) renders for an unauthenticated display: the reads run with the service role instead of widening RLS to anonymous callers. The `calendar_entries` view is not reachable here (it gates on `auth.uid()`), so the day projection assembles from the base tables — confirmed bookings' times, room and company display name, and House Events; no booker columns, no prices, no notes.
 
 One further consumer of the service-role key exists outside this list: `scripts/create-admin.ts` builds its own client in a standalone process (`lib/supabase/admin.ts` is `server-only`, unusable there).
 
