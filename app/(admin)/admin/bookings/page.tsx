@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Metadata } from "next";
 import {
   AdminBookingsView,
   type AdminCalendarModel,
@@ -25,6 +26,10 @@ import { calendarDates, calendarWindow } from "@/lib/domain/periods";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.shell.bookings,
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

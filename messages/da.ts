@@ -827,6 +827,7 @@ export const messages = {
     seedMemberLabel: "Medlemsvirksomhed",
     submit: "Log ind",
     submitting: "Logger ind …",
+    title: "Log ind",
   },
   manifest: {
     name: "The Social House",

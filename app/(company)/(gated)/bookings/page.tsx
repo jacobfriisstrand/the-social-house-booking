@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { BookingOverview } from "@/components/bookings/member-bookings-view";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { requireOwnCompany } from "@/lib/auth/require-company";
@@ -7,6 +8,10 @@ import { first, type SearchParams } from "@/lib/bookings/view-params";
 import { filterBookingOverview } from "@/lib/domain/booking-overview";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
+
+export const metadata: Metadata = {
+  title: messages.shell.bookings,
+};
 
 // Bookinger (member, #8): only the company's own rows are loaded, under
 // the admin overview's filter row and sorting (DESIGN.md "Bookinger
