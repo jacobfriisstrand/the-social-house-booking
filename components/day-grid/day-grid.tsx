@@ -335,9 +335,10 @@ function GridRow({
   return (
     <TableRow className={ROW_CLASS} data-row={row}>
       {/* border-b on the cell itself: it travels with the sticky label, so
-          the row separator is there under the time column too (#115). */}
+          the row separator is there under the time column too (#115). The
+          after-line is the vertical one, same travel. */}
       <TableHead
-        className="sticky left-0 z-10 h-9 border-b bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums"
+        className="sticky left-0 z-10 h-9 border-b bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border"
         scope="row"
       >
         {label}
@@ -532,7 +533,9 @@ export function DayGrid({
           </colgroup>
           <TableHeader className="[&_th]:border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 h-14 bg-card">
+              {/* The after-line overlaps the first room column's own border-l
+                  at rest and stays while it slides behind (#115). */}
+              <TableHead className="sticky left-0 z-10 h-14 bg-card after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border">
                 <span className="sr-only">{copy.sheet.time}</span>
               </TableHead>
               {columns.map((column) => (
