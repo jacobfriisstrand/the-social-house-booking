@@ -236,6 +236,7 @@ function SlotCell({
   drag,
   onBook,
   onDragStart,
+  readOnly,
   roomName,
 }: {
   cell: Extract<GridCell, { kind: "slot" }>;
@@ -243,19 +244,24 @@ function SlotCell({
   drag: SlotDrag | null;
   onBook: (target: BookingTarget) => void;
   onDragStart: DragStart;
+  // #124: the foyer screen shows the grid without the booking affordances
+  // — no session sits behind it, so a free slot is display, not a button.
+  readOnly?: boolean;
   roomName: string | undefined;
 }) {
   return (
     <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
       {cell.status === "available" ? (
         <>
-          <FreeSlotButton
-            cell={cell}
-            column={column}
-            onBook={onBook}
-            onDragStart={onDragStart}
-            roomName={roomName}
-          />
+          {readOnly ? null : (
+            <FreeSlotButton
+              cell={cell}
+              column={column}
+              onBook={onBook}
+              onDragStart={onDragStart}
+              roomName={roomName}
+            />
+          )}
           {drag ? <DragSelection drag={drag} /> : null}
         </>
       ) : (
@@ -279,6 +285,8 @@ interface CellHandlers {
   onBook: (target: BookingTarget) => void;
   onDragStart: DragStart;
   onOpen: (key: string) => void;
+  // #124: the foyer's grid — free slots are display, not buttons.
+  readOnly: boolean;
   roomNames: string[];
 }
 
@@ -306,6 +314,7 @@ function GridCellView({
         drag={dragFrom(handlers.drag, column, cell.firstRow)}
         onBook={handlers.onBook}
         onDragStart={handlers.onDragStart}
+        readOnly={handlers.readOnly}
         roomName={handlers.roomNames[column]}
       />
     );
@@ -472,6 +481,11 @@ export function DayGrid({
   date,
   dateLabel,
   entries,
+  // #124: the foyer renders the grid read-only — no session sits behind
+  // the screen, so a free slot is display, not a booking button, and the
+  // drag never starts. The entry sheets stay: tapping a block shows what
+  // is already on screen.
+  readOnly = false,
   rows,
   terms,
   viewer,
@@ -480,6 +494,7 @@ export function DayGrid({
   date: string;
   dateLabel: string;
   entries: Record<string, GridEntryView>;
+  readOnly?: boolean;
   rows: PlacedCell[][];
   terms: CurrentTerms;
   viewer: BookingViewer;
@@ -505,6 +520,7 @@ export function DayGrid({
     onBook: book,
     onDragStart: startDrag,
     onOpen: openSheet,
+    readOnly,
     roomNames: columns.map((column) => column.room.name),
   };
 
