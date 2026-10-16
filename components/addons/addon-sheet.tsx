@@ -10,12 +10,12 @@ import {
 import { useControlledOpen } from "@/components/forms/use-controlled-open";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { messages } from "@/messages/da";
 
 export function AddonSheet({
@@ -40,27 +40,25 @@ export function AddonSheet({
   const close = useCallback((): void => setOpen(false), [setOpen]);
 
   return (
-    <Dialog onOpenChange={setOpen} open={currentOpen}>
+    <Sheet onOpenChange={setOpen} open={currentOpen}>
       {isControlled ? null : (
-        <DialogTrigger
+        <SheetTrigger
           render={
             <Button size={triggerSize} type="button" variant={triggerVariant} />
           }
         >
           {triggerLabel}
-        </DialogTrigger>
+        </SheetTrigger>
       )}
-      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>
-            {initial ? copy.editTitle : copy.createTitle}
-          </DialogTitle>
-        </DialogHeader>
+      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle>{initial ? copy.editTitle : copy.createTitle}</SheetTitle>
+        </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
           <AddonForm initial={initial} onSaved={close} />
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

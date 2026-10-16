@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { type ComponentProps, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { toast } from "@/components/ui/toast";
 import { deleteRoomImage, reorderRoomImages } from "@/lib/rooms/actions";
 import type { AddonOption } from "@/lib/rooms/data";
@@ -147,20 +147,20 @@ export function RoomSheet({
   );
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger
+    <Sheet onOpenChange={setOpen} open={open}>
+      <SheetTrigger
         render={
           <Button size={triggerSize} type="button" variant={triggerVariant} />
         }
       >
         {triggerLabel}
-      </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
+      </SheetTrigger>
+      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle>
             {initial ? messages.rooms.editTitle : messages.rooms.createTitle}
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
         <RoomSheetBody
           addons={addons}
           close={close}
@@ -170,7 +170,7 @@ export function RoomSheet({
           reorderImages={reorderImages}
           specialDays={specialDays}
         />
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
