@@ -3,10 +3,12 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 // The admin calendar (#9): the month grid — one cell per date, each
 // holding its blocks in start order with their company, room and
-// timeslot, a booking in primary. A block opens the same entry sheet. The
-// stepper and the month name live in the header above the grid.
+// timeslot, a booking in primary. A block opens the same detail sheet the
+// table opens. The stepper and the month name live in the header above
+// the grid.
 import { useCallback, useState } from "react";
-import { EntrySheet } from "@/components/day-grid/entry-sheet";
+import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
+import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { Card } from "@/components/ui/card";
 import {
   Popover,
@@ -34,6 +36,7 @@ import {
   movedPeriod,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
+import type { AdminBookingRow } from "@/lib/domain/admin-bookings";
 import { weekdayIndexMondayFirst } from "@/lib/domain/periods";
 import { formatDateString } from "@/lib/format";
 import type { GridEntryView } from "@/lib/notice-board/view";
@@ -311,12 +314,46 @@ function PeriodControl({
   );
 }
 
+// The month view's sheet pair: the table's own detail sheet over the
+// clicked entry's row, with the cancel confirm beside it. The picked row
+// stays after close so the exit animation plays over it — the table's
+// own overlay pattern.
+function CalendarDetailSheets({
+  onClose,
+  open,
+  row,
+  rows,
+}: {
+  onClose: (open: boolean) => void;
+  open: boolean;
+  row: AdminBookingRow | null;
+  rows: AdminBookingRow[];
+}) {
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const closeCancel = useCallback(() => setCancelId(null), []);
+  const cancelRow = rows.find((r) => r.bookingId === cancelId) ?? null;
+  return (
+    <>
+      <BookingDetailSheet
+        onCancel={setCancelId}
+        onOpenChange={onClose}
+        open={open}
+        row={row}
+      />
+      {cancelRow ? (
+        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
+      ) : null}
+    </>
+  );
+}
+
 export function AdminCalendarGrid({
   calendar,
   loading,
   monthLabel,
   onPeriodChange,
   params,
+  rows,
   today,
 }: {
   // Null while a switch from the list is still loading — the skeleton
@@ -331,13 +368,28 @@ export function AdminCalendarGrid({
   // skeletons and the accumulated params live in one place.
   onPeriodChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
+  // The rows behind the month's entries: a click opens the same detail
+  // sheet the table opens, fed with the same AdminBookingRow.
+  rows: AdminBookingRow[];
   today: string;
 }) {
-  const [openEntry, setOpenEntry] = useState<GridEntryView | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const onOpen = useCallback((view: GridEntryView) => {
-    setOpenEntry(view);
-    setSheetOpen(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+  // The picked row stays after close so the exit animation plays over it
+  // — the table's own overlay pattern.
+  const [sheetRow, setSheetRow] = useState<AdminBookingRow | null>(null);
+  const onOpen = useCallback(
+    (view: GridEntryView) => {
+      setSheetRow(rows.find((row) => row.bookingId === view.id) ?? null);
+      setOpenId(view.id);
+    },
+    [rows]
+  );
+  // Clearing the id closes the sheet; the picked row stays in the sheet
+  // pair below, so the exit animation plays over it.
+  const closeSheet = useCallback((open: boolean) => {
+    if (!open) {
+      setOpenId(null);
+    }
   }, []);
 
   return (
@@ -374,10 +426,11 @@ export function AdminCalendarGrid({
           />
         </div>
       </Card>
-      <EntrySheet
-        entry={openEntry}
-        onOpenChange={setSheetOpen}
-        open={sheetOpen}
+      <CalendarDetailSheets
+        onClose={closeSheet}
+        open={openId !== null}
+        row={sheetRow}
+        rows={rows}
       />
     </>
   );

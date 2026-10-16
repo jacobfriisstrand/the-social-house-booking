@@ -29,6 +29,9 @@ export interface BookingOverviewEntry {
 
 export interface BookingAddonOverview {
   addonId: string;
+  // The catalogue description, when the read carries it — the price
+  // overview's info hover shows it; the email surfaces don't and omit it.
+  description?: string | null;
   name: string | null;
   quantity: number;
   totalOre: number;

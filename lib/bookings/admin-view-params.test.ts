@@ -4,6 +4,7 @@
 // period.
 import { describe, expect, it } from "vitest";
 import {
+  adminExportHref,
   adminViewHref,
   movedPeriod,
   parseAdminViewParams,
@@ -174,6 +175,23 @@ describe("adminViewHref", () => {
       periodTo: undefined,
     });
     expect(cleared).not.toContain("period");
+  });
+});
+
+describe("adminExportHref", () => {
+  it("forwards the page's filters verbatim, multi-selects repeated", () => {
+    expect(
+      adminExportHref({
+        company: ["c1", "c2"],
+        room: undefined,
+        sort: "date",
+        view: "list",
+      })
+    ).toBe("/admin/bookings/export?company=c1&company=c2&sort=date&view=list");
+  });
+
+  it("stays bare without a query", () => {
+    expect(adminExportHref({})).toBe("/admin/bookings/export");
   });
 });
 

@@ -498,6 +498,7 @@ export function BookingFilterRow({
 
 export function AdminBookingsView({
   calendar,
+  calendarRows,
   options,
   params,
   rows,
@@ -505,6 +506,9 @@ export function AdminBookingsView({
 }: {
   // Null in the list view; a day grid or a compact grid otherwise.
   calendar: AdminCalendarModel | null;
+  // The rows behind the calendar's entries: the month view's sheet is the
+  // table's own detail sheet, fed with the same AdminBookingRow.
+  calendarRows: AdminBookingRow[];
   options: AdminFilterOptions;
   params: AdminViewParams;
   rows: AdminBookingRow[];
@@ -583,6 +587,7 @@ export function AdminBookingsView({
           monthLabel={formatMonthYear(view.focusDate)}
           onPeriodChange={update}
           params={view}
+          rows={calendarRows}
           today={today}
         />
       ) : (

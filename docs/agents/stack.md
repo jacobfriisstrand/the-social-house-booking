@@ -12,9 +12,11 @@ Versions, commands, environment variables, and observability. The single referen
 | Styling / UI | Tailwind v4, shadcn on **Base UI** | See `ui.md`. |
 | Database / Auth | Supabase (Postgres, Auth, Edge Functions) | See `supabase.md`, `auth.md`. |
 | Email | Resend (Templates API, webhooks) | See `email.md`. |
+| PDF exports | `@react-pdf/renderer` (server-side render in the route handlers) | The admin exports (#123); CSV is hand-rolled in `lib/export/csv.ts`. |
 | Hosting | Netlify (site, scheduled function) | See `deploy.md`. |
 | Errors | Sentry via `@sentry/nextjs` | Below. |
 | Lint / format | Ultracite (Biome preset) | Below. |
+| Code health | Fallow (fallow.tools) | `npm run fallow`, enforced on pre-push — never suppress a finding, fix the root cause (`testing.md` → Fallow). |
 | Tests | Vitest (TypeScript), pgTAP via `supabase test db` (Postgres) | See `testing.md`. |
 
 Vendor documentation is pinned in `docs/vendor/<vendor>/` with a `Source:` and `Fetched:` header. It overrides whatever you remember about these tools.

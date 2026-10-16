@@ -6,7 +6,6 @@
 // (room and id, like the day grid's blocks) so the grid renders without
 // array-index keys.
 import { cphToUtc } from "@/lib/domain/time";
-import type { BookingDetail } from "@/lib/notice-board/data";
 import { bookingView, type GridEntryView } from "@/lib/notice-board/view";
 import type { AdminCalendarEntry } from "./admin-data";
 
@@ -25,11 +24,9 @@ export interface AdminCalendarCell {
  * shows. */
 export function buildAdminCalendarCells({
   dates,
-  details,
   entries,
 }: {
   dates: readonly string[];
-  details: Map<string, BookingDetail>;
   entries: AdminCalendarEntry[];
 }): AdminCalendarCell[] {
   return dates.map((date) => {
@@ -46,7 +43,9 @@ export function buildAdminCalendarCells({
     return {
       blocks: cellEntries.map((entry) => ({
         key: `${entry.roomId}:${entry.id}`,
-        view: bookingView(entry, details.get(entry.id)),
+        // No detail lines: the admin calendar's sheet is the table's own
+        // detail sheet, which reads the booking row, not the projection.
+        view: bookingView(entry, undefined),
       })),
       date,
     };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CompanyTable } from "@/components/companies/company-table";
 import { CreateCompanySheet } from "@/components/companies/create-company-sheet";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader, PagePanel } from "@/components/shell/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -9,6 +10,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
+import { listAdminCompanies } from "@/lib/companies/admin-data";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
 
@@ -31,13 +33,7 @@ export default async function AdminCompaniesPage({
     searchParams,
     createClient(),
   ]);
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("*")
-    .order("company_display_name")
-    // Bounded: the list is catalogue-sized; paginate in a follow-up if a
-    // tenant ever approaches the cap.
-    .limit(500);
+  const companies = await listAdminCompanies(supabase);
 
   return (
     <>
@@ -47,10 +43,11 @@ export default async function AdminCompaniesPage({
         </Alert>
       ) : null}
       <PageHeader title={copy.title}>
+        <ExportMenu href="/admin/companies/export" />
         <CreateCompanySheet />
       </PageHeader>
       <PagePanel>
-        {companies?.length ? (
+        {companies.length ? (
           <CompanyTable companies={companies} />
         ) : (
           <Card className="py-16">

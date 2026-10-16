@@ -18,6 +18,9 @@ import {
   moveMonth,
 } from "@/lib/domain/periods";
 import type { SortDirection } from "@/lib/table-sort";
+// Type-only: the mapper below returns the filter the reads accept, without
+// pulling the read module into the URL-parsing graph.
+import type { AdminOverviewFilter } from "./admin-data";
 import {
   appendValues,
   first,
@@ -160,6 +163,43 @@ export function adminViewHref(
     search.set("worklist", "1");
   }
   return `/admin/bookings?${search.toString()}`;
+}
+
+/** The CSV export's URL for the page's own search (#123): the filters
+ * ride along verbatim, so the export reads the same rows the list shows.
+ * Multi-selects repeat their key; unknown keys pass through — the route's
+ * parser ignores what it does not know. */
+export function adminExportHref(search: SearchParams): string {
+  const forward = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (value === undefined) {
+      continue;
+    }
+    for (const entry of Array.isArray(value) ? value : [value]) {
+      forward.append(key, entry);
+    }
+  }
+  const query = forward.toString();
+  return `/admin/bookings/export${query ? `?${query}` : ""}`;
+}
+
+/** The URL params' filter, the mapping the page and the CSV export route
+ * (#123) share so a filter change reaches both reads the same way. */
+export function adminOverviewFilter(
+  params: AdminViewParams,
+  now: Date
+): AdminOverviewFilter {
+  return {
+    bookingStates: params.bookingStates,
+    companyIds: params.companyIds,
+    invoicingStatuses: params.invoicingStatuses,
+    memberships: params.memberships,
+    now,
+    periodFrom: params.periodFrom,
+    periodTo: params.periodTo,
+    roomIds: params.roomIds,
+    worklist: params.worklist,
+  };
 }
 
 /** The period a picked date opens: that date's month, the focus clamped
