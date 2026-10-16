@@ -79,6 +79,7 @@ export const ADMIN_SORT_KEYS: AdminSortKey[] = [
   "hours",
   "manualAmounts",
   "memberPrice",
+  "participants",
   "room",
   "roomPrice",
   "status",

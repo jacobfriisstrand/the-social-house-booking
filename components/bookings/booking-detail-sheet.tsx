@@ -34,6 +34,7 @@ import {
   formatDate,
   formatDateString,
   formatHours,
+  formatNumber,
   formatOre,
   formatTime,
 } from "@/lib/format";
@@ -133,6 +134,23 @@ export function BookingDetailSheet({
               value={parts.minutes === null ? NONE : formatHours(parts.minutes)}
             />
             <DetailRow label={bookingsCopy.columns.room} value={row.roomName} />
+            <DetailRow
+              label={bookingsCopy.columns.participants}
+              value={formatNumber(row.participants)}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerName}
+              value={row.bookerName ?? NONE}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerEmail}
+              mono={row.bookerEmail !== null}
+              value={row.bookerEmail ?? NONE}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerPhone}
+              value={row.bookerPhone ?? NONE}
+            />
             <DetailRow
               label={companiesCopy.columns.status}
               value={companiesCopy.membership[row.membershipStatus]}

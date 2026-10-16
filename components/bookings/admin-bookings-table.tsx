@@ -151,6 +151,12 @@ const COLUMNS: ColumnDef[] = [
   { key: "company", label: copy.columns.company },
   { key: "room", label: bookingsCopy.columns.room },
   { key: "date", label: bookingsCopy.columns.dateTime },
+  {
+    align: "right",
+    key: "participants",
+    label: bookingsCopy.columns.participants,
+    width: "w-16",
+  },
   { key: "addOns", label: bookingsCopy.columns.addOns },
   {
     align: "right",
@@ -434,6 +440,9 @@ function BookingRow({
         <span className="block text-muted-foreground text-xs">
           {formatTime(row.startAt)} - {formatTime(row.endAt)}
         </span>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.participants}
       </TableCell>
       {/* The add-ons indicator: "Ja" when the booking carries add-ons —
           the exact lines live in the detail sheet's price panel. */}
@@ -835,6 +844,7 @@ export function AdminBookingsTable({
       <col />
       <col />
       <col />
+      <col className="w-16" />
       <col />
       <col />
       <col className="w-14" />

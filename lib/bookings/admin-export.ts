@@ -48,6 +48,7 @@ function bookingCells(row: AdminBookingRow): ExportCell[] {
     row.roomName,
     formatDateTime(row.startAt),
     formatDateTime(row.endAt),
+    String(row.participants),
     row.addOns.length === 0 ? NONE : copy.columns.addOnsYes,
     oreCell(totalOre(row)),
   ];
@@ -64,6 +65,7 @@ export function bookingsTable(rows: readonly AdminBookingRow[]): ExportTable {
       copy.columns.room,
       copy.columns.start,
       copy.columns.end,
+      copy.columns.participants,
       copy.columns.addOns,
       messages.bookings.admin.columns.totalPrice,
     ],

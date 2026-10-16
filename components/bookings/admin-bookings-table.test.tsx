@@ -37,6 +37,9 @@ const noop = () => undefined;
 const row: AdminBookingRow = {
   addOns: [],
   addonTotalOre: 0,
+  bookerEmail: null,
+  bookerName: null,
+  bookerPhone: null,
   bookingId: "b1",
   bookingNumber: "B-2610-0001",
   bookingStatus: "confirmed",
@@ -53,6 +56,7 @@ const row: AdminBookingRow = {
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  participants: 8,
   roomId: "r1",
   roomName: "Room of Ideas",
   roomPriceOre: 100_000,

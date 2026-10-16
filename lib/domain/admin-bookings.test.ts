@@ -21,6 +21,9 @@ const booking = (
 ) => ({
   addOns: [],
   addonTotalOre: 0,
+  bookerEmail: null,
+  bookerName: null,
+  bookerPhone: null,
   bookingId: "b1",
   bookingNumber: "B-2610-0001",
   bookingStatus: "confirmed" as const,
@@ -37,6 +40,7 @@ const booking = (
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member" as const,
+  participants: 8,
   roomId: "r1",
   roomName: "Room of Power",
   roomPriceOre: 100_000,
@@ -211,6 +215,17 @@ describe("sortAdminRows", () => {
     expect(
       sortAdminRows(rows, "company", "asc").map((row) => row.companyName)
     ).toEqual(["Nordic Events", "Rituals"]);
+  });
+
+  it("sorts the participant count numerically (#117)", () => {
+    const rows = [
+      booking({ bookingId: "eight", participants: 8 }),
+      booking({ bookingId: "four", participants: 4 }),
+    ];
+    const asc = sortAdminRows(rows, "participants", "asc");
+    expect(asc.map((row) => row.bookingId)).toEqual(["four", "eight"]);
+    const desc = sortAdminRows(rows, "participants", "desc");
+    expect(desc.map((row) => row.bookingId)).toEqual(["eight", "four"]);
   });
 
   it("sorts a cancelled row's null discount last", () => {
