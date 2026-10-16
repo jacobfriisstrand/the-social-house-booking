@@ -3,7 +3,7 @@ import { DayGrid } from "@/components/day-grid/day-grid";
 import { FoyerRefresh } from "@/components/foyer/foyer-refresh";
 import { NoticeStrip } from "@/components/notice-board/notice-strip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateString } from "@/lib/format";
+import { formatDateString, formatTime } from "@/lib/format";
 import { loadFoyerDay } from "@/lib/foyer/data";
 import { messages } from "@/messages/da";
 
@@ -31,7 +31,9 @@ export default async function FoyerPage() {
       <FoyerRefresh />
       <header className="flex items-baseline justify-between gap-4">
         <h1 className="font-semibold text-2xl">{copy.title}</h1>
-        <p className="text-muted-foreground">{formatDateString(date)}</p>
+        <p className="text-muted-foreground">
+          {formatDateString(date)} · {copy.updatedAt} {formatTime(now)}
+        </p>
       </header>
       <NoticeStrip
         events={events}

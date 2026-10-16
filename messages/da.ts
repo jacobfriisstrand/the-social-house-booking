@@ -717,6 +717,7 @@ export const messages = {
   // notice board and today's booking overview, no chrome, no booking.
   foyer: {
     title: "Velkommen til The Social House",
+    updatedAt: "Senest opdateret",
   },
   // Hjem (#12, DESIGN.md "Hjem"): the notice board. Notices and today's
   // House Events, the day grid with each room's status, and the rooms.
