@@ -27,4 +27,12 @@ No Playwright or component tests in v1.0. If a bug is found in a UI flow, the fi
 
 ## What "done" means for a PR
 
-Schema change → migration + regenerated types + pgTAP test. Domain rule change → Vitest test. Email change → template + variables schema + `sendMail` test if a rule changed. Every PR passes `npm run check`, `tsc`, both suites, and `next build`.
+Schema change → migration + regenerated types + pgTAP test. Domain rule change → Vitest test. Email change → template + variables schema + `sendMail` test if a rule changed. Every PR passes `npm run check`, `tsc`, both suites, `npm run fallow`, and `next build`.
+
+## Fallow
+
+The code-health gate (`npm run fallow`, enforced on pre-push) reports duplication, dead code, and function health (size, cognitive complexity, CRAP). It fails the push when a finding crosses threshold.
+
+- **Never suppress a finding.** No `// fallow-ignore-next-line complexity` comments, no threshold edits, no config additions whose purpose is to make a push pass — a suppressed finding is a lie the next reader inherits. (The suppressions that predate this rule are not examples to copy; remove them when the file changes for real work.)
+- **Fix the root cause the report names.** Duplication → extract the shared module the clones are asking for. Complexity → split the function along its natural seams (state hooks, JSX blocks, server branches). Dead code → delete it.
+- An extraction that merely moves the problem (a new function that still breaches) is not a fix — the gate will catch it on the next push, as it should. If a finding looks like a false positive, verify against the real behavior first; the config's `ignoreExports` list is for vendored shadcn surfaces, not for findings in first-party code.
