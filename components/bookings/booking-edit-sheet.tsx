@@ -16,15 +16,15 @@ import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldGroup } from "@/components/ui/field";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { FieldGroup } from "@/components/ui/field";
 import type { ManualAmountEntry } from "@/lib/domain/booking-overview";
 import { formatDateTime, formatOre } from "@/lib/format";
 import {
@@ -180,26 +180,26 @@ export function BookingEditSheet({
 }) {
   const controlled = open !== undefined;
   return (
-    <Sheet {...(controlled ? { onOpenChange, open } : {})}>
+    <Dialog {...(controlled ? { onOpenChange, open } : {})}>
       {controlled ? null : (
-        <SheetTrigger
+        <DialogTrigger
           render={<Button size="sm" type="button" variant="outline" />}
         >
           {admin.editLabel}
-        </SheetTrigger>
+        </DialogTrigger>
       )}
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{admin.editTitle}</SheetTitle>
-          <SheetDescription>{bookingNumber}</SheetDescription>
-        </SheetHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{admin.editTitle}</DialogTitle>
+          <DialogDescription>{bookingNumber}</DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
           <ManualAmountsSection
             bookingId={bookingId}
             manualAmounts={manualAmounts}
           />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -13,12 +13,12 @@ import { InvoiceDetailRows } from "@/components/bookings/invoice-detail-rows";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cancelOwnBooking } from "@/lib/bookings/cancel-actions";
 import type { BookingOverviewRow } from "@/lib/domain/booking-overview";
 import { formatDate, formatOre, formatTime } from "@/lib/format";
@@ -88,12 +88,12 @@ function BookingSheetDetails({
 
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>{copy.title}</SheetTitle>
-        <SheetDescription className="font-mono">
+      <DialogHeader>
+        <DialogTitle>{copy.title}</DialogTitle>
+        <DialogDescription className="font-mono">
           {booking.bookingNumber}
-        </SheetDescription>
-      </SheetHeader>
+        </DialogDescription>
+      </DialogHeader>
       <div className="flex flex-col gap-6 px-4 pb-8">
         <dl className="flex flex-col">
           <DetailRow
@@ -181,11 +181,11 @@ export function BookingSheet({
 
   return (
     <>
-      <Sheet onOpenChange={handleSheetOpenChange} open={open}>
-        <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
+      <Dialog onOpenChange={handleSheetOpenChange} open={open}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-xl">
           <BookingSheetDetails booking={booking} onCancel={openConfirm} />
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
       {confirming ? (
         <MemberCancelDialog booking={booking} onClose={closeSheet} />
       ) : null}

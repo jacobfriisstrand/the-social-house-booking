@@ -3,12 +3,12 @@
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   type CompanyRow,
   companyToAdminValues,
@@ -26,8 +26,8 @@ export function CompanySheet({ company }: { company: CompanyRow }) {
   }, []);
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
-      <SheetTrigger
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger
         render={
           <Button
             className="inline-block h-auto max-w-full truncate px-0 py-0 font-medium underline-offset-4 hover:bg-transparent hover:underline"
@@ -37,11 +37,11 @@ export function CompanySheet({ company }: { company: CompanyRow }) {
         }
       >
         {company.company_display_name}
-      </SheetTrigger>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>{company.company_display_name}</SheetTitle>
-        </SheetHeader>
+      </DialogTrigger>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{company.company_display_name}</DialogTitle>
+        </DialogHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
           {/* Re-inviting is only meaningful before the company has used the
               invite: once its master data is filled in, Auth refuses a new
@@ -54,7 +54,7 @@ export function CompanySheet({ company }: { company: CompanyRow }) {
             onSaved={close}
           />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

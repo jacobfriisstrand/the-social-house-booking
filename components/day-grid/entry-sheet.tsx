@@ -7,12 +7,12 @@ import { DetailRow } from "@/components/bookings/detail-row";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { GridEntryView } from "@/lib/notice-board/view";
 import { messages } from "@/messages/da";
 
@@ -32,18 +32,18 @@ export function EntrySheet({
   }
   const isEvent = entry.kind === "house_event";
   return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{entry.name}</SheetTitle>
-          <SheetDescription>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{entry.name}</DialogTitle>
+          <DialogDescription>
             {isEvent ? (
               <Badge variant="info">{copy.houseEventBadge}</Badge>
             ) : (
               copy.sheet.bookingTitle
             )}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
           <dl className="flex flex-col">
             {entry.details.map((line) => (
@@ -57,7 +57,7 @@ export function EntrySheet({
           </dl>
           {entry.price ? <PriceOverview model={entry.price} /> : null}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

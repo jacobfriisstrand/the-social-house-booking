@@ -18,12 +18,12 @@ import { DetailRow } from "@/components/bookings/detail-row";
 import { PriceOverview } from "@/components/bookings/price-overview";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   type AdminBookingRow,
   adminRowParts,
@@ -116,12 +116,12 @@ export function BookingDetailSheet({
   }
   const parts = adminRowParts(row);
   return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{row.bookingNumber}</SheetTitle>
-          <SheetDescription>{row.companyName}</SheetDescription>
-        </SheetHeader>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{row.bookingNumber}</DialogTitle>
+          <DialogDescription>{row.companyName}</DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
           <dl className="flex flex-col">
             <DetailRow
@@ -177,7 +177,7 @@ export function BookingDetailSheet({
           )}
           <CancelButton onCancel={onCancel} row={row} />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -14,15 +14,15 @@ import { TextField } from "@/components/forms/text-field";
 import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { FieldGroup } from "@/components/ui/field";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { FieldGroup } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { createCompany } from "@/lib/companies/admin-actions";
 import {
@@ -97,17 +97,17 @@ export function CreateCompanySheet() {
   }, [state, form, router]);
 
   return (
-    <Sheet onOpenChange={handleOpenChange} open={open}>
-      <SheetTrigger render={<Button />}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
+      <DialogTrigger render={<Button />}>
         {messages.companies.create}
-      </SheetTrigger>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>{messages.companies.create}</SheetTitle>
-          <SheetDescription>
+      </DialogTrigger>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-full gap-0 overflow-y-auto max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{messages.companies.create}</DialogTitle>
+          <DialogDescription>
             {messages.companies.createDescription}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form className="flex flex-col gap-6 px-4 pb-8" onSubmit={submit}>
           <Card>
             <CardContent>
@@ -148,7 +148,7 @@ export function CreateCompanySheet() {
             </CardFooter>
           </Card>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
