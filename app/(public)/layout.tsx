@@ -48,7 +48,17 @@ export default async function PublicLayout({
           instead of carrying intrinsic bounds. */}
       <div className="sticky top-0 hidden h-dvh w-1/2 self-start lg:block">
         {hero ? (
-          <Image alt="" className="object-cover" fill sizes="50vw" src={hero} />
+          // Next's fill image needs a positioned parent; the sticky shell
+          // stays sticky, the wrapper takes the positioning.
+          <div className="relative h-full w-full">
+            <Image
+              alt=""
+              className="object-cover"
+              fill
+              sizes="50vw"
+              src={hero}
+            />
+          </div>
         ) : (
           <div className="flex h-full items-center justify-center">
             {/* The no-image fallback: the house mark, same source as the
