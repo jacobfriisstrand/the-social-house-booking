@@ -10,7 +10,6 @@
 // is ordered only through The Social House, and the acceptance timestamp
 // is what Mail 4 (#11) repeats. The booking dialog (#4) reuses these
 // fields.
-import { MinusIcon, PlusIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   type Control,
@@ -19,6 +18,7 @@ import {
   useController,
   useWatch,
 } from "react-hook-form";
+import { QuantityPicker } from "@/components/forms/quantity-picker";
 import { formatAddonPrice } from "@/components/rooms/addon-price";
 import {
   Accordion,
@@ -27,7 +27,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -89,6 +88,10 @@ function AddOnAbout({
 
 interface AddOnCheckboxListProps<Values extends FieldValues> {
   addOns: AddOnView[];
+  // The selected room's capacity: the quantity stepper never offers more
+  // than it, so a transiently over-capacity participant count cannot offer
+  // unbookable quantities (the server still rejects the booking itself).
+  capacity: number;
   control: Control<Values>;
   error?: string;
   name: Path<Values>;
@@ -108,6 +111,7 @@ interface AddOnRowProps<Values extends FieldValues> {
   onChange: (addonId: string, checked: boolean) => void;
   open: boolean;
   participantCount: number;
+  quantityMax: number;
 }
 
 // #119: the quantity the customer orders of a per-participant add-on,
@@ -119,59 +123,33 @@ interface AddOnRowProps<Values extends FieldValues> {
 function AddOnQuantitySelector<Values extends FieldValues>({
   addonId,
   control,
+  max,
   participantCount,
 }: {
   addonId: string;
   control: Control<Values>;
+  max: number;
   participantCount: number;
 }) {
   const { field } = useController({
     control,
     name: `addOnQuantities.${addonId}` as Path<Values>,
   });
-  const value =
-    typeof field.value === "number" && !Number.isNaN(field.value)
-      ? field.value
-      : participantCount;
-  // A cleared participants field must not push the stepper below 1 —
-  // the server still validates the real bound against its own count.
-  const max = Math.max(1, participantCount);
-  const set = useCallback(
-    (next: number): void => {
-      field.onChange(Math.min(Math.max(1, next), max));
-    },
-    [field, max]
-  );
-  const decrease = useCallback(() => set(value - 1), [set, value]);
-  const increase = useCallback(() => set(value + 1), [set, value]);
 
   return (
-    <fieldset
-      aria-label={copy.quantityLabel}
-      className="-mt-0.5 flex items-center gap-1"
-    >
-      <Button
-        aria-label={copy.quantityDecrease}
-        disabled={value <= 1}
-        onClick={decrease}
-        size="icon-xs"
-        type="button"
-        variant="outline"
-      >
-        <MinusIcon aria-hidden="true" />
-      </Button>
-      <span className="min-w-5 text-center text-sm tabular-nums">{value}</span>
-      <Button
-        aria-label={copy.quantityIncrease}
-        disabled={value >= max}
-        onClick={increase}
-        size="icon-xs"
-        type="button"
-        variant="outline"
-      >
-        <PlusIcon aria-hidden="true" />
-      </Button>
-    </fieldset>
+    <QuantityPicker
+      decreaseLabel={messages.common.quantityDecrease}
+      increaseLabel={messages.common.quantityIncrease}
+      label={copy.quantityLabel}
+      max={max}
+      onValueChange={field.onChange}
+      size="icon-xs"
+      value={
+        typeof field.value === "number" && !Number.isNaN(field.value)
+          ? field.value
+          : participantCount
+      }
+    />
   );
 }
 
@@ -187,6 +165,7 @@ function AddOnRow<Values extends FieldValues>({
   onChange,
   open,
   participantCount,
+  quantityMax,
 }: AddOnRowProps<Values>) {
   const id = `add-on-${addOn.addonId}`;
   const handleCheckedChange = useCallback(
@@ -202,7 +181,7 @@ function AddOnRow<Values extends FieldValues>({
 
   return (
     <Field>
-      <div className="flex items-start gap-3">
+      <div className="flex h-5.5 items-start gap-3">
         <Checkbox
           checked={checked}
           id={id}
@@ -218,6 +197,7 @@ function AddOnRow<Values extends FieldValues>({
           <AddOnQuantitySelector
             addonId={addOn.addonId}
             control={control}
+            max={quantityMax}
             participantCount={participantCount}
           />
         ) : null}
@@ -236,6 +216,7 @@ function AddOnRow<Values extends FieldValues>({
 
 export function AddOnCheckboxList<Values extends FieldValues>({
   addOns,
+  capacity,
   control,
   error,
   name,
@@ -244,7 +225,12 @@ export function AddOnCheckboxList<Values extends FieldValues>({
 }: AddOnCheckboxListProps<Values>) {
   const { field } = useController({ control, name });
   const selected = Array.isArray(field.value) ? (field.value as string[]) : [];
-  const participantCount = useWatch({ control, name: participantsName });
+  const participantCount =
+    Number(useWatch({ control, name: participantsName })) || 0;
+  // A cleared participants field must not push the chips below 1, and an
+  // over-capacity one must not balloon the row past the room's capacity —
+  // the server validates both bounds against its own counts.
+  const quantityMax = Math.max(1, Math.min(participantCount, capacity));
   // The add-on whose description is folded out; opening another closes it.
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -276,7 +262,8 @@ export function AddOnCheckboxList<Values extends FieldValues>({
             onAboutChange={setOpenId}
             onChange={toggle}
             open={openId === addOn.addonId}
-            participantCount={Number(participantCount) || 0}
+            participantCount={participantCount}
+            quantityMax={quantityMax}
           />
         ))}
       </div>
@@ -316,7 +303,7 @@ export function CateringAcceptance<Values extends FieldValues>({
       </FieldLegend>
       <p className="text-muted-foreground text-sm">{copy.catering.rule}</p>
       <Field>
-        <div className="flex items-start gap-3">
+        <div className="flex h-5.5 items-start gap-3">
           <Checkbox
             aria-invalid={Boolean(error)}
             checked={field.value === true}
