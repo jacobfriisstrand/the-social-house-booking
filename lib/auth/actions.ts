@@ -9,12 +9,15 @@ import { z } from "zod";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { createClient } from "@/lib/supabase/server";
 import {
+  type ChangePasswordValues,
+  changePasswordSchema,
   type LoginValues,
   loginSchema,
   type SetPasswordValues,
   setPasswordSchema,
 } from "@/lib/validation/auth";
 import type { FormState } from "@/lib/validation/form-state";
+import { invalidFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 
 export type LoginState =
@@ -120,4 +123,39 @@ export async function setPassword(
   }
 
   return updatePassword(supabase, parsed.data.password);
+}
+
+export type ChangePasswordState = FormState<ChangePasswordValues>;
+
+// #125: a signed-in user changes their own password on the active session —
+// Supabase's default authorization (the session already proves the
+// identity), so no current-password re-entry. updateUser keeps the session
+// valid, so there is no re-login after the change. Unlike the recovery
+// flow's updatePassword above, this one neither signs out nor redirects.
+export async function changePassword(
+  _prevState: ChangePasswordState,
+  values: ChangePasswordValues
+): Promise<ChangePasswordState> {
+  const parsed = changePasswordSchema.safeParse(values);
+  if (!parsed.success) {
+    return invalidFormState(
+      parsed.error,
+      messages.setPassword.errors.saveFailed
+    );
+  }
+
+  const supabase = await createClient();
+  const updated = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (updated.error) {
+    return {
+      error:
+        updated.error.code === "same_password"
+          ? messages.setPassword.errors.samePassword
+          : messages.setPassword.errors.saveFailed,
+      status: "error",
+    };
+  }
+  return { status: "success" };
 }

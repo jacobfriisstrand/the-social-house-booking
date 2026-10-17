@@ -1108,7 +1108,13 @@ export const messages = {
       "Billedet i højre halvdel af de offentlige sider (log ind, glemt adgangskode m.m.). Uden et billede vises The Social House-logoet.",
     heroImageRemoved: "Billedet er fjernet",
     heroImageSection: "Offentligt billede",
+    password: "Ny adgangskode",
+    passwordConfirm: "Gentag ny adgangskode",
     passwordCopied: "Adgangskode kopieret",
+    passwordDescription:
+      "Ændrer admins adgangskode. Du forbliver logget ind efter ændringen.",
+    passwordSaved: "Adgangskoden er ændret",
+    passwordSection: "Adgangskode",
     pickImage: "Vælg billede",
     removeImage: "Fjern billede",
     saved: "Indstillingerne er gemt",

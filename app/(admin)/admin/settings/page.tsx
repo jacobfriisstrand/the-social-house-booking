@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { ChangePasswordForm } from "@/components/settings/change-password-form";
 import { HeroImageForm } from "@/components/settings/hero-image-form";
 import { WifiForm } from "@/components/settings/wifi-form";
 import { PageHeader, PagePanel } from "@/components/shell/page";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   getPublicHeroImage,
   getWifiSettings,
@@ -32,6 +39,15 @@ export default async function AdminSettingsPage() {
     <>
       <PageHeader title={labels.title} />
       <PagePanel>
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>{labels.passwordSection}</CardTitle>
+            <CardDescription>{labels.passwordDescription}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
+          </CardContent>
+        </Card>
         <Card className="max-w-2xl">
           <CardHeader>
             <CardTitle>{labels.wifiSection}</CardTitle>
