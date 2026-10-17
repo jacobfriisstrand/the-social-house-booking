@@ -145,18 +145,21 @@ interface ColumnDef {
 // list: number, company, room, date, the price after discount — the rest
 // of the numbers live in the row's detail sheet, the actions in the ⋯
 // menu.
+// Shared by both renderings of the table (loading and loaded) so the
+// swap between them cannot shift the columns. The floor is the width at
+// which the evenly shared columns fit their nowrap headers: the fixed
+// columns (checkbox, status, actions) take 211px and the widest header
+// ("Total pris (Efter rabat)") needs 175px, shared over the 7 auto
+// columns — 211 + 7 × 175 ≈ 1436.
+const TABLE_CLASS = "min-w-[92rem] table-fixed";
+
 const COLUMNS: ColumnDef[] = [
   { key: "status", label: bookingsCopy.columns.status, width: "w-36" },
   { key: "bookingNumber", label: bookingsCopy.columns.bookingNumber },
   { key: "company", label: copy.columns.company },
   { key: "room", label: bookingsCopy.columns.room },
   { key: "date", label: bookingsCopy.columns.dateTime },
-  {
-    align: "right",
-    key: "participants",
-    label: bookingsCopy.columns.participants,
-    width: "w-16",
-  },
+  { key: "participants", label: bookingsCopy.columns.participants },
   { key: "addOns", label: bookingsCopy.columns.addOns },
   {
     align: "right",
@@ -441,9 +444,7 @@ function BookingRow({
           {formatTime(row.startAt)} - {formatTime(row.endAt)}
         </span>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.participants}
-      </TableCell>
+      <TableCell className="tabular-nums">{row.participants}</TableCell>
       {/* The add-ons indicator: "Ja" when the booking carries add-ons —
           the exact lines live in the detail sheet's price panel. */}
       <TableCell>
@@ -835,18 +836,14 @@ export function AdminBookingsTable({
   // The column grid stated once, up front: table-fixed takes the widths
   // from the cols instead of whichever header row renders first, so the
   // swap between the column titles and the bulk actions cannot shift the
-  // columns.
+  // columns. The cols derive from COLUMNS so the widths cannot desync;
+  // the checkbox and the ⋯ actions bookend the sortable columns.
   const columnGrid = (
     <colgroup>
       <col className="w-10" />
-      <col className="w-36" />
-      <col />
-      <col />
-      <col />
-      <col />
-      <col className="w-16" />
-      <col />
-      <col />
+      {COLUMNS.map((column) => (
+        <col className={column.width} key={column.key} />
+      ))}
       <col className="w-14" />
     </colgroup>
   );
@@ -892,7 +889,7 @@ export function AdminBookingsTable({
           <p className="sr-only" role="status">
             {messages.common.loading}
           </p>
-          <Table aria-busy className="min-w-[58rem] table-fixed" sticky>
+          <Table aria-busy className={TABLE_CLASS} sticky>
             {columnGrid}
             {tableCaption}
             {tableHeader}
@@ -963,7 +960,7 @@ export function AdminBookingsTable({
 
       <Card className="min-w-0 gap-0 py-0">
         <Table
-          className="min-w-[58rem] table-fixed"
+          className={TABLE_CLASS}
           onMouseDownCapture={selection.stopShiftTextSelect}
           sticky
         >
