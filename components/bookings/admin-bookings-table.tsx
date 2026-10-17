@@ -653,57 +653,15 @@ function useBookingOverlay(rows: AdminBookingRow[]) {
   };
 }
 
-export function AdminBookingsTable({
-  loading,
-  onParamChange,
-  params,
-  rows,
-}: {
-  // True while a filter, sort or view change re-reads the rows: skeleton
-  // rows instead of the stale ones, the empty state waits.
-  loading: boolean;
-  // The view's URL write — sort heads included, so a sort rides the same
-  // transition and the skeletons and params accumulate in one place.
-  onParamChange: (changes: Partial<AdminViewParams>) => void;
-  params: AdminViewParams;
-  rows: AdminBookingRow[];
-}) {
-  const router = useRouter();
-  const now = useMemo(() => new Date(), []);
-  const paged = useTablePagination(rows.length);
-
-  const sorted = useMemo(
-    () => sortAdminRows(rows, params.sort, params.sortDir),
-    [rows, params.sort, params.sortDir]
-  );
-  const visible = slicePage(sorted, paged.page, paged.pageSize);
-
-  const selection = useRowSelection(
-    rows.map((row) => row.bookingId),
-    sorted,
-    visible,
-    (row) => row.bookingId
-  );
-  // The ticked rows decide which bulk action can run — the same rules the
-  // server re-checks: the invoice mark needs every row ended and open for
-  // an invoice, un-invoicing every row invoiced or refused, refusing any
-  // row not already refused, a future booking included.
-  const allowance = useMemo(
-    () => invoicingActionAllowance(selection.selectedEntries, now),
-    [selection.selectedEntries, now]
-  );
-
-  // The row-scoped overlays read the rows through their hook; `overlayOpen`
-  // drives the mount.
-  const {
-    closeOverlay,
-    detailRow,
-    editRow,
-    openDetail,
-    openEdit,
-    overlay,
-    overlayOpen,
-  } = useBookingOverlay(rows);
+// The bulk and row-scoped invoicing moves: the invoice dialog's ids (one
+// instance for the bulk mark and the ⋯ menu's single-row mark), one status
+// move for the row menu and the bulk header, and the booking picked for
+// the cancel confirm.
+function useInvoicingActions(
+  rows: AdminBookingRow[],
+  router: ReturnType<typeof useRouter>,
+  selection: ReturnType<typeof useRowSelection>
+) {
   // The invoice dialog: one instance for the bulk mark and the ⋯ menu's
   // single-row mark. `dialogIds` is set on open only, so its identity —
   // and the dialog's reset effect — stays put while it is open. The
@@ -788,6 +746,90 @@ export function AdminBookingsTable({
     (): void => move([...selection.selected], "not_invoicable", true),
     [move, selection.selected]
   );
+  return {
+    cancelId,
+    closeCancel,
+    closeDialog,
+    dialogBookings,
+    dialogIds,
+    move,
+    moveSelectedNotInvoicable,
+    moveSelectedNotInvoiced,
+    moving,
+    openBulkDialog,
+    openCancel,
+    openRowInvoice,
+  };
+}
+
+export function AdminBookingsTable({
+  loading,
+  onParamChange,
+  params,
+  rows,
+}: {
+  // True while a filter, sort or view change re-reads the rows: skeleton
+  // rows instead of the stale ones, the empty state waits.
+  loading: boolean;
+  // The view's URL write — sort heads included, so a sort rides the same
+  // transition and the skeletons and params accumulate in one place.
+  onParamChange: (changes: Partial<AdminViewParams>) => void;
+  params: AdminViewParams;
+  rows: AdminBookingRow[];
+}) {
+  const router = useRouter();
+  const now = useMemo(() => new Date(), []);
+  const paged = useTablePagination(rows.length);
+
+  const sorted = useMemo(
+    () => sortAdminRows(rows, params.sort, params.sortDir),
+    [rows, params.sort, params.sortDir]
+  );
+  const visible = slicePage(sorted, paged.page, paged.pageSize);
+
+  const selection = useRowSelection(
+    rows.map((row) => row.bookingId),
+    sorted,
+    visible,
+    (row) => row.bookingId
+  );
+  // The ticked rows decide which bulk action can run — the same rules the
+  // server re-checks: the invoice mark needs every row ended and open for
+  // an invoice, un-invoicing every row invoiced or refused, refusing any
+  // row not already refused, a future booking included.
+  const allowance = useMemo(
+    () => invoicingActionAllowance(selection.selectedEntries, now),
+    [selection.selectedEntries, now]
+  );
+
+  // The row-scoped overlays read the rows through their hook; `overlayOpen`
+  // drives the mount.
+  const {
+    closeOverlay,
+    detailRow,
+    editRow,
+    openDetail,
+    openEdit,
+    overlay,
+    overlayOpen,
+  } = useBookingOverlay(rows);
+  // The invoicing wiring the bulk header, the ⋯ menu, the cancel confirm
+  // and the invoice dialog share — the hook develop's #126 refactor
+  // extracted, which this branch's layout work had kept inlined.
+  const {
+    cancelId,
+    closeCancel,
+    closeDialog,
+    dialogBookings,
+    dialogIds,
+    move,
+    moving,
+    moveSelectedNotInvoicable,
+    moveSelectedNotInvoiced,
+    openBulkDialog,
+    openCancel,
+    openRowInvoice,
+  } = useInvoicingActions(rows, router, selection);
 
   const selectionCount = selection.selected.size;
 
