@@ -14,7 +14,7 @@ import { buildSnapshot } from "@/lib/domain/snapshot";
 import { hoursBetween } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
 import type { createClient } from "@/lib/supabase/server";
-import type { CreateHoldValues } from "@/lib/validation/booking";
+import type { PendingBookingInput } from "@/lib/validation/booking";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { loadRoomOpening } from "./availability";
@@ -121,7 +121,7 @@ type BookingInsert = Omit<
 // lines. Status, hold expiry, catering acceptance and company are the
 // caller's.
 export const newBookingRow = (
-  input: CreateHoldValues,
+  input: PendingBookingInput,
   discountPercent: number,
   roomHourlyPriceOre: number
 ): BookingInsert => {
@@ -141,6 +141,9 @@ export const newBookingRow = (
     // Overwritten by the bookings_assign_number trigger (#24).
     booking_number: "",
     booking_participant_count: input.participantCount,
+    // #114: the customer's note; the schema trims and the write keeps the
+    // row builder honest on its own — a blank note stays null, never "".
+    booking_practical_notes: input.practicalNotes?.trim() || null,
     booking_room_id: input.roomId,
     booking_room_price_ore: snapshot.roomTotalOre,
     booking_start_at: input.startAt,
@@ -152,17 +155,39 @@ export const newBookingRow = (
 export const slotFailureMessage = (error: PostgrestError): string =>
   error.code === EXCLUSION_VIOLATION ? errors.slotTaken : errors.createFailed;
 
+// #126: the admin's explicit total for the whole booking. The add-on lines
+// are written right after the insert and the sync trigger
+// (booking_addons_sync_totals) moves the stored total by their sum, so the
+// insert starts at the override minus the lines' sum and Postgres lands
+// exactly on the price the admin set. Only the admin action calls this —
+// the company flow's schema has no total price to pass (the override is
+// never read off the shared input type).
+export const expectedTotalWithOverride = (
+  totalPriceOre: number | undefined,
+  lines: readonly { totalOre: number }[]
+): number | undefined =>
+  totalPriceOre === undefined
+    ? undefined
+    : totalPriceOre - lines.reduce((sum, line) => sum + line.totalOre, 0);
+
 // The pending booking row both booking actions insert (#7, ADR-0023): the
 // snapshot (ADR-0005) from the company's discount and the active catering
-// acceptance (the parse cannot produce false). `extra` carries what
+// acceptance — written only from an explicit true: the company flow's
+// parse cannot produce false, and the admin flow has no accepting
+// member, so its row stays unaccepted (ADR-0023). `extra` carries what
 // differs — the hold's expiry for the company flow, nothing for the admin,
-// which confirms at once.
+// which confirms at once (and its overridden total, #126).
 export async function insertPendingBooking(
   supabase: SessionClient,
   company: { company_discount_percent: number; company_id: string },
-  input: CreateHoldValues,
+  input: PendingBookingInput,
   roomHourlyPriceOre: number,
-  extra: Pick<BookingInsert, "booking_hold_expires_at">
+  extra: Partial<
+    Pick<
+      BookingInsert,
+      "booking_expected_total_ore" | "booking_hold_expires_at"
+    >
+  >
 ): Promise<
   | { bookingId: string; bookingNumber: string; ok: true }
   | { error: PostgrestError; ok: false }
@@ -175,7 +200,9 @@ export async function insertPendingBooking(
         company.company_discount_percent,
         roomHourlyPriceOre
       ),
-      booking_catering_accepted_at: new Date().toISOString(),
+      ...(input.cateringAccepted === true
+        ? { booking_catering_accepted_at: new Date().toISOString() }
+        : {}),
       booking_company_id: company.company_id,
       booking_status: "pending_verification",
       ...extra,

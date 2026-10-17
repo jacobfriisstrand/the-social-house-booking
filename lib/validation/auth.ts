@@ -70,3 +70,25 @@ export const setPasswordSchema = z
 
 export type SetPasswordValues = z.infer<typeof setPasswordSchema>;
 export type SetPasswordLinkValues = z.infer<typeof setPasswordLinkSchema>;
+
+// Change-password form (#125): the signed-in admin changes their own
+// password on the active session — Supabase's default authorization, no
+// current-password re-entry. Same strength and confirm rules as set-password.
+export const changePasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(PASSWORD_MIN, messages.setPassword.errors.passwordMin),
+    passwordConfirm: z.string(),
+  })
+  .superRefine((values, context) => {
+    if (values.password !== values.passwordConfirm) {
+      context.addIssue({
+        code: "custom",
+        message: messages.setPassword.errors.mismatch,
+        path: ["passwordConfirm"],
+      });
+    }
+  });
+
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;

@@ -25,6 +25,7 @@ const held: StatisticsBooking = {
   invoicingStatus: "not_invoiced",
   manualAmountsOre: 0,
   membership: "member",
+  participants: 8,
   roomId: "power",
   startAt: "2026-10-05T10:00:00+02:00",
   status: "confirmed",
@@ -194,5 +195,39 @@ describe("companyUsage", () => {
 
   it("is empty for a month without finished bookings", () => {
     expect(companyUsage([held], "2026-11", now)).toEqual([]);
+  });
+
+  it("averages the guests of the held meetings per company (#118)", () => {
+    const small = { ...held, participants: 4 };
+    const other = {
+      ...held,
+      companyId: "nordic",
+      companyName: "Nordic Events",
+      membership: "external" as const,
+      participants: 2,
+    };
+    const usage = companyUsage(
+      [held, small, other, other, cancelled],
+      "2026-10",
+      now
+    );
+    const rows = new Map(usage.map((row) => [row.companyId, row]));
+    // Rituals: one 8-guest meeting and one 4-guest meeting.
+    expect(rows.get("rituals")?.averageParticipants).toBe(6);
+    // Nordic: two 2-guest meetings.
+    expect(rows.get("nordic")?.averageParticipants).toBe(2);
+  });
+
+  it("excludes cancelled meetings from the guests average", () => {
+    // The cancelled booking carries no held meeting, so it neither adds
+    // guests nor meetings; the one held meeting averages over itself.
+    const usage = companyUsage([held, cancelled], "2026-10", now);
+    expect(usage[0].averageParticipants).toBe(8);
+  });
+
+  it("has no guests average for a company with only cancellations", () => {
+    const usage = companyUsage([cancelled], "2026-10", now);
+    expect(usage[0].bookings).toBe(0);
+    expect(usage[0].averageParticipants).toBeNull();
   });
 });

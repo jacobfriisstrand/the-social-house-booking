@@ -34,6 +34,7 @@ const booking = (
   companyName: "Rituals",
   discountPercent: 0,
   endAt: "2026-10-01T11:00:00Z",
+  expectedTotalOre: 100_000,
   invoiceDate: null,
   invoiceNumber: null,
   invoicingStatus: "not_invoiced" as const,
@@ -41,6 +42,7 @@ const booking = (
   manualAmountsOre: 0,
   membershipStatus: "member" as const,
   participants: 8,
+  practicalNotes: null,
   roomId: "r1",
   roomName: "Room of Power",
   roomPriceOre: 100_000,
@@ -55,6 +57,8 @@ describe("adminRowParts", () => {
         addonTotalOre: 15_000,
         discountPercent: 50,
         endAt: "2026-10-01T11:30:00Z",
+        // The stored total of the parts' sum: 50_003 member + 15_000.
+        expectedTotalOre: 65_003,
         manualAmountsOre: 25_000,
         roomPriceOre: 100_005,
         startAt: "2026-10-01T09:00:00Z",
@@ -69,6 +73,24 @@ describe("adminRowParts", () => {
     // The whole basis is the parts added together.
     expect(parts.basisOre).toBe(90_003);
     expect(parts.feeOre).toBe(0);
+  });
+
+  it("reads the stored total as the basis when an admin overrode it (#126)", () => {
+    const parts = adminRowParts(
+      booking({
+        addonTotalOre: 15_000,
+        discountPercent: 50,
+        // The stored total is the admin's price — not the parts' sum
+        // (65_003): the override wins, here and on every basis surface.
+        expectedTotalOre: 40_000,
+        manualAmountsOre: 25_000,
+        roomPriceOre: 100_005,
+      })
+    );
+    expect(parts.basisOre).toBe(65_000);
+    // The room-rent column and the cancellation fee keep reading the room
+    // price (ADR-0006); only the basis follows the override.
+    expect(parts.memberPriceOre).toBe(50_003);
   });
 
   it("gives a cancelled booking its payable fee alone (ADR-0006)", () => {
@@ -107,7 +129,7 @@ describe("adminRowParts", () => {
 describe("adminTotals", () => {
   it("sums every column down its rows, cancelled rows' snapshot excluded", () => {
     const totals = adminTotals([
-      booking({ discountPercent: 50 }),
+      booking({ discountPercent: 50, expectedTotalOre: 50_000 }),
       booking({
         bookingId: "b2",
         bookingStatus: "cancelled",
@@ -376,6 +398,7 @@ describe("invoiceReadyOre", () => {
       invoiceReadyOre(
         booking({
           addonTotalOre: 15_000,
+          expectedTotalOre: 115_000,
           manualAmountsOre: 2500,
           roomPriceOre: 100_000,
         }),
@@ -434,12 +457,22 @@ describe("invoiceReadyTotalOre", () => {
     expect(
       invoiceReadyTotalOre(
         [
-          booking({ bookingId: "b1", roomPriceOre: 10_000 }),
+          booking({
+            bookingId: "b1",
+            expectedTotalOre: 10_000,
+            roomPriceOre: 10_000,
+          }),
           // Not ended yet.
-          booking({ bookingId: "b2", roomPriceOre: 20_000, ...unended }),
+          booking({
+            bookingId: "b2",
+            expectedTotalOre: 20_000,
+            roomPriceOre: 20_000,
+            ...unended,
+          }),
           // Invoiced.
           booking({
             bookingId: "b3",
+            expectedTotalOre: 40_000,
             invoicingStatus: "invoiced",
             roomPriceOre: 40_000,
           }),
@@ -467,18 +500,21 @@ describe("companyCashFlow", () => {
             bookingId: "b1",
             companyId: "c1",
             companyName: "Rituals",
+            expectedTotalOre: 10_000,
             roomPriceOre: 10_000,
           }),
           booking({
             bookingId: "b2",
             companyId: "c2",
             companyName: "Beta A/S",
+            expectedTotalOre: 40_000,
             roomPriceOre: 40_000,
           }),
           booking({
             bookingId: "b3",
             companyId: "c1",
             companyName: "Rituals",
+            expectedTotalOre: 7000,
             roomPriceOre: 7000,
           }),
         ],

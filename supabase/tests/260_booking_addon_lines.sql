@@ -6,7 +6,7 @@
 -- catalogue.
 
 begin;
-select plan(18);
+select plan(21);
 
 -- Fixtures: one company, one room, one fixed and one per-participant
 -- add-on, one pending booking for 10 participants.
@@ -26,11 +26,16 @@ insert into public.addons (addon_id, addon_name, addon_price_ore, addon_pricing_
 insert into public.bookings (booking_id, booking_company_id, booking_room_id, booking_status, booking_start_at, booking_end_at, booking_participant_count, booking_booker_name, booking_booker_email, booking_booker_phone, booking_room_price_ore, booking_expected_total_ore) values
   ('66666666-6666-6666-6666-666666666001', '22222222-2222-2222-2222-222222222001', '44444444-4444-4444-4444-444444444001', 'pending_verification', timestamptz '2026-10-01 09:00+02', timestamptz '2026-10-01 11:00+02', 10, 'Peter', 'peter@rituals.dk', '+45 2010 2030', 1600000, 1600000);
 
--- The line rules raise on wrong quantities.
+-- The line rules raise on wrong quantities. A per-participant line may
+-- carry any quantity 1..participants (#119) — 11 of 10 is out of range.
 select throws_ok(
-  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666001'', ''55555555-5555-5555-5555-555555555001'', 22500, 8, 180000)',
+  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666001'', ''55555555-5555-5555-5555-555555555001'', 22500, 11, 247500)',
   'P0001', null,
-  'a per-participant line''s quantity must equal the participant count');
+  'a per-participant line''s quantity stays within the participant count');
+select throws_ok(
+  'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666001'', ''55555555-5555-5555-5555-555555555001'', 22500, 0, 0)',
+  'P0001', null,
+  'a per-participant line''s quantity of 0 fails the quantity rule');
 select throws_ok(
   'insert into public.booking_addons (booking_addon_booking_id, booking_addon_addon_id, booking_addon_unit_price_ore, booking_addon_quantity, booking_addon_total_ore) values (''66666666-6666-6666-6666-666666666001'', ''55555555-5555-5555-5555-555555555002'', 100000, 2, 200000)',
   'P0001', null,
@@ -64,6 +69,22 @@ select is(
   (select addon_price_ore from public.addons where addon_id = '55555555-5555-5555-5555-555555555002'),
   100000,
   'the catalogue keeps the House Host base price (#7 override)');
+
+-- #119: coffee for 4 of 10 — the line may carry fewer than the headcount,
+-- and the sync trigger follows the smaller total. The lunch line already
+-- exists for this booking (the pair is the primary key), so the case is
+-- an UPDATE of that line — the write path the flow uses — and a plain
+-- update restores it for the later asserts.
+select lives_ok(
+  'update public.booking_addons set booking_addon_quantity = 4, booking_addon_total_ore = 90000 where booking_addon_booking_id = ''66666666-6666-6666-6666-666666666001'' and booking_addon_addon_id = ''55555555-5555-5555-5555-555555555001''',
+  'a per-participant line may carry fewer than the participant count (#119)');
+select is(
+  (select booking_addon_total_ore from public.bookings where booking_id = '66666666-6666-6666-6666-666666666001'),
+  240000,
+  'the add-on total follows the partial quantity');
+update public.booking_addons set booking_addon_quantity = 10, booking_addon_total_ore = 225000
+where booking_addon_booking_id = '66666666-6666-6666-6666-666666666001'
+  and booking_addon_addon_id = '55555555-5555-5555-5555-555555555001';
 
 -- A participant-count change before confirmation rewrites the lines; the
 -- sync trigger follows (booking first, then the lines).

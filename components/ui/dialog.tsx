@@ -5,6 +5,7 @@ import { XIcon } from "lucide-react";
 import type * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Overlay } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 import { messages } from "@/messages/da";
 
@@ -24,22 +25,6 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-function DialogOverlay({
-  className,
-  ...props
-}: DialogPrimitive.Backdrop.Props) {
-  return (
-    <DialogPrimitive.Backdrop
-      className={cn(
-        "data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-200 ease-out data-closed:animate-out data-open:animate-in supports-backdrop-filter:backdrop-blur-xs motion-reduce:data-closed:animate-none motion-reduce:data-open:animate-none",
-        className
-      )}
-      data-slot="dialog-overlay"
-      {...props}
-    />
-  );
-}
-
 function DialogContent({
   className,
   children,
@@ -50,7 +35,7 @@ function DialogContent({
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <Overlay />
       <DialogPrimitive.Popup
         className={cn(
           "data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground text-sm outline-none ring-1 ring-foreground/10 duration-200 ease-out data-closed:animate-out data-open:animate-in motion-reduce:data-closed:animate-none motion-reduce:data-open:animate-none sm:max-w-sm",
@@ -155,7 +140,6 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
   DialogPortal,
   DialogTitle,
   DialogTrigger,

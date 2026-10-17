@@ -13,11 +13,11 @@ export default function NotFound() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
       <Image
         alt="The Social House"
-        className="group-data-[collapsible=icon]:hidden"
         height={30}
         priority
         src="/logo.svg"
-        width={200}
+        unoptimized
+        width={130}
       />
       <h1 className="font-semibold text-3xl">{messages.notFound.title}</h1>
       <p className="text-muted-foreground">{messages.notFound.description}</p>

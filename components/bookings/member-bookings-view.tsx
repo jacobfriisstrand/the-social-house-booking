@@ -175,7 +175,10 @@ const COLUMNS: ColumnDef[] = [
     label: copy.columns.status,
   },
   { key: "bookingNumber", label: copy.columns.bookingNumber },
-  { key: "room", label: copy.columns.room },
+  // #112: the extra left padding keeps the room title clear of the
+  // booking number; the header and the cells carry the same class so
+  // they stay aligned.
+  { className: "pl-6", key: "room", label: copy.columns.room },
   { key: "date", label: copy.columns.dateTime },
   { key: "booker", label: copy.columns.booker },
   { align: "right", key: "price", label: copy.columns.price },
@@ -245,7 +248,9 @@ function BookingRow({
     >
       <BookingStatusCell booking={booking} />
       <TableCell className="font-mono">{booking.bookingNumber}</TableCell>
-      <TableCell className="truncate font-medium">{booking.roomName}</TableCell>
+      <TableCell className="truncate pl-6 font-medium">
+        {booking.roomName}
+      </TableCell>
       <BookingDateCells booking={booking} />
       <TableCell className="truncate">{booking.bookerName}</TableCell>
       <BookingPriceCell booking={booking} />

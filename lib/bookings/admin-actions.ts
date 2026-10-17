@@ -24,6 +24,7 @@ import {
 } from "./addon-lines";
 import {
   confirmPendingBooking,
+  expectedTotalWithOverride,
   insertPendingBooking,
   type SessionClient,
   type Step,
@@ -85,12 +86,20 @@ async function insertConfirmedBooking(
   roomHourlyPriceOre: number,
   lines: AddOnLine[]
 ): Promise<AdminBookingState> {
+  // #126: the admin's total overrides the computed one; the sync trigger
+  // lands on it once the lines are written.
+  const overrideTotalOre = expectedTotalWithOverride(
+    input.totalPriceOre,
+    lines
+  );
   const inserted = await insertPendingBooking(
     supabase,
     company,
     input,
     roomHourlyPriceOre,
-    {}
+    overrideTotalOre === undefined
+      ? {}
+      : { booking_expected_total_ore: overrideTotalOre }
   );
   if (!inserted.ok) {
     return {
@@ -150,6 +159,12 @@ export async function createAdminBooking(
   if (!validated.ok) {
     return validated.state;
   }
+  // #126: the override may sit below the add-on lines — the admin sets the
+  // whole booking's price (everything selected, total 1 kr). The row
+  // starts at the override minus the lines' sum and the sync trigger lands
+  // exactly on it; the CHECK only demands a non-negative total once the
+  // booking is confirmed, so pending and released rows may hold the
+  // negative intermediate.
   return insertConfirmedBooking(
     supabase,
     company.value,

@@ -38,6 +38,10 @@ const membershipLabel = messages.companies.membership;
 const MINUTES_PER_HOUR = 60;
 const TOP_COMPANIES = 10;
 
+// A company with only cancellations has no held meetings, hence no guests
+// average; the dash says "no data", not zero.
+const NO_VALUE = "—";
+
 function CompanyTable({
   basisOre,
   companies,
@@ -51,6 +55,9 @@ function CompanyTable({
         <TableRow>
           <TableHead>{copy.columns.company}</TableHead>
           <TableHead className="text-right">{copy.columns.bookings}</TableHead>
+          <TableHead className="text-right">
+            {copy.columns.guestsAverage}
+          </TableHead>
           <TableHead className="text-right">{copy.columns.hours}</TableHead>
           <TableHead className="text-right">
             {copy.columns.cancellations}
@@ -72,6 +79,11 @@ function CompanyTable({
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatNumber(company.bookings)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {company.averageParticipants === null
+                ? NO_VALUE
+                : formatNumber(company.averageParticipants)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatNumber(company.minutes / MINUTES_PER_HOUR)}
