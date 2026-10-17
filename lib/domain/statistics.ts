@@ -24,6 +24,7 @@ export interface StatisticsBooking {
   invoicingStatus: BookingInvoicingStatus;
   manualAmountsOre: number;
   membership: "external" | "member";
+  participants: number;
   roomId: string;
   startAt: string;
   status: "cancelled" | "confirmed";

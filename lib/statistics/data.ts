@@ -19,7 +19,7 @@ import type { Database } from "@/lib/supabase/database.types";
 const PAGE_ROWS = 1000;
 
 const COLUMNS =
-  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_company_id, booking_end_at, booking_expected_total_ore, booking_id, booking_invoicing_status, booking_room_id, booking_start_at, booking_status, companies(company_display_name, company_membership_status), manual_amounts(manual_amount_amount_ore)";
+  "booking_addon_total_ore, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_company_id, booking_end_at, booking_expected_total_ore, booking_id, booking_invoicing_status, booking_participant_count, booking_room_id, booking_start_at, booking_status, companies(company_display_name, company_membership_status), manual_amounts(manual_amount_amount_ore)";
 
 function pageQuery(
   supabase: SupabaseClient<Database>,
@@ -84,6 +84,7 @@ function toStatisticsBooking(row: Row): StatisticsBooking {
       0
     ),
     membership: company.company_membership_status,
+    participants: row.booking_participant_count,
     roomId: row.booking_room_id,
     startAt: row.booking_start_at,
     status: heldOrCancelled(row),
