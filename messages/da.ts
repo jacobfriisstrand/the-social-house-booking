@@ -1147,7 +1147,7 @@ export const messages = {
         bookings: "Bookinger",
         cancellations: "Aflyste",
         company: "Virksomhed",
-        guestsAverage: "Gæster pr. møde",
+        guestsAverage: "Deltagere pr. møde",
         hours: "Timer",
         share: "Af månedens omsætning",
       },
