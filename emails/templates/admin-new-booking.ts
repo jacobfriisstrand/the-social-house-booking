@@ -1,9 +1,8 @@
 // Bilag 2, Mail 8 — copy verbatim from docs/spec/bilag-2-mailtekster.md.
 // Sent by the app to ADMIN_NOTIFY_EMAIL whenever a booking is confirmed —
 // by the member's code or by an admin booking on a company's behalf
-// (ADR-0023). Allergies and other person-sensitive data are never echoed;
-// the mail only states whether special practical information is registered
-// (Bilag 2: "De konkrete oplysninger læses efter login i adminpanelet").
+// (ADR-0023). The booker's practical note is echoed in the SERVICE block
+// so the admin reads it directly (Bilag 2 Mail 8 amended to match).
 // Resend inserts {{{KEY}}} unescaped, so every value is escaped in
 // adminNewBookingVariables() — the hook's escapeHtml is the one
 // implementation.
@@ -29,6 +28,9 @@ import type { EmailTemplate } from "./registry";
 const text = (value: string): string => escapeHtml(value);
 
 const jaNej = (yes: boolean): string => (yes ? "Ja" : "Nej");
+
+// The booker's note keeps its line breaks, same as the reminder template.
+const LINE_BREAK = /\r?\n/g;
 
 const hoursFormatter = new Intl.NumberFormat("da-DK", {
   maximumFractionDigits: 2,
@@ -71,22 +73,22 @@ export const adminNewBookingPriceOverviewHtml = (
     { discount: "Rabat", memberPrice: "Lokaleleje efter rabat" }
   );
 
-// SERVICE OG PRAKTISKE BEHOV: only the fact that special information is
-// registered — never its content. When House Host, catering or special
-// information is present, the block carries the highlighted follow-up line
-// (Bilag 2: "skal dette fremhæves tydeligt").
+// SERVICE OG PRAKTISKE BEHOV: the flags plus the booker's own note, shown
+// verbatim so the admin reads it without opening the admin panel (the mail
+// no longer hides the content behind a Ja/Nej — spec Bilag 2 Mail 8 was
+// amended for this). When House Host or catering is present, the block
+// still carries the highlighted follow-up line (Bilag 2: "skal dette
+// fremhæves tydeligt"); the note itself is the follow-up for notes.
 export const adminNewBookingServiceHtml = (
   input: AdminNewBookingInput
 ): string => {
+  const notes = input.bookingPracticalNotes?.trim() ?? "";
   const followUp: string[] = [];
   if (input.hasHouseHost) {
     followUp.push("House Host");
   }
   if (input.hasCatering) {
     followUp.push("forplejning");
-  }
-  if (input.bookingPracticalNotes) {
-    followUp.push("særlige praktiske oplysninger");
   }
   const notice =
     followUp.length === 0
@@ -100,9 +102,15 @@ export const adminNewBookingServiceHtml = (
         `House Host: <strong>${jaNej(input.hasHouseHost)}</strong><br>` +
         `Forplejning: <strong>${jaNej(input.hasCatering)}</strong><br>` +
         `Særlige praktiske oplysninger registreret: <strong>${jaNej(
-          Boolean(input.bookingPracticalNotes)
+          Boolean(notes)
         )}</strong>`
-    ) + notice
+    ) +
+    (notes
+      ? emailParagraph(
+          `Bemærkninger:<br><strong>${text(notes).replace(LINE_BREAK, "<br>")}</strong>`
+        )
+      : "") +
+    notice
   );
 };
 

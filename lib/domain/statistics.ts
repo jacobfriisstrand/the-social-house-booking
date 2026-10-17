@@ -139,6 +139,11 @@ function basisParts(booking: StatisticsBooking): BasisParts {
     addonsOre: booking.addonTotalOre,
     cancellationFeesOre: 0,
     manualAmountsOre: booking.manualAmountsOre,
+    // The room rent is the remainder of the invoicing basis, so the parts
+    // always add up to it — including an admin's total-price override
+    // (#126), which may sit below the add-on lines and make this line
+    // negative. Floor it and the month's basis would overstate the real
+    // invoice amount.
     roomRentOre: booking.expectedTotalOre - booking.addonTotalOre,
   };
 }

@@ -6,6 +6,8 @@
 // never served: its row shows the payable cancellation fee alone
 // (ADR-0006) as its whole basis, and its snapshot parts count nothing in
 // the totals. All amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
+
+import { outstandingInvoiceBasisOre } from "./booking-invoicing";
 import type {
   BookingAddonOverview,
   BookingInvoicingStatus,
@@ -40,6 +42,9 @@ export interface AdminBookingRow {
   companyName: string;
   discountPercent: number;
   endAt: string;
+  // The stored frozen total (#126): an admin's explicit price override
+  // lives here, so every basis surface reads it instead of recomputing.
+  expectedTotalOre: number;
   invoiceDate: string | null;
   invoiceNumber: string | null;
   invoicingStatus: BookingInvoicingStatus;
@@ -48,6 +53,8 @@ export interface AdminBookingRow {
   manualAmounts: ManualAmountEntry[];
   manualAmountsOre: number;
   membershipStatus: AdminMembership;
+  // The customer's note from the booking flow (#114); null when empty.
+  practicalNotes: string | null;
   roomId: string;
   roomName: string;
   roomPriceOre: number;
@@ -87,7 +94,19 @@ export function adminRowParts(row: AdminBookingRow): AdminRowParts {
   const memberPrice = memberPriceOre(row.roomPriceOre, row.discountPercent);
   return {
     addOnsOre: row.addonTotalOre,
-    basisOre: memberPrice + row.addonTotalOre + row.manualAmountsOre,
+    // #126: the invoicing basis reads the STORED total (the frozen
+    // booking_expected_total_ore), not a recomputation from the parts —
+    // an admin's explicit total must win here, on the detail sheet and in
+    // the exports alike. For every booking without an override the two are
+    // identical by construction (booking_addons_sync_totals), so this is a
+    // no-op except where an admin set the price.
+    basisOre: outstandingInvoiceBasisOre({
+      cancellationFeeOre: row.cancellationFeeOre,
+      expectedTotalOre: row.expectedTotalOre,
+      manualAmountsOre: row.manualAmountsOre,
+      status: row.bookingStatus,
+      waived: row.cancellationFeeWaived,
+    }),
     feeOre: 0,
     manualAmountsOre: row.manualAmountsOre,
     memberPriceOre: memberPrice,

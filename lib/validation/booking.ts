@@ -31,6 +31,8 @@ export const bookerFields = {
   bookerEmail: z.email(errors.emailInvalid),
   bookerName: required,
   bookerPhone: required,
+  // #114: the customer's free-text note on the booking; blank stays null.
+  practicalNotes: z.string().trim().max(500, errors.tooLong).optional(),
 };
 
 // Room, period and headcount: what any booking needs besides the booker.
@@ -54,10 +56,41 @@ const mustAccept = (message: string) =>
 // hospitality"): catering is ordered only through The Social House and the
 // booker must actively accept it — an unchecked checkbox fails the parse,
 // so the acceptance timestamp is only ever written from a parsed true.
+// #119: the quantities the customer chose for the selected per-participant
+// add-ons (1..participantCount — the upper bound is checked against the
+// booking's participant count in the action, the schema cannot know it).
 export const addOnFields = {
   addOnIds: z.array(z.guid()).max(50),
+  addOnQuantities: z
+    .record(
+      z.guid(),
+      z
+        .number(errors.addOnQuantityInvalid)
+        .int(errors.addOnQuantityInvalid)
+        .min(1, errors.addOnQuantityInvalid)
+    )
+    .optional(),
   cateringAccepted: mustAccept(errors.cateringAcceptRequired),
 };
+
+// The client-side form keeps registered keys with undefined values — an
+// untouched stepper registers one and RHF never unregisters — which the
+// strict record above would reject. The server never sees them: undefined
+// properties do not survive server-action serialization. The booking form
+// prunes them before validating, because an absent quantity is the
+// "follow the headcount" default, never an invalid number (#119).
+export const pruneAddOnQuantities = <
+  Values extends { addOnQuantities?: Record<string, number | undefined> },
+>(
+  values: Values
+): Values => ({
+  ...values,
+  addOnQuantities: Object.fromEntries(
+    Object.entries(values.addOnQuantities ?? {}).filter(
+      ([, quantity]) => quantity !== undefined
+    )
+  ) as Record<string, number>,
+});
 
 // The booking terms and privacy policy (DESIGN.md "Booking dialog"), and
 // the versions the dialog showed: #15 records those for a member's booking
@@ -106,16 +139,45 @@ export const createHoldSchema = z
 
 export type CreateHoldValues = z.infer<typeof createHoldSchema>;
 
+// The booking fields the pending-booking row reads, shared by both flows.
+// The admin schema carries no member acceptance (ADR-0023), so the row
+// builder cannot require one — the catering timestamp is written only
+// from an explicit true.
+export type PendingBookingInput = Omit<
+  CreateHoldValues,
+  "cateringAccepted" | "termsAccepted" | "termsVersionIds"
+> & { cateringAccepted?: boolean };
+
 // The dialog's form for a company: the same fields, with the company id
-// carried along empty so one form type serves both viewers.
+// carried along empty so one form type serves both viewers. totalPriceOre
+// is the admin's price override (#126), declared here only so the shared
+// form type carries the field — the company action parses with
+// createHoldSchema, which has no totalPriceOre and strips it, so a
+// customer can never price their own booking. Only createAdminBooking
+// reads it.
 export const bookingFormSchema = z
-  .object({ ...bookingFields, companyId: z.string() })
+  .object({
+    ...bookingFields,
+    companyId: z.string(),
+    totalPriceOre: z.number().int().min(0).optional(),
+  })
   .superRefine(bookingWindowRule);
 
-// Admin books on a company's behalf (#14, ADR-0023): the same booking, plus
-// which company, and confirmed at once without a verification code.
+// Admin books on a company's behalf (#14, ADR-0023): nobody in the dialog
+// is the member the house's rules address, so the member-only acceptances
+// are not part of the admin flow at all — the catering rule and the
+// terms/privacy checkbox belong to the booker (#7, #15), and the keys are
+// dropped rather than made optional so a forged acceptance cannot enter
+// through the admin path either.
 export const adminBookingSchema = z
-  .object({ ...bookingFields, companyId: z.guid(errors.required) })
+  .object({
+    ...bookerFields,
+    ...slotFields,
+    addOnIds: addOnFields.addOnIds,
+    addOnQuantities: addOnFields.addOnQuantities,
+    companyId: z.guid(errors.required),
+    totalPriceOre: z.number().int().min(0).optional(),
+  })
   .superRefine(bookingWindowRule);
 
 export type AdminBookingValues = z.infer<typeof adminBookingSchema>;

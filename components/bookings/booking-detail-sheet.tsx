@@ -147,6 +147,12 @@ export function BookingDetailSheet({
                 value={`${formatDate(row.cancelledAt)} · ${formatTime(row.cancelledAt)}`}
               />
             ) : null}
+            {row.practicalNotes ? (
+              <DetailRow
+                label={bookingsCopy.sheet.practicalNotes}
+                value={row.practicalNotes}
+              />
+            ) : null}
             <DetailRow
               label={copy.markInvoiced.date}
               value={
@@ -171,7 +177,9 @@ export function BookingDetailSheet({
                 discountPercent: row.discountPercent,
                 manualAmounts: row.manualAmounts,
                 roomTotalOre: row.roomPriceOre,
-                totalOre: (parts.memberPriceOre ?? 0) + row.addonTotalOre,
+                // #126: the stored total — an admin's explicit price shows
+                // here exactly as set, not recomputed from the parts.
+                totalOre: row.expectedTotalOre,
               })}
             />
           )}

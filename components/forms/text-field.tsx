@@ -29,7 +29,9 @@ export interface TextFieldProps<Values extends FieldValues> {
   type?: "email" | "number" | "password" | "tel" | "text";
 }
 
-// A number input reports NaN while empty; the control shows "" instead.
+// A number input reports NaN while empty; the change handler writes
+// undefined instead, so an absent value stays absent for the schema and
+// the control shows "".
 const displayValue = (value: unknown): string | number => {
   if (typeof value === "number") {
     return Number.isNaN(value) ? "" : value;
@@ -54,10 +56,18 @@ export function TextField<Values extends FieldValues>({
   const id = `field-${name}`;
   const { onChange } = field;
   const handleChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) =>
-      onChange(
-        type === "number" ? event.target.valueAsNumber : event.target.value
-      ),
+    (event: ChangeEvent<HTMLInputElement>) => {
+      if (type !== "number") {
+        onChange(event.target.value);
+        return;
+      }
+      // A cleared or partial number input reports NaN. Write null, never
+      // undefined: RHF reads a Controller change of undefined as "back to
+      // the default value", which snaps a prefilled field shut — the
+      // schema rejects null with the field's own message instead.
+      const value = event.target.valueAsNumber;
+      onChange(Number.isNaN(value) ? null : value);
+    },
     [onChange, type]
   );
 

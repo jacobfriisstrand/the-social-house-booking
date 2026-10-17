@@ -381,14 +381,13 @@ House Service: \[JA/NEJ\]
 House Host: \[JA/NEJ\]
 Forplejning: \[JA/NEJ\]
 Særlige praktiske oplysninger registreret: \[JA/NEJ\]
+Bemærkninger: \[BOOKERENS BEMÆRKNINGER\]
 
-Allergier, intolerancer, tilgængelighedsbehov og andre mulige personfølsomme oplysninger må ikke gengives direkte i mailen.
-
-Mailen viser alene, at der er registreret særlige oplysninger. De konkrete oplysninger læses efter login i adminpanelet.
+Bookerens bemærkninger gengives direkte i mailen, når der er registreret nogle (linjeskift bevares), så de konkrete oplysninger kan læses uden login i adminpanelet.
 
 \[ÅBN BOOKINGEN\]
 
-Hvis der er valgt House Host eller forplejning, eller hvis der er registreret særlige ønsker, skal dette fremhæves tydeligt, så Ali kan følge personligt op.
+Hvis der er valgt House Host eller forplejning, skal dette fremhæves tydeligt, så Ali kan følge personligt op. Bemærkningen selv er den tydelige fremhæning for særlige ønsker.
 
 **MAIL 9 – ADVISERING TIL ADMIN OM AFBOOKING**
 

@@ -55,7 +55,7 @@ describe("#5 admin new-booking mail", () => {
     expect(withoutDiscount).toContain("300,00 kr");
   });
 
-  it("reports service flags without echoing practical notes", () => {
+  it("echoes the booker's note under the service flags", () => {
     const flagged = adminNewBookingServiceHtml({
       ...base,
       bookingPracticalNotes: "Allergi mod nødder",
@@ -65,21 +65,36 @@ describe("#5 admin new-booking mail", () => {
     expect(flagged).toContain(
       "Særlige praktiske oplysninger registreret: <strong>Ja</strong>"
     );
-    expect(flagged).toContain("Følg personligt op");
-    expect(flagged).not.toContain("Allergi mod nødder");
+    expect(flagged).toContain(
+      "Bemærkninger:<br><strong>Allergi mod nødder</strong>"
+    );
+    // The note itself is shown, so the follow-up notice only names the
+    // services that still need personal follow-up.
+    expect(flagged).toContain("Følg personligt op: House Host er registreret.");
+
+    const notesOnly = adminNewBookingServiceHtml({
+      ...base,
+      bookingPracticalNotes: "Linje 1\nLinje 2",
+    });
+    expect(notesOnly).toContain("Linje 1<br>Linje 2");
+    expect(notesOnly).not.toContain("Følg personligt op");
 
     const plain = adminNewBookingServiceHtml(base);
     expect(plain).toContain("House Service: <strong>Nej</strong>");
-    expect(plain).not.toContain("Følg personligt op");
+    expect(plain).not.toContain("Bemærkninger:");
   });
 
   it("escapes echoed values", () => {
     const variables = adminNewBookingVariables({
       ...base,
+      bookingPracticalNotes: "Allergi <script>alert(1)</script>",
       companyDisplayName: "Rituals & Sons <test>",
     });
     expect(variables.COMPANY_DISPLAY_NAME).toBe(
       "Rituals &amp; Sons &lt;test&gt;"
+    );
+    expect(variables.SERVICE_HTML).toContain(
+      "Allergi &lt;script&gt;alert(1)&lt;/script&gt;"
     );
   });
 });
