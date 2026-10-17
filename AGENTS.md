@@ -12,6 +12,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Meeting-room booking for member companies; The Social House invoices manually in e-conomic. Danish UI, English code. This file is the index; the linked docs are the rules.
 
+## Strategic programming
+
+You are trained on tactical work; benchmarks never scored the codebase you leave behind. The user carries the strategic layer, and their push toward it is part of the task.
+
+- Pile mud on the ball of mud? Propose the refactor first: name it, its cost, its payoff. Proposing is your job; deciding is the user's.
+- Ponytail governs the diff you write; strategy governs the plan you propose.
+- A fix that leaves its module worse than it found it is a failed fix, tests passing or not.
+- Improvement work (module deepening, test coverage, architecture) is first-class: run the `improve-codebase-architecture` skill when asked.
+
+Full text: "Strategic programming" in `.github/copilot-instructions.md`.
+
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · shadcn on **Base UI** · Supabase (Postgres, Auth, Edge Functions) · Resend · Netlify · Sentry · Ultracite (Biome) · Vitest + pgTAP · npm · Node 24.

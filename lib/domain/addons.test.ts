@@ -31,6 +31,14 @@ describe("addonQuantity", () => {
   it("is the participant count for a per-participant add-on", () => {
     expect(addonQuantity("per_participant", 10)).toBe(10);
   });
+
+  it("is the customer's chosen quantity when one is given (#119)", () => {
+    expect(addonQuantity("per_participant", 10, 4)).toBe(4);
+  });
+
+  it("stays 1 for a fixed add-on whatever quantity is given (#119)", () => {
+    expect(addonQuantity("fixed", 10, 4)).toBe(1);
+  });
 });
 
 describe("addonLine", () => {
@@ -59,6 +67,12 @@ describe("addonLine", () => {
 
   it("gives 0 for 0 participants on a per-participant add-on", () => {
     expect(addonLine(lunch, 0).totalOre).toBe(0);
+  });
+
+  it("prices a per-participant add-on at the chosen quantity (#119)", () => {
+    const line = addonLine(lunch, 10, { quantity: 4 });
+    expect(line.quantity).toBe(4);
+    expect(line.totalOre).toBe(90_000);
   });
 
   it("uses an override unit price without touching the catalogue price", () => {

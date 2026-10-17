@@ -35,6 +35,9 @@ import { GET, POST } from "./route";
 const row = (overrides: Partial<AdminBookingRow>): AdminBookingRow => ({
   addOns: [],
   addonTotalOre: 0,
+  bookerEmail: null,
+  bookerName: null,
+  bookerPhone: null,
   bookingId: "b",
   bookingNumber: "TB-2026-0001",
   bookingStatus: "confirmed",
@@ -45,12 +48,15 @@ const row = (overrides: Partial<AdminBookingRow>): AdminBookingRow => ({
   companyName: "Firma",
   discountPercent: 0,
   endAt: "2026-09-02T19:00:00Z",
+  expectedTotalOre: 62_500,
   invoiceDate: null,
   invoiceNumber: null,
   invoicingStatus: "not_invoiced",
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  participants: 8,
+  practicalNotes: null,
   roomId: "r",
   roomName: "Lokale",
   roomPriceOre: 62_500,
@@ -88,7 +94,7 @@ describe("bookings export route", () => {
     );
     const lines = (await response.text()).split("\r\n");
     expect(lines[0].replace("\uFEFF", "")).toBe(
-      "Status;Aflyst;Bookingnummer;Virksomhed;Lokale;Start;Slut;Tilkøb;Total pris (Efter rabat)"
+      "Status;Aflyst;Bookingnummer;Virksomhed;Lokale;Start;Slut;Deltagere;Tilkøb;Total pris (Efter rabat)"
     );
     // The table's default sort: start order ascending.
     expect(lines[1].includes("TB-2026-0001")).toBe(true);

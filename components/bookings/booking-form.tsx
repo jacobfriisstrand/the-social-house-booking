@@ -9,6 +9,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import {
+  type ChangeEvent,
   type FormEvent,
   startTransition,
   useActionState,
@@ -22,6 +23,7 @@ import {
   type Control,
   type FieldErrors,
   type Path,
+  type Resolver,
   type UseFormReturn,
   useController,
   useForm,
@@ -30,16 +32,18 @@ import {
 import type { z } from "zod";
 import { ChoiceSelect } from "@/components/forms/choice-select";
 import { PendingButton } from "@/components/forms/pending-button";
-import { TextField } from "@/components/forms/text-field";
+import { TextareaField } from "@/components/forms/textarea-field";
 import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldContent,
+  FieldDescription,
   FieldError,
   FieldLabel,
 } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { createHold, type Hold, type HoldState } from "@/lib/bookings/actions";
 import {
@@ -67,12 +71,14 @@ import { formatDate, formatTime, formatWeekday } from "@/lib/format";
 import {
   adminBookingSchema,
   bookingFormSchema,
+  pruneAddOnQuantities,
 } from "@/lib/validation/booking";
 import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
 import { AddOnCheckboxList, CateringAcceptance } from "./addon-selection";
 import { BookerFields } from "./booker-fields";
 import { DetailRow } from "./detail-row";
+import { ParticipantsField } from "./participants-field";
 import { PriceOverview } from "./price-overview";
 import { SlotPicker } from "./slot-picker";
 
@@ -98,9 +104,9 @@ const idleState: BookingState = { status: "idle" };
 // these, and a server error on one of them returns to its step.
 const STEP_FIELDS: readonly (readonly Path<BookingFormValues>[])[] = [
   ["startAt", "endAt", "participantCount"],
-  ["addOnIds", "cateringAccepted"],
-  ["companyId", "bookerName", "bookerEmail", "bookerPhone"],
-  ["termsAccepted"],
+  ["addOnIds", "addOnQuantities", "cateringAccepted"],
+  ["bookerName", "bookerEmail", "bookerPhone", "companyId", "practicalNotes"],
+  ["termsAccepted", "totalPriceOre"],
 ];
 export const FORM_STEP_COUNT = STEP_FIELDS.length;
 const LAST_STEP = FORM_STEP_COUNT - 1;
@@ -133,13 +139,21 @@ const defaultValues = (
   terms: CurrentTerms
 ): BookingFormValues => ({
   addOnIds: [],
+  addOnQuantities: {},
   bookerEmail: "",
   bookerName: "",
   bookerPhone: "",
   cateringAccepted: false,
   companyId: "",
   endAt: prefillInstant(prefill.date, prefill.to),
-  participantCount: prefill.participants ?? DEFAULT_PARTICIPANTS,
+  // A prefill from the search can exceed the room's capacity; clamping
+  // here keeps the stepper's start value inside 1..capacity, where both
+  // bounds are known.
+  participantCount: Math.min(
+    prefill.participants ?? DEFAULT_PARTICIPANTS,
+    room.capacity
+  ),
+  practicalNotes: "",
   roomId: room.roomId,
   startAt: prefillInstant(prefill.date, prefill.from),
   termsAccepted: false,
@@ -252,17 +266,23 @@ const livePriceOverview = (
   room: DialogRoom,
   values: Pick<
     BookingFormValues,
-    "addOnIds" | "endAt" | "participantCount" | "startAt"
+    "addOnIds" | "addOnQuantities" | "endAt" | "participantCount" | "startAt"
   >,
   discountPercent: number
 ): PriceOverviewModel => {
   const hours = hoursOf(values.startAt, values.endAt);
+  const selected = selectedAddOns(room, values.addOnIds);
+  // #119: the chosen quantities ride into the lines; an add-on without an
+  // explicit choice prices at the full headcount.
+  const optionsByAddonId = new Map(
+    selected.map((addOn) => [
+      addOn.addonId,
+      { quantity: values.addOnQuantities?.[addOn.addonId] },
+    ])
+  );
   const input = {
     addOnsOre: linesTotalOre(
-      addonLines(
-        selectedAddOns(room, values.addOnIds),
-        values.participantCount || 0
-      )
+      addonLines(selected, values.participantCount || 0, optionsByAddonId)
     ),
     discountPercent,
     hours,
@@ -278,10 +298,35 @@ const livePriceOverview = (
   });
 };
 
-const addOnNames = (room: DialogRoom, addOnIds: string[]): string =>
-  selectedAddOns(room, addOnIds)
-    .map((addOn) => addOn.name)
-    .join(", ") || copy.overview.noAddOns;
+// The overview reads the add-ons back, one per line instead of a comma
+// list; a per-participant add-on carries its chosen quantity — the
+// headcount when the customer left the stepper untouched (#119).
+const addOnReadBack = (
+  room: DialogRoom,
+  addOnIds: string[],
+  participantCount: number,
+  quantities: Record<string, number> | undefined
+): { addonId: string; label: string }[] =>
+  selectedAddOns(room, addOnIds).map((addOn) => ({
+    addonId: addOn.addonId,
+    label:
+      addOn.pricingModel === "per_participant"
+        ? `${addOn.name} (${quantities?.[addOn.addonId] ?? participantCount} stk.)`
+        : addOn.name,
+  }));
+
+// #126: the admin's explicit total replaces the computed one in the
+// overview — the computed rows stay as the basis it was set from. A
+// non-finite value (the number input reports NaN while cleared) falls
+// back to the computed total instead of rendering "NaN".
+const overviewPrice = (
+  admin: boolean,
+  live: PriceOverviewModel,
+  totalPriceOre: number | undefined
+): PriceOverviewModel =>
+  admin && typeof totalPriceOre === "number" && Number.isFinite(totalPriceOre)
+    ? { ...live, totalOre: totalPriceOre }
+    : live;
 
 const companyName = (
   viewer: BookingViewer,
@@ -300,6 +345,20 @@ const discountFor = (viewer: BookingViewer, companyId: string): number =>
 
 const schemaFor = (viewer: BookingViewer) =>
   viewer.kind === "admin" ? adminBookingSchema : bookingFormSchema;
+
+// The shared form type is the company shape; the admin schema drops the
+// member acceptances, so the per-viewer resolver is asserted to the form's
+// resolver — each flow's schema validates exactly the fields it uses.
+// Inside that, an untouched stepper's undefined record key must never
+// reach the schema (lib/validation/booking explains why the server cannot
+// see it): the resolver prunes it first.
+const resolverFor = (viewer: BookingViewer): Resolver<BookingFormValues> => {
+  const resolve = zodResolver(
+    schemaFor(viewer)
+  ) as unknown as Resolver<BookingFormValues>;
+  return async (values, context, options) =>
+    resolve(pruneAddOnQuantities(values), context, options);
+};
 
 // "Book nu" holds the room for a member; an admin's booking is created and
 // confirmed in one go.
@@ -527,44 +586,58 @@ function SlotStep({
       slots={slot.slots}
       startAt={slot.startAt}
     >
-      <TextField
+      <ParticipantsField
+        capacity={room.capacity}
         control={control}
-        description={copy.participantsHint(room.capacity)}
-        inputMode="numeric"
-        label={messages.booking.fields.participantCount}
         name="participantCount"
-        type="number"
       />
     </SlotPicker>
   );
 }
 
-// Step 2: the add-ons, then the catering rule, which must be actively
-// accepted (#7, Bilag 1 "Forplejning og hospitality").
+// Step 2: the add-ons, then — for a member booking on its own behalf — the
+// catering rule, which must be actively accepted (#7, Bilag 1 "Forplejning
+// og hospitality"). An admin books for someone else and is not the member
+// the rule addresses, so it does not render for them (ADR-0023).
 function ExtrasStep({
   addOns,
+  capacity,
   control,
   errors,
+  viewer,
 }: {
   addOns: AddOn[];
+  capacity: number;
   control: Control<BookingFormValues>;
   errors: FieldErrors<BookingFormValues>;
+  viewer: BookingViewer;
 }) {
+  const member = viewer.kind === "company";
   return (
     // Two columns from md up, two to one: the add-ons left, the catering
-    // rule right (mockup of 2026-09-23 in #81). Stacked below md.
-    <div className="grid gap-6 md:grid-cols-[2fr_2fr]">
+    // rule right (mockup of 2026-09-23 in #81). Stacked below md; without
+    // the rule (admin) the list takes the full width.
+    <div className={member ? "grid gap-6 md:grid-cols-[2fr_2fr]" : undefined}>
       <AddOnCheckboxList
         addOns={addOns}
+        capacity={capacity}
         control={control}
         error={errors.addOnIds?.message}
         name="addOnIds"
+        participantsName="participantCount"
+        quantityError={
+          typeof errors.addOnQuantities?.root?.message === "string"
+            ? errors.addOnQuantities.root.message
+            : undefined
+        }
       />
-      <CateringAcceptance
-        control={control}
-        error={errors.cateringAccepted?.message}
-        name="cateringAccepted"
-      />
+      {member ? (
+        <CateringAcceptance
+          control={control}
+          error={errors.cateringAccepted?.message}
+          name="cateringAccepted"
+        />
+      ) : null}
     </div>
   );
 }
@@ -589,7 +662,63 @@ function BookerStep({
         <CompanyField control={control} viewer={viewer} />
       ) : null}
       <BookerFields control={control} />
+      {/* #114: the customer's note to the house; blank stays null. */}
+      <TextareaField
+        control={control}
+        label={messages.booking.fields.practicalNotes}
+        name="practicalNotes"
+        required={false}
+      />
     </div>
+  );
+}
+
+// #126: the admin's total price in kroner, converted to the øre the form
+// value carries (the name says ore, the admin types crowns). A cleared or
+// partial input writes undefined — never NaN, which the overview would
+// otherwise render as a real total.
+function TotalPriceField({ control }: { control: Control<BookingFormValues> }) {
+  const { field, fieldState } = useController({
+    control,
+    name: "totalPriceOre",
+  });
+  const id = "field-totalPriceOre";
+  const { onChange } = field;
+  const handleChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      const kroner = event.target.valueAsNumber;
+      onChange(Number.isFinite(kroner) ? kroner * 100 : undefined);
+    },
+    [onChange]
+  );
+  return (
+    <Field data-invalid={fieldState.invalid}>
+      <FieldLabel htmlFor={id} required={false}>
+        {messages.booking.admin.fields.totalPrice}
+      </FieldLabel>
+      <Input
+        aria-invalid={fieldState.invalid}
+        id={id}
+        inputMode="numeric"
+        name={field.name}
+        onBlur={field.onBlur}
+        onChange={handleChange}
+        ref={field.ref}
+        type="number"
+        value={
+          typeof field.value === "number" && Number.isFinite(field.value)
+            ? field.value / 100
+            : ""
+        }
+      />
+      {fieldState.invalid ? (
+        <FieldError errors={[fieldState.error]} />
+      ) : (
+        <FieldDescription>
+          {messages.booking.admin.fields.totalPriceHint}
+        </FieldDescription>
+      )}
+    </Field>
   );
 }
 
@@ -610,6 +739,7 @@ function OverviewStep({
     endAt,
     participantCount,
     addOnIds,
+    addOnQuantities,
     bookerName,
     bookerEmail,
     bookerPhone,
@@ -621,6 +751,7 @@ function OverviewStep({
       "endAt",
       "participantCount",
       "addOnIds",
+      "addOnQuantities",
       "bookerName",
       "bookerEmail",
       "bookerPhone",
@@ -628,6 +759,12 @@ function OverviewStep({
     ],
   });
   const company = companyName(viewer, companyId);
+  const readBack = addOnReadBack(
+    room,
+    Array.isArray(addOnIds) ? addOnIds : [],
+    Number(participantCount) || 0,
+    addOnQuantities
+  );
   return (
     <div className="flex flex-1 flex-col gap-4">
       {/* The rows centred in the space above the price, which sits at the
@@ -651,7 +788,17 @@ function OverviewStep({
           />
           <DetailRow
             label={copy.overview.addOns}
-            value={addOnNames(room, addOnIds)}
+            value={
+              readBack.length === 0 ? (
+                copy.overview.noAddOns
+              ) : (
+                <span className="flex flex-col items-end text-right">
+                  {readBack.map((line) => (
+                    <span key={line.addonId}>{line.label}</span>
+                  ))}
+                </span>
+              )
+            }
           />
           <DetailRow
             label={copy.overview.booker}
@@ -666,6 +813,9 @@ function OverviewStep({
           />
         </dl>
       </div>
+      {/* #126: the admin sets the whole booking's price before it is
+          created; the company flow never sees the field. */}
+      {viewer.kind === "admin" ? <TotalPriceField control={control} /> : null}
       <PriceOverview model={price} />
     </div>
   );
@@ -695,7 +845,13 @@ function StepBody({
   }
   if (step === 1) {
     return (
-      <ExtrasStep addOns={room.addons} control={control} errors={errors} />
+      <ExtrasStep
+        addOns={room.addons}
+        capacity={room.capacity}
+        control={control}
+        errors={errors}
+        viewer={viewer}
+      />
     );
   }
   if (step === 2) {
@@ -707,8 +863,10 @@ function StepBody({
 }
 
 // "Tilbage" from the second step on; "Næste" until the overview, where the
-// submit takes its place with the terms checkbox beside it. Both submit the
-// form, so Enter in a field moves on rather than booking early.
+// submit takes its place — with the terms checkbox beside it for a member
+// booking on its own behalf: the acceptance is the booker's, not the
+// admin's (ADR-0023). Both submit the form, so Enter in a field moves on
+// rather than booking early.
 function StepNav({
   control,
   onBack,
@@ -716,6 +874,7 @@ function StepNav({
   step,
   submitCopy,
   terms,
+  viewer,
 }: {
   control: Control<BookingFormValues>;
   onBack: () => void;
@@ -723,6 +882,7 @@ function StepNav({
   step: number;
   submitCopy: { submit: string; submitting: string };
   terms: CurrentTerms;
+  viewer: BookingViewer;
 }) {
   const last = step === LAST_STEP;
   return (
@@ -733,7 +893,7 @@ function StepNav({
         </Button>
       ) : null}
       <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-        {last ? (
+        {last && viewer.kind === "company" ? (
           <TermsField className="w-auto" control={control} terms={terms} />
         ) : null}
         {last ? (
@@ -776,7 +936,7 @@ export function BookingForm({
 }: BookingFormProps) {
   const form = useForm<BookingFormValues>({
     defaultValues: defaultValues(room, prefill, terms),
-    resolver: zodResolver(schemaFor(viewer)),
+    resolver: resolverFor(viewer),
   });
   const { control, formState } = form;
   const slot = useSlotSelection(room, form, initialDate, initialPeriods);
@@ -786,15 +946,34 @@ export function BookingForm({
   });
   useStepForErrors(state, onStepChange);
   const markAttempted = useStepRevalidation(form, step);
-  const [participantCount, addOnIds, companyId] = useWatch({
+  const [
+    participantCount,
+    addOnIds,
+    addOnQuantities,
+    companyId,
+    totalPriceOre,
+  ] = useWatch({
     control,
-    name: ["participantCount", "addOnIds", "companyId"],
+    name: [
+      "participantCount",
+      "addOnIds",
+      "addOnQuantities",
+      "companyId",
+      "totalPriceOre",
+    ],
   });
-  const price = livePriceOverview(
+  const live = livePriceOverview(
     room,
-    { addOnIds, endAt: slot.endAt, participantCount, startAt: slot.startAt },
+    {
+      addOnIds,
+      addOnQuantities,
+      endAt: slot.endAt,
+      participantCount,
+      startAt: slot.startAt,
+    },
     discountFor(viewer, companyId)
   );
+  const price = overviewPrice(viewer.kind === "admin", live, totalPriceOre);
   const back = useCallback(() => onStepChange(step - 1), [onStepChange, step]);
   const next = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -838,6 +1017,7 @@ export function BookingForm({
         step={step}
         submitCopy={submitCopyFor(viewer)}
         terms={terms}
+        viewer={viewer}
       />
     </form>
   );

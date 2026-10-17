@@ -46,7 +46,11 @@ create table public.bookings (
   booking_discount_percent integer not null default 0
     check (booking_discount_percent between 0 and 100),
   booking_addon_total_ore integer not null default 0 check (booking_addon_total_ore >= 0),
-  booking_expected_total_ore integer not null default 0 check (booking_expected_total_ore >= 0),
+  booking_expected_total_ore integer not null default 0
+    check (
+      booking_status <> 'confirmed'
+      or booking_expected_total_ore >= 0
+    ),
   booking_cancellation_terms text,
   -- Cancellation (ADR-0006): fee on the member price, set at cancellation time.
   -- The fee is recomputed server-side at the confirm moment, so the column
@@ -73,8 +77,9 @@ create table public.bookings (
   booking_updated_at timestamptz not null default now(),
   -- Catering rule (Bilag 1 "Forplejning og hospitality", #7): the flow
   -- requires active acceptance; the confirmation mail (#11, Mail 4) repeats
-  -- the rule. Null never happens through the app — the schema requires the
-  -- checkbox — but the column stays nullable so fixtures and admin SQL do
+  -- the rule. A member booking stamps the instant; an admin-entered row
+  -- stays null, because the admin accepts nothing on the company's behalf
+  -- (ADR-0023). The column stays nullable so fixtures and admin SQL do
   -- not have to fake an instant.
   booking_catering_accepted_at timestamptz,
   check (booking_end_at > booking_start_at)
@@ -371,13 +376,13 @@ create trigger booking_addons_snapshot_immutable
   for each row
   execute function public.enforce_addon_snapshot_immutable();
 
--- Line values (#7, ADR-0011): quantity is the headcount for a
--- per-participant add-on and 1 for a fixed one. Checked in Postgres so
--- every write path obeys it; the line total is guarded by the
--- booking_addon_total_check constraint. A per-participant line must be
--- written after the booking row carries the participant count it belongs
--- to (the natural order: booking first, then its lines), so changing the
--- headcount means updating bookings first, then the lines.
+-- Line values (#7, ADR-0011): quantity is the customer's choice between 1
+-- and the headcount for a per-participant add-on (#119), and 1 for a fixed
+-- one. Checked in Postgres so every write path obeys it; the line total is
+-- guarded by the booking_addon_total_check constraint. A per-participant
+-- line must be written after the booking row carries the participant count
+-- it belongs to (the natural order: booking first, then its lines), so
+-- changing the headcount means updating bookings first, then the lines.
 create or replace function public.enforce_addon_line_values()
 returns trigger
 language plpgsql
@@ -395,10 +400,13 @@ begin
   where b.booking_id = new.booking_addon_booking_id;
 
   if v_model = 'per_participant'
-    and new.booking_addon_quantity is distinct from v_participant_count
+    and (
+      new.booking_addon_quantity < 1
+      or new.booking_addon_quantity > v_participant_count
+    )
   then
     raise exception
-      'a per-participant add-on''s quantity must equal the booking''s participant count'
+      'a per-participant add-on''s quantity must be between 1 and the booking''s participant count'
       using errcode = 'P0001';
   end if;
 

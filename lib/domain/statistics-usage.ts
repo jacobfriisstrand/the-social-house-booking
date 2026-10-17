@@ -36,6 +36,7 @@ export interface RoomUsage extends Usage {
 }
 
 export interface CompanyUsage extends Usage {
+  averageParticipants: number | null;
   companyId: string;
   membership: StatisticsBooking["membership"];
 }
@@ -136,23 +137,40 @@ export function roomUsage(
 }
 
 // Every company with a held or cancelled booking in the month; the most
-// bookings first.
+// bookings first. The guests average counts held meetings only — a
+// cancellation never happened, so it brings no guests (#118).
 export function companyUsage(
   bookings: readonly StatisticsBooking[],
   month: string,
   now: Date
 ): CompanyUsage[] {
   const usage = new Map<string, CompanyUsage>();
+  const heldParticipants = new Map<string, number>();
   for (const booking of heldInMonth(bookings, month, now)) {
     const row = usage.get(booking.companyId) ?? {
       ...emptyUsage(booking.companyName),
+      averageParticipants: null,
       companyId: booking.companyId,
       membership: booking.membership,
     };
     addUsage(row, booking);
     usage.set(booking.companyId, row);
+    if (booking.status !== "cancelled") {
+      heldParticipants.set(
+        booking.companyId,
+        (heldParticipants.get(booking.companyId) ?? 0) + booking.participants
+      );
+    }
   }
-  return [...usage.values()].sort(
-    (a, b) => b.bookings - a.bookings || b.minutes - a.minutes || byName(a, b)
-  );
+  return [...usage.values()]
+    .map((row) => ({
+      ...row,
+      averageParticipants:
+        row.bookings === 0
+          ? null
+          : (heldParticipants.get(row.companyId) ?? 0) / row.bookings,
+    }))
+    .sort(
+      (a, b) => b.bookings - a.bookings || b.minutes - a.minutes || byName(a, b)
+    );
 }

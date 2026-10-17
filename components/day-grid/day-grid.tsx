@@ -96,10 +96,15 @@ const rangeLabel = (drag: SlotDrag): string =>
   `${ROW_LABELS[drag.startRow]} - ${ROW_END_LABELS[drag.endRow]}`;
 
 // The grid's rows keep their height and never highlight (DESIGN.md: no
-// hover effects beyond the cursor).
+// hover effects beyond the cursor). The hairline between the slots is the
+// border token on every width (#115): without it the rows read as one
+// sheet, and on the phone the horizontally scrolling bookings have
+// nothing to separate them.
 const ROW_CLASS = "h-9 hover:bg-transparent";
-// A block fills its cell, spanned rows included, with a small inset.
-const BLOCK_CELL_CLASS = "relative border-l p-0";
+// A block fills its cell, spanned rows included, with a small inset. The
+// border-b is the row separator: on a border-separate table the hairlines
+// belong to the cells, not the rows (see the Table comment).
+const BLOCK_CELL_CLASS = "relative border-b border-l p-0";
 const BLOCK_CLASS = "absolute inset-0.5 rounded-lg border";
 // Everything the room is not available in — the buffer and the past,
 // closed and blocked slots — wears the muted block with a diagonal hatch,
@@ -231,6 +236,7 @@ function SlotCell({
   drag,
   onBook,
   onDragStart,
+  readOnly,
   roomName,
 }: {
   cell: Extract<GridCell, { kind: "slot" }>;
@@ -238,19 +244,24 @@ function SlotCell({
   drag: SlotDrag | null;
   onBook: (target: BookingTarget) => void;
   onDragStart: DragStart;
+  // #124: the foyer screen shows the grid without the booking affordances
+  // — no session sits behind it, so a free slot is display, not a button.
+  readOnly?: boolean;
   roomName: string | undefined;
 }) {
   return (
     <TableCell className={BLOCK_CELL_CLASS} rowSpan={cell.rowSpan}>
       {cell.status === "available" ? (
         <>
-          <FreeSlotButton
-            cell={cell}
-            column={column}
-            onBook={onBook}
-            onDragStart={onDragStart}
-            roomName={roomName}
-          />
+          {readOnly ? null : (
+            <FreeSlotButton
+              cell={cell}
+              column={column}
+              onBook={onBook}
+              onDragStart={onDragStart}
+              roomName={roomName}
+            />
+          )}
           {drag ? <DragSelection drag={drag} /> : null}
         </>
       ) : (
@@ -274,6 +285,8 @@ interface CellHandlers {
   onBook: (target: BookingTarget) => void;
   onDragStart: DragStart;
   onOpen: (key: string) => void;
+  // #124: the foyer's grid — free slots are display, not buttons.
+  readOnly: boolean;
   roomNames: string[];
 }
 
@@ -301,6 +314,7 @@ function GridCellView({
         drag={dragFrom(handlers.drag, column, cell.firstRow)}
         onBook={handlers.onBook}
         onDragStart={handlers.onDragStart}
+        readOnly={handlers.readOnly}
         roomName={handlers.roomNames[column]}
       />
     );
@@ -329,8 +343,11 @@ function GridRow({
 }) {
   return (
     <TableRow className={ROW_CLASS} data-row={row}>
+      {/* border-b on the cell itself: it travels with the sticky label, so
+          the row separator is there under the time column too (#115). The
+          after-line is the vertical one, same travel. */}
       <TableHead
-        className="sticky left-0 z-10 h-9 bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums"
+        className="sticky left-0 z-10 h-9 border-b bg-card pt-1 pr-3 text-right align-top font-normal text-muted-foreground tabular-nums after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border"
         scope="row"
       >
         {label}
@@ -464,6 +481,11 @@ export function DayGrid({
   date,
   dateLabel,
   entries,
+  // #124: the foyer renders the grid read-only — no session sits behind
+  // the screen, so a free slot is display, not a booking button, and the
+  // drag never starts. The entry sheets stay: tapping a block shows what
+  // is already on screen.
+  readOnly = false,
   rows,
   terms,
   viewer,
@@ -472,6 +494,7 @@ export function DayGrid({
   date: string;
   dateLabel: string;
   entries: Record<string, GridEntryView>;
+  readOnly?: boolean;
   rows: PlacedCell[][];
   terms: CurrentTerms;
   viewer: BookingViewer;
@@ -497,15 +520,25 @@ export function DayGrid({
     onBook: book,
     onDragStart: startDrag,
     onOpen: openSheet,
+    readOnly,
     roomNames: columns.map((column) => column.room.name),
   };
 
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
+        {/* border-separate: with collapse, WebKit misrenders the sticky time
+            labels — on the phone the bookings slide in behind them (#115).
+            Separated borders put each hairline on the cell that owns it, so
+            they travel with the sticky cells; the spacing stays at 0. The
+            hairlines therefore live on the cells (block cells and headers),
+            not on the rows, which cannot carry borders in this model. */}
         <Table
           aria-label={copy.gridLabel(dateLabel)}
-          className={cn("table-fixed", drag && "cursor-row-resize select-none")}
+          className={cn(
+            "table-fixed border-separate border-spacing-0",
+            drag && "cursor-row-resize select-none"
+          )}
           style={{ minWidth: `calc(72px + ${columns.length} * 9rem)` }}
         >
           <colgroup>
@@ -514,9 +547,11 @@ export function DayGrid({
               <col key={column.room.roomId} />
             ))}
           </colgroup>
-          <TableHeader>
+          <TableHeader className="[&_th]:border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 h-14 bg-card">
+              {/* The after-line overlaps the first room column's own border-l
+                  at rest and stays while it slides behind (#115). */}
+              <TableHead className="sticky left-0 z-10 h-14 bg-card after:absolute after:inset-y-0 after:-right-px after:w-px after:bg-border">
                 <span className="sr-only">{copy.sheet.time}</span>
               </TableHead>
               {columns.map((column) => (
@@ -524,7 +559,7 @@ export function DayGrid({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0">
             {rows.map((cells, row) => (
               <GridRow
                 cells={cells}

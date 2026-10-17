@@ -25,6 +25,7 @@ const held: StatisticsBooking = {
   invoicingStatus: "not_invoiced",
   manualAmountsOre: 0,
   membership: "member",
+  participants: 8,
   roomId: "room-power",
   startAt: "2026-09-15T10:00:00+02:00",
   status: "confirmed",

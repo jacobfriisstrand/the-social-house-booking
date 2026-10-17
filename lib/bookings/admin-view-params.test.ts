@@ -56,6 +56,12 @@ describe("parseAdminViewParams", () => {
     expect(params.sortDir).toBe("desc");
   });
 
+  // #117: the sort allowlist and the header's AdminSortKey must move
+  // together — a key missing here silently falls back to the date sort.
+  it("parses the participants sort", () => {
+    expect(parse({ sort: "participants" }).sort).toBe("participants");
+  });
+
   it("reads a repeated param as several selected ids", () => {
     const params = parse({
       company: ["c1", "c2"],

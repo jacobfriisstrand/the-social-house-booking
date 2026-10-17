@@ -34,6 +34,7 @@ import {
   formatDate,
   formatDateString,
   formatHours,
+  formatNumber,
   formatOre,
   formatTime,
 } from "@/lib/format";
@@ -134,6 +135,23 @@ export function BookingDetailSheet({
             />
             <DetailRow label={bookingsCopy.columns.room} value={row.roomName} />
             <DetailRow
+              label={bookingsCopy.columns.participants}
+              value={formatNumber(row.participants)}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerName}
+              value={row.bookerName ?? NONE}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerEmail}
+              mono={row.bookerEmail !== null}
+              value={row.bookerEmail ?? NONE}
+            />
+            <DetailRow
+              label={bookingsCopy.columns.bookerPhone}
+              value={row.bookerPhone ?? NONE}
+            />
+            <DetailRow
               label={companiesCopy.columns.status}
               value={companiesCopy.membership[row.membershipStatus]}
             />
@@ -145,6 +163,12 @@ export function BookingDetailSheet({
               <DetailRow
                 label={bookingsCopy.sheet.cancelledAt}
                 value={`${formatDate(row.cancelledAt)} · ${formatTime(row.cancelledAt)}`}
+              />
+            ) : null}
+            {row.practicalNotes ? (
+              <DetailRow
+                label={bookingsCopy.sheet.practicalNotes}
+                value={row.practicalNotes}
               />
             ) : null}
             <DetailRow
@@ -171,7 +195,9 @@ export function BookingDetailSheet({
                 discountPercent: row.discountPercent,
                 manualAmounts: row.manualAmounts,
                 roomTotalOre: row.roomPriceOre,
-                totalOre: (parts.memberPriceOre ?? 0) + row.addonTotalOre,
+                // #126: the stored total — an admin's explicit price shows
+                // here exactly as set, not recomputed from the parts.
+                totalOre: row.expectedTotalOre,
               })}
             />
           )}

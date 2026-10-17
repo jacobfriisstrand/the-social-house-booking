@@ -88,9 +88,9 @@ export function BookingDialog({
     <Dialog onOpenChange={handleOpenChange} open={open}>
       {/* A large dialog: a slower fade with a slight rise reads smoother
           than the default quick zoom, opening and closing. The height is
-          fixed from md up so the dialog keeps its size between steps, and
-          every step fits inside it: only the start-time list scrolls. */}
-      <DialogContent className="data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4 flex flex-col p-6 duration-300 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-3xl md:h-[min(40rem,calc(100dvh-2rem))]">
+          fixed from md up so the dialog keeps its size between steps; a
+          step taller than the dialog scrolls inside it. */}
+      <DialogContent className="data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4 flex flex-col p-6 duration-300 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none sm:max-w-3xl md:h-[min(46rem,calc(100dvh-2rem))]">
         <DialogHeader>
           <DialogTitle className="text-xl">{room.name}</DialogTitle>
           <DialogDescription className="sr-only">
