@@ -28,6 +28,65 @@ const copy = messages.companies;
 // reads as "forgotten to render", a dash as "no data".
 const NO_VALUE = "—";
 
+// One row's cells: the tick, the contact data and the master-data badge.
+// Extracted from the map so the table's own body stays readable — fallow
+// counts this arrow among the file's complexity offenders otherwise.
+function CompanyRowCells({
+  company,
+  selection,
+}: {
+  company: CompanyRow;
+  selection: ReturnType<typeof useRowSelection>;
+}) {
+  return (
+    <>
+      {/* Sticky sideways with its header cell — horizontally only, a top
+          inset would pin the cell while its row scrolls away — on its own
+          opaque card ground (the bookings table's status column leads the
+          way). */}
+      <TableCell className="sticky left-0 z-10 bg-card">
+        <RowTick
+          checked={selection.selected.has(company.company_id)}
+          id={company.company_id}
+          label={copy.selection.selectRow(company.company_display_name)}
+          toggle={selection.toggle}
+        />
+      </TableCell>
+      <TableCell className="truncate font-medium">
+        <CompanySheet company={company} />
+      </TableCell>
+      <TableCell className="truncate">{company.company_email}</TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {copy.membership[company.company_membership_status]}
+        </Badge>
+      </TableCell>
+      <TableCell className="tabular-nums">
+        {company.company_discount_percent} %
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_cvr_number ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_contact_name ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_contact_phone ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_invoice_email ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="text-right">
+        {company.company_master_data_completed_at ? (
+          <Badge variant="success">{copy.masterDataComplete}</Badge>
+        ) : (
+          <Badge variant="destructive">{copy.masterDataMissing}</Badge>
+        )}
+      </TableCell>
+    </>
+  );
+}
+
 export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const paged = useTablePagination(companies.length);
   const rows = slicePage(companies, paged.page, paged.pageSize);
@@ -132,51 +191,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
         <TableBody>
           {rows.map((company) => (
             <TableRow key={company.company_id}>
-              {/* Sticky sideways with its header cell — horizontally only,
-                  a top inset would pin the cell while its row scrolls away —
-                  on its own opaque card ground (the bookings table's status
-                  column leads the way). */}
-              <TableCell className="sticky left-0 z-10 bg-card">
-                <RowTick
-                  checked={selection.selected.has(company.company_id)}
-                  id={company.company_id}
-                  label={copy.selection.selectRow(company.company_display_name)}
-                  toggle={selection.toggle}
-                />
-              </TableCell>
-              <TableCell className="truncate font-medium">
-                <CompanySheet company={company} />
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_email}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">
-                  {copy.membership[company.company_membership_status]}
-                </Badge>
-              </TableCell>
-              <TableCell className="tabular-nums">
-                {company.company_discount_percent} %
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_cvr_number ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_contact_name ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_contact_phone ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_invoice_email ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="text-right">
-                {company.company_master_data_completed_at ? (
-                  <Badge variant="success">{copy.masterDataComplete}</Badge>
-                ) : (
-                  <Badge variant="destructive">{copy.masterDataMissing}</Badge>
-                )}
-              </TableCell>
+              <CompanyRowCells company={company} selection={selection} />
             </TableRow>
           ))}
         </TableBody>
