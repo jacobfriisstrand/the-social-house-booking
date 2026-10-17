@@ -24,6 +24,69 @@ import { messages } from "@/messages/da";
 
 const copy = messages.companies;
 
+// Cells without a value show an em dash, not an empty cell — a blank cell
+// reads as "forgotten to render", a dash as "no data".
+const NO_VALUE = "—";
+
+// One row's cells: the tick, the contact data and the master-data badge.
+// Extracted from the map so the table's own body stays readable — fallow
+// counts this arrow among the file's complexity offenders otherwise.
+function CompanyRowCells({
+  company,
+  selection,
+}: {
+  company: CompanyRow;
+  selection: ReturnType<typeof useRowSelection>;
+}) {
+  return (
+    <>
+      {/* Sticky sideways with its header cell — horizontally only, a top
+          inset would pin the cell while its row scrolls away — on its own
+          opaque card ground (the bookings table's status column leads the
+          way). */}
+      <TableCell className="sticky left-0 z-10 bg-card">
+        <RowTick
+          checked={selection.selected.has(company.company_id)}
+          id={company.company_id}
+          label={copy.selection.selectRow(company.company_display_name)}
+          toggle={selection.toggle}
+        />
+      </TableCell>
+      <TableCell className="truncate font-medium">
+        <CompanySheet company={company} />
+      </TableCell>
+      <TableCell className="truncate">{company.company_email}</TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {copy.membership[company.company_membership_status]}
+        </Badge>
+      </TableCell>
+      <TableCell className="tabular-nums">
+        {company.company_discount_percent} %
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_cvr_number ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_contact_name ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_contact_phone ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="truncate">
+        {company.company_invoice_email ?? NO_VALUE}
+      </TableCell>
+      <TableCell className="text-right">
+        {company.company_master_data_completed_at ? (
+          <Badge variant="success">{copy.masterDataComplete}</Badge>
+        ) : (
+          <Badge variant="destructive">{copy.masterDataMissing}</Badge>
+        )}
+      </TableCell>
+    </>
+  );
+}
+
 export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const paged = useTablePagination(companies.length);
   const rows = slicePage(companies, paged.page, paged.pageSize);
@@ -41,9 +104,31 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
       className="min-w-0 gap-0 overflow-x-auto py-0"
       onMouseDown={selection.stopShiftTextSelect}
     >
-      {/* table-fixed: the columns between the first and the last share the
-          remaining width evenly (DESIGN.md "Components"). */}
-      <Table className="min-w-[48rem] table-fixed" sticky>
+      {/* table-fixed: the column widths are stated once in the colgroup
+          (col = the widest value seen so far + the 14px cell padding), so
+          the swap between the column titles and the bulk actions cannot
+          shift the columns, and short-content columns stay as narrow as
+          their content. The floor is the cols' sum — wider cards keep the
+          table at exactly these widths; narrower cards scroll sideways.
+          The truncate cell class is the graceful degradation when real
+          data outgrows a measured width. Headers keep the primitive's
+          h-10; labels wrap to a second line inside it. */}
+      <Table
+        className="min-w-[77rem] table-fixed [&_thead_th]:whitespace-normal"
+        sticky
+      >
+        <colgroup>
+          <col className="w-10" />
+          <col className="w-[137px]" />
+          <col className="w-[187px]" />
+          <col className="w-[112px]" />
+          <col className="w-16" />
+          <col className="w-[80px]" />
+          <col className="w-[114px]" />
+          <col className="w-[109px]" />
+          <col className="w-[196px]" />
+          <col className="w-56" />
+        </colgroup>
         <TableHeader>
           <TableRow>
             {/* Both axes, as the admin tick column: the cell rides the stuck
@@ -59,8 +144,10 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
             </TableHead>
             {selectionCount > 0 ? (
               // The bulk header: the export stands where the column titles
-              // were, and swaps back when the selection clears.
-              <TableHead colSpan={5}>
+              // were, and swaps back when the selection clears. The span is
+              // the data column count — every column addition updates it
+              // with the header list below.
+              <TableHead colSpan={9}>
                 <div className="flex items-center gap-2">
                   <p className="whitespace-nowrap text-sm">
                     {copy.selection.selected(selectionCount)}
@@ -89,10 +176,12 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
                 <TableHead>{copy.columns.displayName}</TableHead>
                 <TableHead>{copy.columns.email}</TableHead>
                 <TableHead>{copy.columns.status}</TableHead>
+                <TableHead>{copy.columns.discount}</TableHead>
+                <TableHead>{copy.columns.cvrNumber}</TableHead>
+                <TableHead>{copy.columns.contactName}</TableHead>
+                <TableHead>{copy.columns.contactPhone}</TableHead>
+                <TableHead>{copy.columns.invoiceEmail}</TableHead>
                 <TableHead className="text-right">
-                  {copy.columns.discount}
-                </TableHead>
-                <TableHead className="w-56 max-w-56 text-right">
                   {copy.columns.masterData}
                 </TableHead>
               </>
@@ -102,39 +191,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
         <TableBody>
           {rows.map((company) => (
             <TableRow key={company.company_id}>
-              {/* Sticky sideways with its header cell — horizontally only,
-                  a top inset would pin the cell while its row scrolls away —
-                  on its own opaque card ground (the bookings table's status
-                  column leads the way). */}
-              <TableCell className="sticky left-0 z-10 bg-card">
-                <RowTick
-                  checked={selection.selected.has(company.company_id)}
-                  id={company.company_id}
-                  label={copy.selection.selectRow(company.company_display_name)}
-                  toggle={selection.toggle}
-                />
-              </TableCell>
-              <TableCell className="truncate font-medium">
-                <CompanySheet company={company} />
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_email}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">
-                  {copy.membership[company.company_membership_status]}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {company.company_discount_percent} %
-              </TableCell>
-              <TableCell className="text-right">
-                {company.company_master_data_completed_at ? (
-                  <Badge variant="success">{copy.masterDataComplete}</Badge>
-                ) : (
-                  <Badge variant="destructive">{copy.masterDataMissing}</Badge>
-                )}
-              </TableCell>
+              <CompanyRowCells company={company} selection={selection} />
             </TableRow>
           ))}
         </TableBody>

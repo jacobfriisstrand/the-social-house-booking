@@ -534,9 +534,13 @@ export const messages = {
   },
   companies: {
     columns: {
+      contactName: "Kontaktperson",
+      contactPhone: "Mobilnummer",
+      cvrNumber: "CVR",
       discount: "Rabat",
       displayName: "Visningsnavn",
       email: "Email",
+      invoiceEmail: "Faktura-email",
       masterData: "Stamdata",
       status: "Medlemsstatus",
     },

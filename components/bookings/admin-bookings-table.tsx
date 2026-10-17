@@ -823,6 +823,7 @@ export function AdminBookingsTable({
     overlay,
     overlayOpen,
   } = useBookingOverlay(rows);
+
   const {
     cancelId,
     closeCancel,
