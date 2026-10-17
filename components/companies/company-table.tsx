@@ -28,17 +28,6 @@ const copy = messages.companies;
 // reads as "forgotten to render", a dash as "no data".
 const NO_VALUE = "—";
 
-// company_billing_interval is free-text with one value in v1.0 (the rule
-// sits in lib/domain/company-master-data.ts); unknown values render raw.
-function billingIntervalLabel(value: string | null): string {
-  if (!value) {
-    return NO_VALUE;
-  }
-  return value in copy.billingIntervals
-    ? copy.billingIntervals[value as keyof typeof copy.billingIntervals]
-    : value;
-}
-
 export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const paged = useTablePagination(companies.length);
   const rows = slicePage(companies, paged.page, paged.pageSize);
@@ -56,11 +45,31 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
       className="min-w-0 gap-0 overflow-x-auto py-0"
       onMouseDown={selection.stopShiftTextSelect}
     >
-      {/* table-fixed: the columns between the first and the last share the
-          remaining width evenly (DESIGN.md "Components"). #113 widened the
-          table with the master-data columns; the card scrolls sideways and
-          the min-width keeps every column readable. */}
-      <Table className="min-w-[128rem] table-fixed" sticky>
+      {/* table-fixed: the column widths are stated once in the colgroup
+          (col = the widest value seen so far + the 14px cell padding), so
+          the swap between the column titles and the bulk actions cannot
+          shift the columns, and short-content columns stay as narrow as
+          their content. The floor is the cols' sum — wider cards keep the
+          table at exactly these widths; narrower cards scroll sideways.
+          The truncate cell class is the graceful degradation when real
+          data outgrows a measured width. Headers keep the primitive's
+          h-10; labels wrap to a second line inside it. */}
+      <Table
+        className="min-w-[77rem] table-fixed [&_thead_th]:whitespace-normal"
+        sticky
+      >
+        <colgroup>
+          <col className="w-10" />
+          <col className="w-[137px]" />
+          <col className="w-[187px]" />
+          <col className="w-[112px]" />
+          <col className="w-16" />
+          <col className="w-[80px]" />
+          <col className="w-[114px]" />
+          <col className="w-[109px]" />
+          <col className="w-[196px]" />
+          <col className="w-56" />
+        </colgroup>
         <TableHeader>
           <TableRow>
             {/* Both axes, as the admin tick column: the cell rides the stuck
@@ -79,7 +88,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
               // were, and swaps back when the selection clears. The span is
               // the data column count — every column addition updates it
               // with the header list below.
-              <TableHead colSpan={16}>
+              <TableHead colSpan={9}>
                 <div className="flex items-center gap-2">
                   <p className="whitespace-nowrap text-sm">
                     {copy.selection.selected(selectionCount)}
@@ -106,23 +115,14 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
             ) : (
               <>
                 <TableHead>{copy.columns.displayName}</TableHead>
-                <TableHead>{copy.columns.legalName}</TableHead>
                 <TableHead>{copy.columns.email}</TableHead>
                 <TableHead>{copy.columns.status}</TableHead>
-                <TableHead className="text-right">
-                  {copy.columns.discount}
-                </TableHead>
+                <TableHead>{copy.columns.discount}</TableHead>
                 <TableHead>{copy.columns.cvrNumber}</TableHead>
                 <TableHead>{copy.columns.contactName}</TableHead>
                 <TableHead>{copy.columns.contactPhone}</TableHead>
                 <TableHead>{copy.columns.invoiceEmail}</TableHead>
-                <TableHead>{copy.columns.attention}</TableHead>
-                <TableHead>{copy.columns.department}</TableHead>
-                <TableHead>{copy.columns.reference}</TableHead>
-                <TableHead>{copy.columns.billingInterval}</TableHead>
-                <TableHead>{copy.columns.economicCustomerNumber}</TableHead>
-                <TableHead>{copy.columns.internalNote}</TableHead>
-                <TableHead className="w-56 max-w-56 text-right">
+                <TableHead className="text-right">
                   {copy.columns.masterData}
                 </TableHead>
               </>
@@ -148,9 +148,6 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
                 <CompanySheet company={company} />
               </TableCell>
               <TableCell className="truncate">
-                {company.company_legal_name ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
                 {company.company_email}
               </TableCell>
               <TableCell>
@@ -158,7 +155,7 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
                   {copy.membership[company.company_membership_status]}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right tabular-nums">
+              <TableCell className="tabular-nums">
                 {company.company_discount_percent} %
               </TableCell>
               <TableCell className="truncate">
@@ -172,24 +169,6 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
               </TableCell>
               <TableCell className="truncate">
                 {company.company_invoice_email ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_attention ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_department ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_reference ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {billingIntervalLabel(company.company_billing_interval)}
-              </TableCell>
-              <TableCell className="truncate tabular-nums">
-                {company.company_economic_customer_number ?? NO_VALUE}
-              </TableCell>
-              <TableCell className="truncate">
-                {company.company_internal_note ?? NO_VALUE}
               </TableCell>
               <TableCell className="text-right">
                 {company.company_master_data_completed_at ? (
