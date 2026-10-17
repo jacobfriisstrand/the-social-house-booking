@@ -32,7 +32,6 @@ import {
 import type { z } from "zod";
 import { ChoiceSelect } from "@/components/forms/choice-select";
 import { PendingButton } from "@/components/forms/pending-button";
-import { TextField } from "@/components/forms/text-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
@@ -79,6 +78,7 @@ import { messages } from "@/messages/da";
 import { AddOnCheckboxList, CateringAcceptance } from "./addon-selection";
 import { BookerFields } from "./booker-fields";
 import { DetailRow } from "./detail-row";
+import { ParticipantsField } from "./participants-field";
 import { PriceOverview } from "./price-overview";
 import { SlotPicker } from "./slot-picker";
 
@@ -146,7 +146,13 @@ const defaultValues = (
   cateringAccepted: false,
   companyId: "",
   endAt: prefillInstant(prefill.date, prefill.to),
-  participantCount: prefill.participants ?? DEFAULT_PARTICIPANTS,
+  // A prefill from the search can exceed the room's capacity; clamping
+  // here keeps the stepper's start value inside 1..capacity, where both
+  // bounds are known.
+  participantCount: Math.min(
+    prefill.participants ?? DEFAULT_PARTICIPANTS,
+    room.capacity
+  ),
   practicalNotes: "",
   roomId: room.roomId,
   startAt: prefillInstant(prefill.date, prefill.from),
@@ -580,13 +586,10 @@ function SlotStep({
       slots={slot.slots}
       startAt={slot.startAt}
     >
-      <TextField
+      <ParticipantsField
+        capacity={room.capacity}
         control={control}
-        description={copy.participantsHint(room.capacity)}
-        inputMode="numeric"
-        label={messages.booking.fields.participantCount}
         name="participantCount"
-        type="number"
       />
     </SlotPicker>
   );
@@ -598,11 +601,13 @@ function SlotStep({
 // the rule addresses, so it does not render for them (ADR-0023).
 function ExtrasStep({
   addOns,
+  capacity,
   control,
   errors,
   viewer,
 }: {
   addOns: AddOn[];
+  capacity: number;
   control: Control<BookingFormValues>;
   errors: FieldErrors<BookingFormValues>;
   viewer: BookingViewer;
@@ -615,6 +620,7 @@ function ExtrasStep({
     <div className={member ? "grid gap-6 md:grid-cols-[2fr_2fr]" : undefined}>
       <AddOnCheckboxList
         addOns={addOns}
+        capacity={capacity}
         control={control}
         error={errors.addOnIds?.message}
         name="addOnIds"
@@ -841,6 +847,7 @@ function StepBody({
     return (
       <ExtrasStep
         addOns={room.addons}
+        capacity={room.capacity}
         control={control}
         errors={errors}
         viewer={viewer}
