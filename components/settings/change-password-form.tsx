@@ -42,14 +42,14 @@ export function ChangePasswordForm() {
         <TextField
           autoComplete="new-password"
           control={form.control}
-          label={copy.password}
+          label={labels.password}
           name="password"
           type="password"
         />
         <TextField
           autoComplete="new-password"
           control={form.control}
-          label={copy.passwordConfirm}
+          label={labels.passwordConfirm}
           name="passwordConfirm"
           type="password"
         />
