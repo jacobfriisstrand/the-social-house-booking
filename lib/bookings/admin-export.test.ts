@@ -16,6 +16,9 @@ import {
 const baseRow: AdminBookingRow = {
   addOns: [],
   addonTotalOre: 0,
+  bookerEmail: null,
+  bookerName: null,
+  bookerPhone: null,
   bookingId: "b1",
   bookingNumber: "TB-2026-0001",
   bookingStatus: "confirmed",
@@ -33,6 +36,7 @@ const baseRow: AdminBookingRow = {
   manualAmounts: [],
   manualAmountsOre: 0,
   membershipStatus: "member",
+  participants: 8,
   practicalNotes: null,
   roomId: "r1",
   roomName: "Lokalet",
@@ -57,13 +61,13 @@ describe("bookingsTable", () => {
       .split("\r\n")[0]
       .replace("\uFEFF", "");
     expect(header).toBe(
-      "Status;Aflyst;Bookingnummer;Virksomhed;Lokale;Start;Slut;Tilkøb;Total pris (Efter rabat)"
+      "Status;Aflyst;Bookingnummer;Virksomhed;Lokale;Start;Slut;Deltagere;Tilkøb;Total pris (Efter rabat)"
     );
   });
 
   it("maps a confirmed booking to the table's cells", () => {
     expect(firstLine([baseRow])).toBe(
-      "Ikke faktureret;-;TB-2026-0001;Ærø ApS;Lokalet;02/09/2026 19:00;02/09/2026 21:00;-;625,00"
+      "Ikke faktureret;-;TB-2026-0001;Ærø ApS;Lokalet;02/09/2026 19:00;02/09/2026 21:00;8;-;625,00"
     );
   });
 
@@ -110,7 +114,7 @@ describe("bookingsTable", () => {
         }),
       ])
     ).toBe(
-      'Ikke faktureret;-;TB-2026-0001;"Møller & Søn; ApS";Lokalet;02/09/2026 19:00;02/09/2026 21:00;Ja;625,00'
+      'Ikke faktureret;-;TB-2026-0001;"Møller & Søn; ApS";Lokalet;02/09/2026 19:00;02/09/2026 21:00;8;Ja;625,00'
     );
   });
 

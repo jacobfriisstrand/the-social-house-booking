@@ -30,6 +30,9 @@ export type AdminBookingState = "cancelled" | "finished" | "upcoming";
 export interface AdminBookingRow {
   addOns: BookingAddonOverview[];
   addonTotalOre: number;
+  bookerEmail: string | null;
+  bookerName: string | null;
+  bookerPhone: string | null;
   bookingId: string;
   bookingNumber: string;
   bookingStatus: BookingOverviewStatus;
@@ -53,6 +56,8 @@ export interface AdminBookingRow {
   manualAmounts: ManualAmountEntry[];
   manualAmountsOre: number;
   membershipStatus: AdminMembership;
+  // The meeting's participant count (the snapshot frozen at confirmation).
+  participants: number;
   // The customer's note from the booking flow (#114); null when empty.
   practicalNotes: string | null;
   roomId: string;
@@ -199,6 +204,7 @@ export type AdminSortKey =
   | "hours"
   | "manualAmounts"
   | "memberPrice"
+  | "participants"
   | "room"
   | "roomPrice"
   | "status"
@@ -224,6 +230,7 @@ const sortNumber: Partial<
   hours: (row) => adminRowParts(row).minutes,
   manualAmounts: (row) => adminRowParts(row).manualAmountsOre,
   memberPrice: (row) => adminRowParts(row).memberPriceOre,
+  participants: (row) => row.participants,
   roomPrice: (row) => adminRowParts(row).roomPriceOre,
   total: (row) => adminRowParts(row).basisOre,
 };
