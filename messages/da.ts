@@ -965,6 +965,9 @@ export const messages = {
       `Viser ${from}–${to} af ${total}`,
   },
   rooms: {
+    actions: {
+      open: (name: string) => `Handlinger for ${name}`,
+    },
     activate: "Aktiver",
     activateFailed: "Statussen kunne ikke ændres. Prøv igen.",
     activeColumn: "Status",

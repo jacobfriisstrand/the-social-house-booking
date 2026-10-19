@@ -18,15 +18,31 @@ import { ResendInvitationButton } from "./resend-invitation-button";
 
 // The company's information in a right-hand sheet (DESIGN.md: admin edit in
 // a dialog or a sheet). The sheet opens in place on the list page — no
-// dedicated page, no navigation. Content mounts only while open.
-export function CompanySheet({ company }: { company: CompanyRow }) {
-  const [open, setOpen] = useState(false);
+// dedicated page, no navigation. Content mounts only while open. The row
+// click opens it too: pass `open`/`onOpenChange` to control it from
+// outside, otherwise it manages its own state (the name-cell trigger).
+export function CompanySheet({
+  company,
+  onClose,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: {
+  company: CompanyRow;
+  // The row-click wiring's close: the table clears its editing row.
+  onClose?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const onOpenChange = onOpenChangeProp ?? setOpenState;
   const close = useCallback((): void => {
-    setOpen(false);
-  }, []);
+    onOpenChange(false);
+    onClose?.();
+  }, [onClose, onOpenChange]);
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetTrigger
         render={
           <Button

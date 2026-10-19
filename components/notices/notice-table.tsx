@@ -16,6 +16,7 @@ import { useCallback } from "react";
 import { EmptyCard } from "@/components/empty-card";
 import { useActiveToggleAction } from "@/components/forms/active-toggle-button";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
+import { openRowWith } from "@/components/forms/open-row-with";
 import { useMenuDialogs } from "@/components/forms/use-menu-dialogs";
 import { NoticeSheet } from "@/components/notices/notice-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +124,11 @@ function NoticeRow({
 }) {
   const { lastDay, title } = row.values;
   return (
-    <TableRow>
+    <TableRow
+      className="cursor-pointer"
+      tabIndex={0}
+      {...openRowWith(row, onEdit)}
+    >
       <TableCell className="truncate font-medium">{title}</TableCell>
       <TableCell>
         <Badge variant={STATUS_BADGE[row.status]}>

@@ -8,6 +8,7 @@ import { EllipsisIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 import { EmptyCard } from "@/components/empty-card";
 import { ConfirmDeleteButton } from "@/components/forms/confirm-delete-button";
+import { openRowWith } from "@/components/forms/open-row-with";
 import { useMenuDialogs } from "@/components/forms/use-menu-dialogs";
 import { HouseEventSheet } from "@/components/house-events/house-event-sheet";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,14 @@ function HouseEventRow({
   onEdit: (event: HouseEvent) => void;
 }) {
   return (
-    <TableRow>
+    <TableRow
+      className="cursor-pointer"
+      tabIndex={0}
+      {...openRowWith(event, onEdit)}
+    >
+      <TableCell className="truncate font-medium">
+        {event.title ?? messages.home.houseEventBadge}
+      </TableCell>
       <TableCell className="tabular-nums">
         {formatDate(event.startAt)}
       </TableCell>
@@ -105,9 +113,6 @@ function HouseEventRow({
       </TableCell>
       <TableCell className="truncate">
         {event.rooms.map((room) => room.roomName).join(", ")}
-      </TableCell>
-      <TableCell className="truncate font-medium">
-        {event.title ?? messages.home.houseEventBadge}
       </TableCell>
       <TableCell className="w-14">
         <HouseEventRowMenu event={event} onDelete={onDelete} onEdit={onEdit} />
@@ -145,10 +150,10 @@ export function HouseEventTable({
         <Table className="min-w-[48rem] table-fixed" sticky>
           <TableHeader>
             <TableRow>
+              <TableHead>{copy.columns.title}</TableHead>
               <TableHead>{copy.columns.date}</TableHead>
               <TableHead>{copy.columns.time}</TableHead>
               <TableHead>{copy.columns.rooms}</TableHead>
-              <TableHead>{copy.columns.title}</TableHead>
               <TableHead className="w-14" />
             </TableRow>
           </TableHeader>
