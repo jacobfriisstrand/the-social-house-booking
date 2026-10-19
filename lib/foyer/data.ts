@@ -16,11 +16,10 @@
 // a public screen).
 import "server-only";
 
-import { bufferEndAt } from "@/lib/domain/buffer";
 import { cphDate } from "@/lib/domain/opening-hours";
 import type { CurrentTerms } from "@/lib/domain/terms";
-import { cphToUtc } from "@/lib/domain/time";
 import type { DayEntry, StripHouseEvent } from "@/lib/notice-board/data";
+import { dayWindow, groupHouseEvents } from "@/lib/notice-board/data";
 import { buildDayGrid, type DayGridModel } from "@/lib/notice-board/grid";
 import type { Notice } from "@/lib/notices/data";
 import { listShownNotices } from "@/lib/notices/data";
@@ -39,16 +38,8 @@ export interface FoyerDay {
 
 // The instants the Copenhagen date covers, widened on the left by the
 // booking buffer — the same window the authed day grid reads through
-// (lib/notice-board/data.ts dayWindow): a meeting that ended just before
-// midnight still blocks the morning through its buffer.
-function foyerDayWindow(date: string): { from: string; to: string } {
-  const start = cphToUtc(date, "00:00");
-  const bufferMs = bufferEndAt(start).getTime() - start.getTime();
-  return {
-    from: new Date(start.getTime() - bufferMs).toISOString(),
-    to: cphToUtc(date, "24:00").toISOString(),
-  };
-}
+// (dayWindow in lib/notice-board/data.ts): a meeting that ended just
+// before midnight still blocks the morning through its buffer.
 
 // Confirmed bookings touching the day, as grid entries. A pending hold is
 // a promise to a company, not a fact to show the house's guests —
@@ -58,7 +49,7 @@ async function listFoyerBookingEntries(
   supabase: ReturnType<typeof createAdminClient>,
   date: string
 ): Promise<DayEntry[]> {
-  const window = foyerDayWindow(date);
+  const window = dayWindow(date);
   const { data, error } = await supabase
     .from("bookings")
     .select(
@@ -96,7 +87,7 @@ async function listFoyerEventEntries(
   supabase: ReturnType<typeof createAdminClient>,
   date: string
 ): Promise<DayEntry[]> {
-  const window = foyerDayWindow(date);
+  const window = dayWindow(date);
   const { data, error } = await supabase
     .from("house_events")
     .select(
@@ -133,26 +124,7 @@ async function listFoyerEventEntries(
 
 // Today's House Events for the notice strip: grouped per event with the
 // rooms they block, while they have not ended — the same grouping the
-// authed strip reads get (lib/notice-board/data.ts groupHouseEvents).
-function groupFoyerEvents(entries: DayEntry[], now: Date): StripHouseEvent[] {
-  const byId = new Map<string, StripHouseEvent>();
-  for (const entry of entries) {
-    if (entry.kind !== "house_event" || entry.endAt <= now) {
-      continue;
-    }
-    const event = byId.get(entry.id) ?? {
-      description: entry.description,
-      endAt: entry.endAt,
-      id: entry.id,
-      roomNames: [],
-      startAt: entry.startAt,
-      title: entry.title,
-    };
-    event.roomNames.push(entry.roomName);
-    byId.set(entry.id, event);
-  }
-  return [...byId.values()];
-}
+// authed strip reads get (groupHouseEvents in lib/notice-board/data.ts).
 
 // Everything the foyer screen renders for one day, in one round trip.
 // `now` decides the day (today in Copenhagen, ADR-0021) and the grid's
@@ -182,7 +154,7 @@ export async function loadFoyerDay(now: Date): Promise<FoyerDay> {
   });
   return {
     date,
-    events: groupFoyerEvents(entries, now),
+    events: groupHouseEvents(entries, now),
     grid,
     notices,
     rooms,
