@@ -43,8 +43,9 @@ export type BookingDetail =
     };
 
 // The instants a Copenhagen date covers, widened on the left by the buffer:
-// a period that ended just before midnight still blocks through it.
-function dayWindow(date: string): DayWindow {
+// a period that ended just before midnight still blocks through it. The
+// foyer's public read shares the same window (lib/foyer/data.ts).
+export function dayWindow(date: string): DayWindow {
   const start = cphToUtc(date, "00:00");
   const bufferMs = bufferEndAt(start).getTime() - start.getTime();
   return {
@@ -212,22 +213,26 @@ export interface StripHouseEvent {
 }
 
 // One card per event, its rooms gathered from the per-room rows of the
-// projection.
-function groupHouseEvents(entries: DayEntry[]): StripHouseEvent[] {
+// projection. Shared with the foyer strip (lib/foyer/data.ts).
+export function groupHouseEvents(
+  entries: DayEntry[],
+  now?: Date
+): StripHouseEvent[] {
   const byId = new Map<string, StripHouseEvent>();
   for (const entry of entries) {
-    if (entry.kind === "house_event") {
-      const event = byId.get(entry.id) ?? {
-        description: entry.description,
-        endAt: entry.endAt,
-        id: entry.id,
-        roomNames: [],
-        startAt: entry.startAt,
-        title: entry.title,
-      };
-      event.roomNames.push(entry.roomName);
-      byId.set(entry.id, event);
+    if (entry.kind !== "house_event" || (now && entry.endAt <= now)) {
+      continue;
     }
+    const event = byId.get(entry.id) ?? {
+      description: entry.description,
+      endAt: entry.endAt,
+      id: entry.id,
+      roomNames: [],
+      startAt: entry.startAt,
+      title: entry.title,
+    };
+    event.roomNames.push(entry.roomName);
+    byId.set(entry.id, event);
   }
   return [...byId.values()];
 }

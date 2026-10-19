@@ -1,17 +1,27 @@
 "use client";
 
-import { TablePagination } from "@/components/pagination/table-pagination";
-import { useTablePagination } from "@/components/pagination/use-table-pagination";
+import {
+  BanIcon,
+  CircleCheckIcon,
+  EllipsisIcon,
+  PencilIcon,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 // Lokaler-tabellen (admin): rows are sliced by the URL pagination
 // (lib/pagination). Edit and create open in a sheet here (DESIGN.md: admin
 // edit in a dialog or a sheet — no dedicated page per entity);
 // deactivated rooms stay listed with a badge — their history is preserved
 // (issue #3).
-import { RoomActiveButton } from "@/components/rooms/room-active-button";
+import { useActiveToggleAction } from "@/components/forms/active-toggle-button";
+import { openRowWith } from "@/components/forms/open-row-with";
+import { TablePagination } from "@/components/pagination/table-pagination";
+import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { RoomPreviewDialog } from "@/components/rooms/room-preview-dialog";
 import { RoomSheet } from "@/components/rooms/room-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import {
   Table,
   TableBody,
@@ -22,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { formatKroner } from "@/lib/format";
 import { slicePage } from "@/lib/pagination";
+import { setRoomActive } from "@/lib/rooms/actions";
 import type { AddonOption, RoomDetail } from "@/lib/rooms/data";
 import type { RoomFormValues } from "@/lib/validation/rooms";
 import { messages } from "@/messages/da";
@@ -75,6 +86,57 @@ function openingHoursForForm(
       opens: opensForDay(row),
     };
   });
+}
+
+// One row's ⋯ menu, the bookings list's pattern: the edit sheet and the
+// reversible active toggle in one place — the add-ons table's menu.
+function RoomRowMenu({
+  onEdit,
+  room,
+}: {
+  onEdit: (roomId: string) => void;
+  room: RoomDetail;
+}) {
+  const { pending, run } = useActiveToggleAction(
+    setRoomActive,
+    messages.rooms.activeUpdated
+  );
+  const toggle = useCallback(
+    () => run(room.roomId, !room.isActive),
+    [room, run]
+  );
+  const edit = useCallback(() => onEdit(room.roomId), [onEdit, room.roomId]);
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            aria-label={messages.rooms.actions.open(room.name)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={edit}>
+          <PencilIcon aria-hidden="true" />
+          {messages.rooms.editLabel}
+        </MenuItem>
+        <MenuItem disabled={pending} onClick={toggle}>
+          {room.isActive ? (
+            <BanIcon aria-hidden="true" />
+          ) : (
+            <CircleCheckIcon aria-hidden="true" />
+          )}
+          {room.isActive ? messages.rooms.deactivate : messages.rooms.activate}
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  );
 }
 
 function sheetPropsOf(room: RoomDetail, addons: AddonOption[]) {
@@ -165,6 +227,21 @@ export function AdminRoomTable({
 }) {
   const paged = useTablePagination(rooms.length);
   const rows = slicePage(rooms, paged.page, paged.pageSize);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = rows.find((room) => room.roomId === editingId) ?? null;
+  const openEditor = useCallback(
+    (room: RoomDetail) => setEditingId(room.roomId),
+    []
+  );
+  const closeEditor = useCallback(() => setEditingId(null), []);
+  const onSheetOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        closeEditor();
+      }
+    },
+    [closeEditor]
+  );
 
   return (
     <Card className="gap-0 py-0">
@@ -181,7 +258,12 @@ export function AdminRoomTable({
         </TableHeader>
         <TableBody>
           {rows.map((room) => (
-            <TableRow key={room.roomId}>
+            <TableRow
+              className="cursor-pointer"
+              key={room.roomId}
+              tabIndex={0}
+              {...openRowWith(room, openEditor)}
+            >
               <RoomImageCell room={room} />
               <RoomNameCell room={room} />
               <TableCell className="tabular-nums">
@@ -192,17 +274,8 @@ export function AdminRoomTable({
                 {messages.rooms.perHourSuffix}
               </TableCell>
               <RoomStatusCell isActive={room.isActive} />
-              <TableCell className="w-40">
-                <div className="flex items-center justify-end gap-2 *:basis-1/2">
-                  <RoomSheet
-                    {...sheetPropsOf(room, addons)}
-                    triggerLabel={messages.rooms.editLabel}
-                  />
-                  <RoomActiveButton
-                    isActive={room.isActive}
-                    roomId={room.roomId}
-                  />
-                </div>
+              <TableCell className="w-14 text-right">
+                <RoomRowMenu onEdit={setEditingId} room={room} />
               </TableCell>
             </TableRow>
           ))}
@@ -211,6 +284,14 @@ export function AdminRoomTable({
       <CardFooter className="px-2 py-1">
         <TablePagination paged={paged} totalItems={rooms.length} />
       </CardFooter>
+      {editing ? (
+        <RoomSheet
+          {...sheetPropsOf(editing, addons)}
+          onOpenChange={onSheetOpenChange}
+          open
+          triggerLabel=""
+        />
+      ) : null}
     </Card>
   );
 }

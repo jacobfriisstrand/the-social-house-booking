@@ -10,6 +10,7 @@ import {
   Card,
   CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { requireSession } from "@/lib/auth/require-session";
 import { getBookingViewer, viewerDiscount } from "@/lib/bookings/viewer";
 import { cphDate } from "@/lib/domain/opening-hours";
-import { formatDateString } from "@/lib/format";
+import { formatDateString, formatWeekday } from "@/lib/format";
 import {
   listDayBookingDetails,
   listDayEntries,
@@ -98,6 +99,9 @@ export default async function HomePage({
             <CardTitle className="text-lg">
               <h2>{copy.dayTitle}</h2>
             </CardTitle>
+            <CardDescription>
+              {copy.noticesDate(formatWeekday(date), formatDateString(date))}
+            </CardDescription>
             <CardAction className="max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start">
               <DateControl date={date} />
             </CardAction>

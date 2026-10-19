@@ -1,8 +1,10 @@
 "use client";
 
 import { XIcon } from "lucide-react";
+import { useCallback, useState } from "react";
 import { CompanySheet } from "@/components/companies/company-sheet";
 import { ExportSelectionMenu } from "@/components/export-menu";
+import { openRowWith } from "@/components/forms/open-row-with";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { RowTick, useRowSelection } from "@/components/selection/row-selection";
@@ -33,9 +35,13 @@ const NO_VALUE = "—";
 // counts this arrow among the file's complexity offenders otherwise.
 function CompanyRowCells({
   company,
+  editing,
+  onClose,
   selection,
 }: {
   company: CompanyRow;
+  editing: boolean;
+  onClose: () => void;
   selection: ReturnType<typeof useRowSelection>;
 }) {
   return (
@@ -53,7 +59,7 @@ function CompanyRowCells({
         />
       </TableCell>
       <TableCell className="truncate font-medium">
-        <CompanySheet company={company} />
+        <CompanySheet company={company} onClose={onClose} open={editing} />
       </TableCell>
       <TableCell className="truncate">{company.company_email}</TableCell>
       <TableCell>
@@ -90,6 +96,13 @@ function CompanyRowCells({
 export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
   const paged = useTablePagination(companies.length);
   const rows = slicePage(companies, paged.page, paged.pageSize);
+  const [editing, setEditing] = useState<CompanyRow | null>(null);
+
+  const openEditor = useCallback(
+    (company: CompanyRow) => setEditing(company),
+    []
+  );
+  const closeEditor = useCallback(() => setEditing(null), []);
 
   const selection = useRowSelection(
     companies.map((company) => company.company_id),
@@ -190,8 +203,18 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
         </TableHeader>
         <TableBody>
           {rows.map((company) => (
-            <TableRow key={company.company_id}>
-              <CompanyRowCells company={company} selection={selection} />
+            <TableRow
+              className="cursor-pointer"
+              key={company.company_id}
+              tabIndex={0}
+              {...openRowWith(company, openEditor)}
+            >
+              <CompanyRowCells
+                company={company}
+                editing={editing === company}
+                onClose={closeEditor}
+                selection={selection}
+              />
             </TableRow>
           ))}
         </TableBody>

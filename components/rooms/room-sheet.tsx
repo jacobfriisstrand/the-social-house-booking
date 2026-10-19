@@ -34,6 +34,10 @@ interface RoomSheetProps {
   }>;
   // Room in edit mode; null in create mode.
   initial: RoomFormInitial | null;
+  onOpenChange?: (open: boolean) => void;
+  // The row-click wiring's open/close: control the sheet from outside
+  // (the table's row), otherwise the trigger manages its own state.
+  open?: boolean;
   specialDays: SpecialClosingDayItem[];
   triggerLabel: string;
   triggerSize?: ComponentProps<typeof Button>["size"];
@@ -113,12 +117,16 @@ export function RoomSheet({
   triggerLabel,
   triggerSize = "sm",
   triggerVariant = "outline",
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
 }: RoomSheetProps) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const onOpenChange = onOpenChangeProp ?? setOpenState;
   const router = useRouter();
   const close = useCallback((): void => {
-    setOpen(false);
-  }, []);
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   const removeImage = useCallback(
     async (roomImageId: string): Promise<void> => {
@@ -147,7 +155,7 @@ export function RoomSheet({
   );
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetTrigger
         render={
           <Button size={triggerSize} type="button" variant={triggerVariant} />

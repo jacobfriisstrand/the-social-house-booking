@@ -14,26 +14,33 @@ function SidebarToggle() {
   return (
     <SidebarTrigger
       aria-label={messages.shell.toggleSidebar}
-      className="-ml-0.5 justify-start px-0 hover:bg-transparent active:translate-y-0 [&_svg]:size-6"
+      className="justify-center px-0 hover:bg-transparent active:translate-y-0 [&_svg]:size-6"
       size="icon-lg"
     />
   );
 }
 
 export function PageHeader({
+  meta,
   title,
   children,
 }: {
   title: string;
+  // A muted fact beside the title — the overview's date window, say. Not
+  // an action: actions live in `children`, at the row's end.
+  meta?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     // min-h-9: the row is as tall as the sidebar's header row, so the page
     // title and the house mark beside it share one centre line (2026-09-29).
     <div className="flex min-h-9 flex-wrap items-center justify-between gap-4">
-      <div className="flex items-center gap-1">
+      <div className="flex items-baseline gap-1">
         <SidebarToggle />
         <h1 className="font-semibold text-xl">{title}</h1>
+        {meta ? (
+          <span className="ml-2 text-muted-foreground text-sm">{meta}</span>
+        ) : null}
       </div>
       <div className="flex items-center gap-2">{children}</div>
     </div>

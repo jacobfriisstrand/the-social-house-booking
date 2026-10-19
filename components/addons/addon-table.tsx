@@ -21,6 +21,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { AddonSheet } from "@/components/addons/addon-sheet";
 import { useActiveToggleAction } from "@/components/forms/active-toggle-button";
+import { openRowWith } from "@/components/forms/open-row-with";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -142,8 +143,10 @@ function SortableAddonRow({ addon, index, onEdit }: SortableAddonRowProps) {
 
   return (
     <TableRow
-      className={cn(sortable.isDragging && "opacity-50")}
+      className={cn("cursor-pointer", sortable.isDragging && "opacity-50")}
       ref={sortable.ref}
+      tabIndex={0}
+      {...openRowWith(addon, onEdit)}
     >
       <TableCell className="w-12">
         <Button

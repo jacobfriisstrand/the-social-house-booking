@@ -167,10 +167,12 @@ function CompactGrid({
   cells,
   loading,
   onOpen,
+  today,
 }: {
   cells: AdminCalendarCell[];
   loading: boolean;
   onOpen: (view: GridEntryView) => void;
+  today: string;
 }) {
   return (
     <Table aria-busy={loading} className="table-fixed">
@@ -233,7 +235,10 @@ function CompactGrid({
               >
                 {cells.slice(row * 7, row * 7 + 7).map((cell) => (
                   <TableCell
-                    className="border-l p-1 align-top first:border-l-0"
+                    className={cn(
+                      "border-l p-1 align-top first:border-l-0",
+                      cell.date === today && "bg-primary/50"
+                    )}
                     key={cell.date}
                   >
                     <span className="block px-1 pb-1 text-muted-foreground text-xs tabular-nums">
@@ -423,6 +428,7 @@ export function AdminCalendarGrid({
             cells={calendar?.cells ?? NO_CELLS}
             loading={loading}
             onOpen={onOpen}
+            today={today}
           />
         </div>
       </Card>

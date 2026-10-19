@@ -23,6 +23,7 @@ import {
 } from "@/lib/bookings/admin-view-params";
 import { cphDate } from "@/lib/domain/opening-hours";
 import { calendarDates, calendarWindow } from "@/lib/domain/periods";
+import { formatDateRange } from "@/lib/format";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { messages } from "@/messages/da";
@@ -113,7 +114,10 @@ export default async function AdminBookingsPage({
     // match what the admin is looking at.
     return (
       <>
-        <PageHeader title={messages.shell.bookings} />
+        <PageHeader
+          meta={formatDateRange(params.fromDate, params.toDate)}
+          title={messages.shell.bookings}
+        />
         <AdminBookingsMonth
           filter={filter}
           options={options}
@@ -133,7 +137,10 @@ export default async function AdminBookingsPage({
 
   return (
     <>
-      <PageHeader title={messages.shell.bookings}>
+      <PageHeader
+        meta={formatDateRange(params.fromDate, params.toDate)}
+        title={messages.shell.bookings}
+      >
         <ExportMenu href={exportHref} />
       </PageHeader>
       <PagePanel>
