@@ -235,17 +235,13 @@ function CompactGrid({
               >
                 {cells.slice(row * 7, row * 7 + 7).map((cell) => (
                   <TableCell
-                    className="border-l p-1 align-top first:border-l-0"
+                    className={cn(
+                      "border-l p-1 align-top first:border-l-0",
+                      cell.date === today && "bg-primary/50"
+                    )}
                     key={cell.date}
                   >
-                    <span
-                      className={cn(
-                        "mb-1 ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs tabular-nums",
-                        cell.date === today
-                          ? "bg-primary font-medium text-primary-foreground"
-                          : "text-muted-foreground"
-                      )}
-                    >
+                    <span className="block px-1 pb-1 text-muted-foreground text-xs tabular-nums">
                       {Number(cell.date.slice(-2))}
                     </span>
                     {/* The fixed-height block area keeps every cell the same size and
