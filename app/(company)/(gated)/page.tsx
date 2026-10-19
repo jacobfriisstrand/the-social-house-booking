@@ -98,6 +98,7 @@ export default async function HomePage({
             <CardTitle className="text-lg">
               <h2>{copy.dayTitle}</h2>
             </CardTitle>
+            <CardDescription>{formatDateString(date)}</CardDescription>
             <CardAction className="max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start">
               <DateControl date={date} />
             </CardAction>
