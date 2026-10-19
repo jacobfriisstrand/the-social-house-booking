@@ -21,10 +21,14 @@ function SidebarToggle() {
 }
 
 export function PageHeader({
+  meta,
   title,
   children,
 }: {
   title: string;
+  // A muted fact beside the title — the overview's date window, say. Not
+  // an action: actions live in `children`, at the row's end.
+  meta?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -34,6 +38,9 @@ export function PageHeader({
       <div className="flex items-center gap-1">
         <SidebarToggle />
         <h1 className="font-semibold text-xl">{title}</h1>
+        {meta ? (
+          <span className="ml-2 text-muted-foreground text-sm">{meta}</span>
+        ) : null}
       </div>
       <div className="flex items-center gap-2">{children}</div>
     </div>

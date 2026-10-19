@@ -214,7 +214,7 @@ function Calendar({
         ),
         root: cn("w-fit", defaultClassNames.root),
         today: cn(
-          "rounded-(--cell-radius) bg-muted text-foreground data-[selected=true]:rounded-none",
+          "rounded-(--cell-radius) bg-primary text-foreground data-[selected=true]:rounded-none",
           defaultClassNames.today
         ),
         week: cn("mt-2 flex w-full", defaultClassNames.week),

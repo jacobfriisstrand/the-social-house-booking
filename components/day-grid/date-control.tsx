@@ -74,7 +74,12 @@ export function DateControl({ date }: { date: string }) {
         >
           <ChevronLeftIcon />
         </Button>
-        <span className="px-1 text-sm tabular-nums">
+        {/* Poppins ships proportional figures (the webfont subset has no
+            tnum feature), so tabular-nums cannot equalize the dates and
+            the previous chevron would track the label's width. The
+            reserved width is MonthControl's pattern: the buttons stay
+            put whatever the date reads. */}
+        <span className="min-w-24 px-1 text-center text-sm">
           {formatDateString(date)}
         </span>
         <Button
