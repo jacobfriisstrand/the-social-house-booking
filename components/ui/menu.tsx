@@ -13,20 +13,26 @@ function Menu({ ...props }: MenuPrimitive.Root.Props) {
 
 function MenuTrigger({
   onClick,
+  onKeyDown,
   onPointerDown,
   ...props
 }: MenuPrimitive.Trigger.Props) {
   // A table row is clickable (the row's sheet), so the ⋯ trigger's press
   // must not reach it — the menu would open AND the row's sheet. Base UI's
   // trigger does not stop the events, and its menu opens on mousedown; stop
-  // the press and the click before the row's handlers see them. The menu
-  // runs its own open logic from these same events.
+  // the press, the click and the keyboard activation before the row's
+  // handlers see them. The menu runs its own open logic from these same
+  // events.
   return (
     <MenuPrimitive.Trigger
       data-slot="menu-trigger"
       onClick={(event) => {
         event.stopPropagation();
         onClick?.(event);
+      }}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        onKeyDown?.(event);
       }}
       onPointerDown={(event) => {
         event.stopPropagation();
