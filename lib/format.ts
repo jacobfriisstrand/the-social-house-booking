@@ -49,14 +49,14 @@ const kronerFormatter = new Intl.NumberFormat("da-DK", {
 });
 
 // formatDateString("2026-12-24") → "24/12/2026" — a bare yyyy-mm-dd date
-// (no timezone) as dd/mm/yyyy (DESIGN.md date format).
+// (no timezone) as d/m/yyyy (DESIGN.md date format; not zero-padded).
 export function formatDateString(value: string): string {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
 }
 
-// formatDateRange("2026-10-01", "2026-10-31") → "01/10 – 31/10 2026"; the
-// same month collapses to "01/10 – 31/10 2026", a single day to "01/10/2026".
+// formatDateRange("2026-10-01", "2026-10-31") → "1/10 – 31/10 2026"; the
+// years differ → "1/10/2026 – 31/12/2026", a single day to "1/10/2026".
 // The overview headers' period label.
 export function formatDateRange(from: string, to: string): string {
   if (from === to) {
