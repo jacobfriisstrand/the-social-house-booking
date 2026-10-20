@@ -52,3 +52,6 @@ deno.lock
 
 # Demo room photos, downloaded by scripts/seed-room-images.ts
 /supabase/seed-images/
+
+# Local pi configuration
+.pi/
