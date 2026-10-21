@@ -299,8 +299,11 @@ export async function listAdminBookings(
 
   // The sidebar badge's worklist (?worklist=1): ended bookings without an
   // invoice — confirmed as a whole, cancelled only with a payable fee —
-  // the set outstandingInvoicesFilter splits and the badge counts. ANDed
-  // with the other filters; the calendar applies nothing.
+  // the set outstandingInvoicesFilter splits and the badge counts. The
+  // end cut is a strict less-than: isInvoiceReadyEnd
+  // (lib/domain/admin-bookings.ts) states the same rule once, so the
+  // cash-flow total cannot drift (ADR-0005's shared set). ANDed with the
+  // other filters; the calendar applies nothing.
   if (filter.worklist) {
     query = query
       .eq("booking_invoicing_status", "not_invoiced")

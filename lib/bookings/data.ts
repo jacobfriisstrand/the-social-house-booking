@@ -221,8 +221,11 @@ export async function adminDisplayNames(
 // The sidebar badge on the admin Bookinger item: every invoiceable booking
 // that has ended and still waits for an invoice. The status split
 // (confirmed, or cancelled with a payable fee) holds
-// (lib/bookings/filters.ts); the end instant chains on the query. RLS lets
-// the admin session count them all.
+// (lib/bookings/filters.ts); the end instant chains on the query as a
+// strict less-than — the same cut isInvoiceReadyEnd states on the domain
+// side (lib/domain/admin-bookings.ts), so the badge and the cash-flow
+// total cannot drift (ADR-0005's shared set). RLS lets the admin session
+// count them all.
 export async function countOutstandingInvoices(
   supabase: SupabaseClient<Database>,
   now = new Date()

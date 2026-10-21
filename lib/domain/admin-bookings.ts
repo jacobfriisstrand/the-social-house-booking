@@ -335,15 +335,31 @@ export function invoicingActionAllowance(
   };
 }
 
+/** The invoice-ready end cut (#143), stated once: a booking is
+ * invoice-ready only when its meeting end lies strictly before now — the
+ * same strict less-than the worklist SQL chains (booking_end_at.lt in
+ * listAdminBookings, countOutstandingInvoices), so the cash-flow total
+ * and the worklist badge cannot disagree for a booking that ends exactly
+ * now. The invoicing actions keep their own inclusive ended rule
+ * (invoicingActionAllowance): do not swap the two. */
+export function isInvoiceReadyEnd(
+  endAt: AdminBookingRow["endAt"],
+  now: Date
+): boolean {
+  return new Date(endAt).getTime() < now.getTime();
+}
+
 /** One row's invoice-ready amount (#120, #121): what the booking can
- * still be invoiced for, zero unless it has ended and still waits for an
- * invoice — the worklist's set (outstandingInvoicesFilter,
- * countOutstandingInvoices). The amount is the row's whole basis
+ * still be invoiced for, zero unless its meeting end lies strictly
+ * before now (isInvoiceReadyEnd) and it still waits for an invoice — the
+ * worklist's set (outstandingInvoicesFilter, countOutstandingInvoices).
+ * The amount is the row's whole basis
  * (adminRowParts): the frozen expected total plus manual amounts on
  * a confirmed booking, the payable cancellation fee alone on a cancelled
  * one (ADR-0006). An invoiced or refused row counts nothing — invoiced
  * bookings must not be re-summed as open (the manual-amounts guard,
- * migration 20261002073814) — and so does a booking that has not ended.
+ * migration 20261002073814) — and so does one whose end is not strictly
+ * before now (isInvoiceReadyEnd).
  * Shares the basis with outstandingInvoiceBasisOre
  * (lib/domain/booking-invoicing.ts): expected total and parts agree by
  * construction (lib/domain/snapshot.ts). */
@@ -351,7 +367,7 @@ export function invoiceReadyOre(row: AdminBookingRow, now: Date): number {
   if (row.invoicingStatus !== "not_invoiced") {
     return 0;
   }
-  if (new Date(row.endAt).getTime() > now.getTime()) {
+  if (!isInvoiceReadyEnd(row.endAt, now)) {
     return 0;
   }
   return adminRowParts(row).basisOre;
