@@ -45,6 +45,28 @@ const copy = messages.bookings.admin;
 export type FilterRowValue = ListFilterParams &
   Partial<Pick<AdminViewParams, "companyIds" | "memberships" | "worklist">>;
 
+// The x inside a filter's trigger: it clears the filter and keeps the
+// press from reaching the trigger itself (some triggers open on
+// mousedown), so the popup and the clear both read the one click.
+function FilterClearButton({
+  onClick,
+  onMouseDown,
+}: {
+  onClick: (event: React.MouseEvent) => void;
+  onMouseDown?: (event: React.MouseEvent) => void;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+    >
+      <XIcon className="size-3.5" />
+    </span>
+  );
+}
+
 // A filter's multi-select: every option carries a checkbox, so the
 // selection reads at a glance; no selection means the filter is off and
 // the trigger says so ("Alle virksomheder"). Toggling writes the URL at
@@ -101,14 +123,10 @@ function FilterMultiSelect({
           {summary}
         </span>
         {value.length > 0 ? (
-          <span
-            aria-hidden="true"
-            className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+          <FilterClearButton
             onClick={onClearClick}
             onMouseDown={onClearPress}
-          >
-            <XIcon className="size-3.5" />
-          </span>
+          />
         ) : null}
       </SelectTrigger>
       <SelectContent>
@@ -149,7 +167,7 @@ function FilterMultiSelect({
 // picker stays open — the user closes it themselves and the close applies
 // the day; a second click on another day completes the range, which
 // applies at once. The x clears and applies immediately.
-function signature(value: { from: string; to?: string } | null): string {
+function rangeKey(value: { from: string; to?: string } | null): string {
   return value ? `${value.from}|${value.to ?? value.from}` : "";
 }
 
@@ -188,13 +206,13 @@ function PeriodRangePicker({
           ? { from: periodFrom, to: periodTo ?? periodFrom }
           : null;
         setDraft(applied);
-        appliedRef.current = signature(applied);
-      } else if (draft && signature(draft) !== appliedRef.current) {
+        appliedRef.current = rangeKey(applied);
+      } else if (draft && rangeKey(draft) !== appliedRef.current) {
         // A close the picker performed itself (the completed range) already
         // committed inside handleSelect; the user's own close applies the
         // draft — only when it actually moved from what is applied.
         commit(draft);
-        appliedRef.current = signature(draft);
+        appliedRef.current = rangeKey(draft);
       } else if (!draft && appliedRef.current !== "") {
         commit(null);
         appliedRef.current = "";
@@ -218,7 +236,7 @@ function PeriodRangePicker({
       const result = nextPeriodDraft(clicked, draft);
       if (result.complete) {
         commit(result.draft);
-        appliedRef.current = signature(result.draft);
+        appliedRef.current = rangeKey(result.draft);
         setOpen(false);
       }
       setDraft(result.draft);
@@ -269,15 +287,7 @@ function PeriodRangePicker({
           >
             {text}
           </span>
-          {shownFrom ? (
-            <span
-              aria-hidden="true"
-              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-              onClick={onClearClick}
-            >
-              <XIcon className="size-3.5" />
-            </span>
-          ) : null}
+          {shownFrom ? <FilterClearButton onClick={onClearClick} /> : null}
           <CalendarIcon
             aria-hidden="true"
             className="size-4 text-muted-foreground"
