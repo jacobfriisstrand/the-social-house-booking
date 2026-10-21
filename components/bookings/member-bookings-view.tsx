@@ -7,12 +7,12 @@
 // set (use-view-params.ts); the rows sort here, as on the admin list.
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { BookingFilterRow } from "@/components/bookings/admin-bookings-view";
 import {
   BookingStatusBadge,
   InvoicingStatusBadge,
 } from "@/components/bookings/booking-overview";
 import { BookingSheet } from "@/components/bookings/booking-sheet";
+import { BookingFilterRow } from "@/components/bookings/filter-row";
 import { useViewParams } from "@/components/bookings/use-view-params";
 import { TablePagination } from "@/components/pagination/table-pagination";
 import { useTablePagination } from "@/components/pagination/use-table-pagination";
