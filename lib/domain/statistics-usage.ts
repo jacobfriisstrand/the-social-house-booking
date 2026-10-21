@@ -6,12 +6,13 @@
 // month's stat cards. Occupancy (booket af åbningstiden) is a room's held hours against
 // its opening hours in the month up to now.
 
+import { invoiceBasisOre } from "./booking-invoicing";
 import {
   openingHoursOn,
   type SpecialClosingDay,
   type WeeklyOpeningHour,
 } from "./opening-hours";
-import { heldBasisOre, monthOf, type StatisticsBooking } from "./statistics";
+import { monthOf, type StatisticsBooking } from "./statistics";
 import { cphToUtc } from "./time";
 
 export interface StatisticsRoom {
@@ -64,7 +65,7 @@ function heldInMonth(
 }
 
 function addUsage(usage: Usage, booking: StatisticsBooking): void {
-  usage.basisOre += heldBasisOre(booking);
+  usage.basisOre += invoiceBasisOre(booking);
   if (booking.status === "cancelled") {
     usage.cancellations += 1;
     return;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outstandingInvoiceBasisOre } from "./booking-invoicing";
+import { invoiceBasisOre } from "./booking-invoicing";
 import {
   monthOf,
   percentChange,
@@ -112,12 +112,14 @@ describe("statisticsOverview", () => {
     ];
     const worklistTotal = bookings
       .map((booking) =>
-        outstandingInvoiceBasisOre({
+        invoiceBasisOre({
+          addonTotalOre: booking.addonTotalOre,
           cancellationFeeOre: booking.cancellationFeeOre,
+          cancellationFeeWaived: booking.cancellationFeeWaived,
           expectedTotalOre: booking.expectedTotalOre,
+          invoicingStatus: booking.invoicingStatus,
           manualAmountsOre: booking.manualAmountsOre,
           status: booking.status,
-          waived: booking.cancellationFeeWaived,
         })
       )
       .reduce((sum, basis) => sum + basis, 0);

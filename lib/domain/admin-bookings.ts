@@ -7,14 +7,13 @@
 // (ADR-0006) as its whole basis, and its snapshot parts count nothing in
 // the totals. All amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
 
-import { outstandingInvoiceBasisOre } from "./booking-invoicing";
+import { invoiceBasisParts, invoiceBasisTotalOre } from "./booking-invoicing";
 import type {
   BookingAddonOverview,
   BookingInvoicingStatus,
   BookingOverviewStatus,
   ManualAmountEntry,
 } from "./booking-overview";
-import { payableCancellationFeeOre } from "./cancellation";
 import { memberPriceOre } from "./pricing";
 
 export type AdminMembership = "external" | "member";
@@ -81,15 +80,22 @@ export interface AdminRowParts {
 }
 
 export function adminRowParts(row: AdminBookingRow): AdminRowParts {
+  // The one invoicing-basis policy (lib/domain/booking-invoicing.ts): the
+  // fee column on a cancelled row, the whole basis on every row.
+  const basis = invoiceBasisParts({
+    addonTotalOre: row.addonTotalOre,
+    cancellationFeeOre: row.cancellationFeeOre,
+    cancellationFeeWaived: row.cancellationFeeWaived,
+    expectedTotalOre: row.expectedTotalOre,
+    manualAmountsOre: row.manualAmountsOre,
+    status: row.bookingStatus,
+  });
   if (row.bookingStatus === "cancelled") {
-    const feeOre = payableCancellationFeeOre(
-      row.cancellationFeeOre,
-      row.cancellationFeeWaived
-    );
+    const feeOre = basis.cancellationFeesOre;
     return {
       addOnsOre: null,
-      basisOre: feeOre ?? 0,
-      feeOre: feeOre ?? 0,
+      basisOre: feeOre,
+      feeOre,
       manualAmountsOre: null,
       memberPriceOre: null,
       minutes: null,
@@ -100,18 +106,11 @@ export function adminRowParts(row: AdminBookingRow): AdminRowParts {
   return {
     addOnsOre: row.addonTotalOre,
     // #126: the invoicing basis reads the STORED total (the frozen
-    // booking_expected_total_ore), not a recomputation from the parts —
-    // an admin's explicit total must win here, on the detail sheet and in
-    // the exports alike. For every booking without an override the two are
-    // identical by construction (booking_addons_sync_totals), so this is a
-    // no-op except where an admin set the price.
-    basisOre: outstandingInvoiceBasisOre({
-      cancellationFeeOre: row.cancellationFeeOre,
-      expectedTotalOre: row.expectedTotalOre,
-      manualAmountsOre: row.manualAmountsOre,
-      status: row.bookingStatus,
-      waived: row.cancellationFeeWaived,
-    }),
+    // booking_expected_total_ore) — the policy's room rent is the remainder
+    // of the expected total, so the parts add up to the stored total and an
+    // admin's explicit price wins here, on the detail sheet and in the
+    // exports alike.
+    basisOre: invoiceBasisTotalOre(basis),
     feeOre: 0,
     manualAmountsOre: row.manualAmountsOre,
     memberPriceOre: memberPrice,
@@ -359,9 +358,9 @@ export function isInvoiceReadyEnd(
  * one (ADR-0006). An invoiced or refused row counts nothing — invoiced
  * bookings must not be re-summed as open (the manual-amounts guard,
  * migration 20261002073814) — and so does one whose end is not strictly
- * before now (isInvoiceReadyEnd).
- * Shares the basis with outstandingInvoiceBasisOre
- * (lib/domain/booking-invoicing.ts): expected total and parts agree by
+ * before now (isInvoiceReadyEnd). The amount is the row's whole basis
+ * (adminRowParts) — the invoicing-basis policy
+ * (lib/domain/booking-invoicing.ts); expected total and parts agree by
  * construction (lib/domain/snapshot.ts). */
 export function invoiceReadyOre(row: AdminBookingRow, now: Date): number {
   if (row.invoicingStatus !== "not_invoiced") {
