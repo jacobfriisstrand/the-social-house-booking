@@ -3,6 +3,11 @@ import type {
   BookingAddonOverview,
   ManualAmountEntry,
 } from "@/lib/domain/booking-overview";
+import {
+  type FrozenBookingPriceRow,
+  frozenBookingPriceOverview,
+} from "@/lib/domain/booking-price";
+import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Every list read unwraps the Postgrest response the same way: an error
@@ -79,3 +84,47 @@ export const manualAmountEntries = (
     manualAmountId: amount.manual_amount_id,
     note: amount.manual_amount_note,
   }));
+
+// The columns a booking's price overview is read from (ADR-0005): the
+// historical price frozen at confirmation — later reads of a booking
+// never recompute from live room or company prices, and never from the
+// booked hours either, so the time columns stay out of the read. The
+// manual amounts (ADR-0010) ride along when the row carries their embed —
+// only the member booking sheet's read does.
+export interface BookingPriceRow {
+  booking_addon_total_ore: number;
+  booking_discount_percent: number;
+  booking_expected_total_ore: number;
+  booking_room_price_ore: number;
+  manual_amounts?: ManualAmountEmbedRow[] | null;
+}
+
+// The price slice the frozen read (lib/domain/booking-price) composes
+// from a bookings row: the stored room total, discount, add-on total and
+// expected total, and the manual amounts mapped from their embed.
+// `addOns` carries the add-on lines the caller has already mapped from
+// the booking_addons embed (the member booking sheet's read) — a read
+// without them shows the add-ons summary only.
+const frozenBookingPriceRow = (
+  row: BookingPriceRow,
+  addOns?: BookingAddonOverview[]
+): FrozenBookingPriceRow => ({
+  addOns: addOns ?? [],
+  addonTotalOre: row.booking_addon_total_ore,
+  discountPercent: row.booking_discount_percent,
+  expectedTotalOre: row.booking_expected_total_ore,
+  manualAmounts: manualAmountEntries(row.manual_amounts ?? null),
+  roomPriceOre: row.booking_room_price_ore,
+});
+
+// The frozen price overview of a bookings row (ADR-0005): the projection
+// (frozenBookingPriceRow) plus the frozen composition
+// (frozenBookingPriceOverview, lib/domain/booking-price) as one read for
+// the query-side callers — the member booking sheet, the notice board and
+// the hold reads. The composition stays the price module's; the admin
+// detail sheet composes from its own mapper's row instead.
+export const bookingPriceOverviewFromRow = (
+  row: BookingPriceRow,
+  addOns?: BookingAddonOverview[]
+): PriceOverviewModel =>
+  frozenBookingPriceOverview(frozenBookingPriceRow(row, addOns));

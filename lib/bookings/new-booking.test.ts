@@ -8,11 +8,8 @@
 import { describe, expect, it } from "vitest";
 import type { CancellationBasis } from "@/lib/domain/cancellation";
 import { memberPriceOreForBooking } from "@/lib/domain/cancellation";
-import {
-  bookingPriceOverview,
-  expectedTotalWithOverride,
-  newBookingRow,
-} from "./new-booking";
+import { expectedTotalWithOverride, newBookingRow } from "./new-booking";
+import { bookingPriceOverviewFromRow } from "./rows";
 
 // The reported booking: Room of Power, 4 h, House Service + Lunch for 8,
 // Rituals (50 %). Room 3.200 kr, add-ons 2.300 kr, discount 1.600 kr —
@@ -56,7 +53,7 @@ describe("the frozen room price is the room's total for the booked hours", () =>
       booking_expected_total_ore:
         (row.booking_expected_total_ore ?? 0) + ADD_ON_LINES_ORE,
     };
-    const model = bookingPriceOverview(stored);
+    const model = bookingPriceOverviewFromRow(stored);
     expect(model.roomNormalTotalOre).toBe(320_000);
     expect(model.savingsOre).toBe(160_000);
     expect(model.roomMemberTotalOre).toBe(160_000);
@@ -82,12 +79,10 @@ describe("the frozen room price is the room's total for the booked hours", () =>
     const stored = {
       booking_addon_total_ore: 230_000,
       booking_discount_percent: 50,
-      booking_end_at: FOUR_HOURS.endAt.replace("14:00", "12:00"),
       booking_expected_total_ore: 310_000,
       booking_room_price_ore: 160_000,
-      booking_start_at: FOUR_HOURS.startAt,
     };
-    const model = bookingPriceOverview(stored);
+    const model = bookingPriceOverviewFromRow(stored);
     expect(model.roomNormalTotalOre).toBe(160_000);
     expect(model.savingsOre).toBe(80_000);
     expect(model.totalOre).toBe(310_000);

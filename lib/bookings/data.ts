@@ -5,10 +5,10 @@
 // here, at load, for confirmed upcoming bookings only.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cancellationFeeAt } from "@/lib/bookings/cancellation";
-import { bookingPriceOverview } from "@/lib/bookings/new-booking";
 import {
   type BookingAddonEmbedRow,
   bookingAddonOverviewLines,
+  bookingPriceOverviewFromRow,
   type ManualAmountEmbedRow,
   rowsOrThrow,
 } from "@/lib/bookings/rows";
@@ -90,7 +90,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     invoiceNumber: booking.booking_invoice_number,
     invoicingStatus: booking.booking_invoicing_status,
     liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
-    price: bookingPriceOverview(booking, addOns),
+    price: bookingPriceOverviewFromRow(booking, addOns),
     roomId: booking.booking_room_id,
     roomName,
   };

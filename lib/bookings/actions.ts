@@ -43,7 +43,6 @@ import {
   writeAddOnLines,
 } from "./addon-lines";
 import {
-  bookingPriceOverview,
   EXCLUSION_VIOLATION,
   insertPendingBooking,
   readBookingPriceRow,
@@ -52,6 +51,7 @@ import {
   slotFailureMessage,
 } from "./new-booking";
 import { notifyBookingConfirmed } from "./notify-booking-confirmed";
+import { bookingPriceOverviewFromRow } from "./rows";
 import {
   generateVerificationCode,
   hashVerificationCode,
@@ -115,7 +115,7 @@ async function findLiveHold(
   const { data } = await supabase
     .from("bookings")
     .select(
-      "booking_id, booking_number, booking_booker_email, booking_room_price_ore, booking_discount_percent, booking_addon_total_ore, booking_expected_total_ore, booking_start_at, booking_end_at"
+      "booking_id, booking_number, booking_booker_email, booking_room_price_ore, booking_discount_percent, booking_addon_total_ore, booking_expected_total_ore"
     )
     .eq("booking_id", parsed.data.bookingId)
     .eq("booking_status", "pending_verification")
@@ -128,7 +128,7 @@ async function findLiveHold(
     bookerEmail: data.booking_booker_email,
     bookingId: data.booking_id,
     bookingNumber: data.booking_number,
-    price: bookingPriceOverview(data),
+    price: bookingPriceOverviewFromRow(data),
   };
 }
 
@@ -342,7 +342,7 @@ async function insertHold(
       bookerEmail: input.bookerEmail,
       bookingId,
       bookingNumber: inserted.bookingNumber,
-      price: bookingPriceOverview(snapshot),
+      price: bookingPriceOverviewFromRow(snapshot),
     },
   };
 }

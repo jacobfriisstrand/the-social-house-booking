@@ -2,7 +2,8 @@
 // from the prices on the page (#148) — the same arithmetic the
 // confirmation freezes into the historical price (add-on lines at full
 // price, discount on the room only, ADR-0007) — and the frozen read of a
-// confirmed booking (#149, ADR-0005). Once "Book nu" creates the hold,
+// booking's historical price that every post-confirmation surface
+// composes through (#149, ADR-0005). Once "Book nu" creates the hold,
 // the verification step shows the frozen overview instead (#6). Pure: no
 // React, no form — the form maps its fields onto this interface; frozen
 // surfaces pass their row.
@@ -123,10 +124,11 @@ export function bookingPriceOverview(
 }
 
 // The price slice a frozen read row carries (ADR-0005): the historical
-// price frozen at confirmation, as the admin mapper delivers it
-// (lib/bookings/admin-data). AdminBookingRow extends it structurally, so
-// the detail sheet passes the row whole and this module stays
-// unacquainted with the admin overview.
+// price frozen at confirmation, as the data layer's mappers deliver it —
+// lib/bookings/rows projects a bookings row's snapshot columns onto it,
+// and lib/bookings/admin-data's AdminBookingRow extends it structurally
+// so the detail sheet passes the row whole. This module stays
+// unacquainted with the query rows and the admin overview.
 export interface FrozenBookingPriceRow {
   addOns: BookingAddonOverview[];
   addonTotalOre: number;
@@ -138,12 +140,13 @@ export interface FrozenBookingPriceRow {
   roomPriceOre: number;
 }
 
-// The frozen overview of a confirmed booking (ADR-0005): the room total,
-// discount and add-ons read from the frozen columns — the stored numbers,
-// never live prices. The manual amounts (ADR-0010), oldest first, are the
-// post-meeting additions on top of the stored total. Serves the
-// non-cancelled detail sheet only: a cancelled booking was never served,
-// and its fee-only basis (ADR-0006) is the sheet's CancelledPrice block.
+// The frozen overview of a booking (ADR-0005): the room total, discount
+// and add-ons read from the frozen columns — the stored numbers, never
+// live prices. The manual amounts (ADR-0010), oldest first, are the
+// post-meeting additions on top of the stored total. Every frozen
+// surface composes through this one read; a cancelled booking never
+// renders it — the detail sheet shows its fee-only basis instead
+// (ADR-0006, the CancelledPrice block).
 export function frozenBookingPriceOverview(
   row: FrozenBookingPriceRow
 ): PriceOverviewModel {
