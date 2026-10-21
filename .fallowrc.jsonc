@@ -126,11 +126,6 @@
         "reason": "AdminBookingsView: every URL-writing control rides one transition; the component split is queued with the table's."
       },
       {
-        "files": ["lib/bookings/admin-data.ts"],
-        "maxCrap": 40,
-        "reason": "CRAP is estimated without unit coverage on the admin read queries; the queries run under the seeded overview and the pgTap RLS suite."
-      },
-      {
         "files": ["components/ui/toggle-group.tsx"],
         "maxCrap": 32,
         "reason": "shadcn-owned composition block, kept as added (DESIGN.md: ui components are owned, not restructured)."
