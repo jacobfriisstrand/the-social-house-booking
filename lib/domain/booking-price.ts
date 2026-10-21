@@ -1,15 +1,21 @@
-// The pre-confirmation price composition (#148): the price overview the
-// booking dialog shows before there is a hold — the same arithmetic the
-// snapshot uses (add-on lines at full price, discount on the room only,
-// ADR-0007), from the prices on the page. Once "Book nu" creates the hold,
+// The price overview compositions: the live one the booking dialog builds
+// from the prices on the page (#148) — the same arithmetic the
+// confirmation freezes into the historical price (add-on lines at full
+// price, discount on the room only, ADR-0007) — and the frozen read of a
+// confirmed booking (#149, ADR-0005). Once "Book nu" creates the hold,
 // the verification step shows the frozen overview instead (#6). Pure: no
-// React, no form — the form maps its fields onto this interface.
+// React, no form — the form maps its fields onto this interface; frozen
+// surfaces pass their row.
 import {
   type AddOn,
   type AddOnLine,
   addonLines,
   linesTotalOre,
 } from "./addons";
+import type {
+  BookingAddonOverview,
+  ManualAmountEntry,
+} from "./booking-overview";
 import { type PriceOverviewModel, priceOverview } from "./price-overview";
 import { roomTotalOre } from "./pricing";
 import { buildSnapshot } from "./snapshot";
@@ -114,4 +120,39 @@ export function bookingPriceOverview(
   return typeof overrideOre === "number" && Number.isFinite(overrideOre)
     ? { ...overview, totalOre: overrideOre }
     : overview;
+}
+
+// The price slice a frozen read row carries (ADR-0005): the historical
+// price frozen at confirmation, as the admin mapper delivers it
+// (lib/bookings/admin-data). AdminBookingRow extends it structurally, so
+// the detail sheet passes the row whole and this module stays
+// unacquainted with the admin overview.
+export interface FrozenBookingPriceRow {
+  addOns: BookingAddonOverview[];
+  addonTotalOre: number;
+  discountPercent: number;
+  // The stored frozen total (#126): an admin's explicit price shows
+  // exactly as set, not recomputed from the parts.
+  expectedTotalOre: number;
+  manualAmounts: ManualAmountEntry[];
+  roomPriceOre: number;
+}
+
+// The frozen overview of a confirmed booking (ADR-0005): the room total,
+// discount and add-ons read from the frozen columns — the stored numbers,
+// never live prices. The manual amounts (ADR-0010), oldest first, are the
+// post-meeting additions on top of the stored total. Serves the
+// non-cancelled detail sheet only: a cancelled booking was never served,
+// and its fee-only basis (ADR-0006) is the sheet's CancelledPrice block.
+export function frozenBookingPriceOverview(
+  row: FrozenBookingPriceRow
+): PriceOverviewModel {
+  return priceOverview({
+    addOnLines: row.addOns,
+    addOnsOre: row.addonTotalOre,
+    discountPercent: row.discountPercent,
+    manualAmounts: row.manualAmounts,
+    roomTotalOre: row.roomPriceOre,
+    totalOre: row.expectedTotalOre,
+  });
 }
