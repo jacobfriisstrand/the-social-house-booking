@@ -39,7 +39,7 @@ import {
   adminViewHref,
   windowAround,
 } from "@/lib/bookings/admin-view-params";
-import type { RoomOption } from "@/lib/bookings/data";
+import type { RoomOption } from "@/lib/bookings/room-options";
 import type { ListFilterParams } from "@/lib/bookings/view-params";
 import { dateToIso, isoToDate } from "@/lib/calendar-date";
 import type { AdminBookingRow } from "@/lib/domain/admin-bookings";

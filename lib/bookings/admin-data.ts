@@ -17,12 +17,12 @@ import type { DayEntry } from "@/lib/notice-board/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { selectedCompanyIds } from "./admin-company-filter";
 import { adminDisplayNames } from "./admin-display-names";
-import { listRoomOptions, type RoomOption } from "./data";
 import {
   adminBookingStatesFilter,
   adminCalendarStateCuts,
   outstandingInvoicesFilter,
 } from "./filters";
+import { listRoomOptions, type RoomOption } from "./room-options";
 import { rowsOrThrow } from "./rows";
 
 type Client = SupabaseClient<Database>;

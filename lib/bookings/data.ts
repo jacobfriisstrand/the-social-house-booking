@@ -143,25 +143,3 @@ export async function listOwnBookingOverview(
 
   return bookings.map((booking) => toOverviewRow(booking, now));
 }
-
-/** One choice in a Lokale filter. */
-export interface RoomOption {
-  roomId: string;
-  roomName: string;
-}
-
-// The Lokale filter's choices on both Bookinger pages: every room,
-// deactivated ones too, so a past booking's room stays selectable. Every
-// session may read the rooms (policies/rooms.sql).
-export async function listRoomOptions(
-  supabase: SupabaseClient<Database>
-): Promise<RoomOption[]> {
-  const result = await supabase
-    .from("rooms")
-    .select("room_id, room_name")
-    .order("room_name");
-  return rowsOrThrow(result, "filter rooms").map((room) => ({
-    roomId: room.room_id,
-    roomName: room.room_name,
-  }));
-}

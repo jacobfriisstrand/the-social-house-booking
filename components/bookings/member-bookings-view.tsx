@@ -33,11 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RoomOption } from "@/lib/bookings/data";
 import {
   type MemberViewParams,
   memberViewHref,
 } from "@/lib/bookings/member-view-params";
+import type { RoomOption } from "@/lib/bookings/room-options";
 import { hasListFilters } from "@/lib/bookings/view-params";
 import {
   addOnsTotalOre,
