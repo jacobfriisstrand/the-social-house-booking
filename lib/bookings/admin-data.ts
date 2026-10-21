@@ -16,7 +16,8 @@ import { periodUtcWindow } from "@/lib/domain/periods";
 import type { DayEntry } from "@/lib/notice-board/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { selectedCompanyIds } from "./admin-company-filter";
-import { adminDisplayNames, listRoomOptions, type RoomOption } from "./data";
+import { adminDisplayNames } from "./admin-display-names";
+import { listRoomOptions, type RoomOption } from "./data";
 import {
   adminBookingStatesFilter,
   adminCalendarStateCuts,

@@ -14,7 +14,7 @@ import {
 import {
   countOutstandingInvoices,
   countUpcomingOwnBookings,
-} from "@/lib/bookings/data";
+} from "@/lib/bookings/badge-counts";
 import { getWifiSettings } from "@/lib/settings/data";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";

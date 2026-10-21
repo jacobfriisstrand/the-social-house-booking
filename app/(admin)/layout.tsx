@@ -5,7 +5,7 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { sidebarDefaultOpen } from "@/components/shell/sidebar-cookie";
 import { requireAdmin } from "@/lib/auth/require-admin";
-import { countOutstandingInvoices } from "@/lib/bookings/data";
+import { countOutstandingInvoices } from "@/lib/bookings/badge-counts";
 import { getWifiSettings } from "@/lib/settings/data";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTerms } from "@/lib/terms/data";
