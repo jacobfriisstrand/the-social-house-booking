@@ -6,11 +6,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cancellationFeeAt } from "@/lib/bookings/cancellation";
 import { bookingPriceOverview } from "@/lib/bookings/new-booking";
-import { rowsOrThrow } from "@/lib/bookings/rows";
-import type {
-  BookingAddonOverview,
-  BookingOverviewRow,
-} from "@/lib/domain/booking-overview";
+import {
+  type BookingAddonEmbedRow,
+  bookingAddonOverviewLines,
+  type ManualAmountEmbedRow,
+  rowsOrThrow,
+} from "@/lib/bookings/rows";
+import type { BookingOverviewRow } from "@/lib/domain/booking-overview";
 import { payableCancellationFeeOre } from "@/lib/domain/cancellation";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -35,22 +37,8 @@ type BookingRow = Pick<
   | "booking_start_at"
   | "booking_status"
 > & {
-  booking_addons: Array<
-    Pick<
-      Database["public"]["Tables"]["booking_addons"]["Row"],
-      | "booking_addon_addon_id"
-      | "booking_addon_quantity"
-      | "booking_addon_total_ore"
-    > & {
-      addons: { addon_name: string; addon_description: string | null } | null;
-    }
-  >;
-  manual_amounts: Array<{
-    manual_amount_amount_ore: number;
-    manual_amount_created_at: string;
-    manual_amount_id: string;
-    manual_amount_note: string;
-  }> | null;
+  booking_addons: BookingAddonEmbedRow[];
+  manual_amounts: ManualAmountEmbedRow[] | null;
   rooms: { room_name: string } | null;
 };
 
@@ -80,13 +68,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     throw new Error(`booking room ${booking.booking_room_id} was not found`);
   }
 
-  const addOns: BookingAddonOverview[] = booking.booking_addons.map((line) => ({
-    addonId: line.booking_addon_addon_id,
-    description: line.addons?.addon_description ?? null,
-    name: line.addons?.addon_name ?? null,
-    quantity: line.booking_addon_quantity,
-    totalOre: line.booking_addon_total_ore,
-  }));
+  const addOns = bookingAddonOverviewLines(booking.booking_addons);
 
   return {
     addOns,

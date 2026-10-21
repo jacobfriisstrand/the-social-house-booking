@@ -23,7 +23,13 @@ import {
   outstandingInvoicesFilter,
 } from "./filters";
 import { listRoomOptions, type RoomOption } from "./room-options";
-import { rowsOrThrow } from "./rows";
+import {
+  type BookingAddonEmbedRow,
+  bookingAddonOverviewLines,
+  type ManualAmountEmbedRow,
+  manualAmountEntries,
+  rowsOrThrow,
+} from "./rows";
 
 type Client = SupabaseClient<Database>;
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
@@ -83,12 +89,7 @@ function requiredName(
 
 interface AdminBookingQueryRow {
   booking_addon_total_ore: number;
-  booking_addons: Array<{
-    addons: { addon_name: string; addon_description: string | null } | null;
-    booking_addon_addon_id: string;
-    booking_addon_quantity: number;
-    booking_addon_total_ore: number;
-  }> | null;
+  booking_addons: BookingAddonEmbedRow[] | null;
   booking_booker_email: string | null;
   booking_booker_name: string | null;
   booking_booker_phone: string | null;
@@ -114,13 +115,7 @@ interface AdminBookingQueryRow {
     company_id: string;
     company_membership_status: AdminMembership;
   } | null;
-  manual_amounts: Array<{
-    manual_amount_amount_ore: number;
-    manual_amount_created_at: string;
-    manual_amount_created_by: string | null;
-    manual_amount_id: string;
-    manual_amount_note: string;
-  }> | null;
+  manual_amounts: ManualAmountEmbedRow[] | null;
   rooms: { room_id: string; room_name: string } | null;
 }
 
@@ -139,23 +134,9 @@ function toAdminBookingRow(
   if (!room) {
     throw new Error(`booking ${row.booking_id} is missing its room`);
   }
-  const manualAmounts = (row.manual_amounts ?? []).map((amount) => ({
-    amountOre: amount.manual_amount_amount_ore,
-    createdAt: amount.manual_amount_created_at,
-    createdByName: amount.manual_amount_created_by
-      ? (adminNames.get(amount.manual_amount_created_by) ?? null)
-      : null,
-    manualAmountId: amount.manual_amount_id,
-    note: amount.manual_amount_note,
-  }));
+  const manualAmounts = manualAmountEntries(row.manual_amounts, adminNames);
   return {
-    addOns: (row.booking_addons ?? []).map((line) => ({
-      addonId: line.booking_addon_addon_id,
-      description: line.addons?.addon_description ?? null,
-      name: line.addons?.addon_name ?? null,
-      quantity: line.booking_addon_quantity,
-      totalOre: line.booking_addon_total_ore,
-    })),
+    addOns: bookingAddonOverviewLines(row.booking_addons),
     addonTotalOre: row.booking_addon_total_ore,
     bookerEmail: row.booking_booker_email,
     bookerName: row.booking_booker_name,
@@ -320,7 +301,7 @@ export async function listAdminBookings(
     supabase,
     bookings.flatMap((booking) =>
       (booking.manual_amounts ?? []).map(
-        (amount) => amount.manual_amount_created_by
+        (amount) => amount.manual_amount_created_by ?? null
       )
     )
   );
@@ -466,7 +447,7 @@ export async function listAdminCalendarEntries(
     supabase,
     bookings.flatMap((row) =>
       (row.manual_amounts ?? []).map(
-        (amount) => amount.manual_amount_created_by
+        (amount) => amount.manual_amount_created_by ?? null
       )
     )
   );

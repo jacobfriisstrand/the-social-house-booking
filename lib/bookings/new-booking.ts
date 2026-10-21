@@ -18,6 +18,7 @@ import type { PendingBookingInput } from "@/lib/validation/booking";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { loadRoomOpening } from "./availability";
+import { type ManualAmountEmbedRow, manualAmountEntries } from "./rows";
 
 const { errors } = messages.booking;
 
@@ -245,11 +246,7 @@ export interface BookingPriceRow {
   booking_expected_total_ore: number;
   booking_room_price_ore: number;
   booking_start_at: string;
-  manual_amounts?: Array<{
-    manual_amount_amount_ore: number;
-    manual_amount_id: string;
-    manual_amount_note: string;
-  }> | null;
+  manual_amounts?: ManualAmountEmbedRow[] | null;
 }
 
 const SNAPSHOT_COLUMNS =
@@ -269,11 +266,7 @@ export const bookingPriceOverview = (
     addOnLines,
     addOnsOre: row.booking_addon_total_ore,
     discountPercent: row.booking_discount_percent,
-    manualAmounts: (row.manual_amounts ?? []).map((amount) => ({
-      amountOre: amount.manual_amount_amount_ore,
-      manualAmountId: amount.manual_amount_id,
-      note: amount.manual_amount_note,
-    })),
+    manualAmounts: manualAmountEntries(row.manual_amounts ?? null),
     roomTotalOre: row.booking_room_price_ore,
     totalOre: row.booking_expected_total_ore,
   });
