@@ -1,10 +1,10 @@
 // Read-side for the member booking overview (#8). The caller supplies the
 // company id after requireOwnCompany() has rejected admin sessions; RLS still
 // remains the final ownership check on every query. The waived flag (#5)
-// reads a fee as no fee, and the live fee for the cancel flow is computed
-// here, at load, for confirmed upcoming bookings only.
+// reads a fee as no fee, and the live cancel decision (#155) is the one
+// policy in lib/domain/cancellation.ts, read here at load.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cancellationFeeAt } from "@/lib/bookings/cancellation";
+import { cancellationPolicyOf } from "@/lib/bookings/cancellation";
 import {
   type BookingAddonEmbedRow,
   bookingAddonOverviewLines,
@@ -45,23 +45,6 @@ type BookingRow = Pick<
 const BOOKING_COLUMNS =
   "booking_addon_total_ore, booking_booker_name, booking_cancellation_fee_ore, booking_cancellation_fee_waived, booking_cancelled_at, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_hold_expires_at, booking_id, booking_invoice_date, booking_invoice_number, booking_invoicing_status, booking_number, booking_room_id, booking_room_price_ore, booking_start_at, booking_status";
 
-// The fee the sheet's cancel flow states (#5): only for a confirmed booking
-// whose start has not passed — a past booking and a hold have nothing to
-// cancel. The confirm recomputes server-side; this is the render-time
-// number.
-const liveCancellationFeeOre = (
-  booking: BookingRow,
-  now: Date
-): number | null => {
-  if (booking.booking_status !== "confirmed") {
-    return null;
-  }
-  if (new Date(booking.booking_start_at).getTime() <= now.getTime()) {
-    return null;
-  }
-  return cancellationFeeAt(booking, now);
-};
-
 function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
   const roomName = booking.rooms?.room_name;
   if (!roomName) {
@@ -82,6 +65,7 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
       booking.booking_cancellation_fee_ore,
       booking.booking_cancellation_fee_waived
     ),
+    cancellationPolicy: cancellationPolicyOf(booking, now),
     cancelledAt: booking.booking_cancelled_at,
     endAt: booking.booking_end_at,
     // The invoice fields ride along (#122): the sheet shows them only
@@ -89,7 +73,6 @@ function toOverviewRow(booking: BookingRow, now: Date): BookingOverviewRow {
     invoiceDate: booking.booking_invoice_date,
     invoiceNumber: booking.booking_invoice_number,
     invoicingStatus: booking.booking_invoicing_status,
-    liveCancellationFeeOre: liveCancellationFeeOre(booking, now),
     price: bookingPriceOverviewFromRow(booking, addOns),
     roomId: booking.booking_room_id,
     roomName,

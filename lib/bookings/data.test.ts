@@ -178,12 +178,15 @@ describe("listOwnBookingOverview", () => {
         bookingStartAt: in48Hours,
         bookingStatus: "confirmed",
         cancellationFeeOre: null,
+        cancellationPolicy: {
+          feeOre: 31_250,
+          mayCancel: true,
+        },
         cancelledAt: null,
         endAt: in50Hours,
         invoiceDate: null,
         invoiceNumber: null,
         invoicingStatus: "not_invoiced",
-        liveCancellationFeeOre: 31_250,
         price: {
           addOnLines: [line],
           addOnsOre: 50_000,
@@ -246,7 +249,10 @@ describe("listOwnBookingOverview", () => {
     ]);
     expect(row?.cancellationFeeOre).toBeNull();
     expect(row?.cancelledAt).toBe("2026-09-01T09:00:00Z");
-    expect(row?.liveCancellationFeeOre).toBeNull();
+    expect(row?.cancellationPolicy).toEqual({
+      mayCancel: false,
+      refusal: "already_cancelled",
+    });
   });
 
   it("keeps a cancelled booking's stored fee with no live fee", async () => {
@@ -254,7 +260,10 @@ describe("listOwnBookingOverview", () => {
       cancelledRow({ booking_cancellation_fee_ore: 25_000 }),
     ]);
     expect(row?.cancellationFeeOre).toBe(25_000);
-    expect(row?.liveCancellationFeeOre).toBeNull();
+    expect(row?.cancellationPolicy).toEqual({
+      mayCancel: false,
+      refusal: "already_cancelled",
+    });
   });
 
   it("computes no live fee for a past booking or a standing hold", async () => {
@@ -271,8 +280,14 @@ describe("listOwnBookingOverview", () => {
         booking_status: "pending_verification",
       }),
     ]);
-    expect(rows[0]?.liveCancellationFeeOre).toBeNull();
-    expect(rows[1]?.liveCancellationFeeOre).toBeNull();
+    expect(rows[0]?.cancellationPolicy).toEqual({
+      mayCancel: false,
+      refusal: "start_passed",
+    });
+    expect(rows[1]?.cancellationPolicy).toEqual({
+      mayCancel: false,
+      refusal: "not_cancellable",
+    });
     expect(rows[1]?.bookingHoldExpiresAt).toBe(in24Hours);
   });
 

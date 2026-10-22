@@ -14,6 +14,8 @@ import type {
   BookingOverviewStatus,
   ManualAmountEntry,
 } from "./booking-overview";
+import type { CancellationPolicy } from "./cancellation";
+import { cancellationPolicy } from "./cancellation";
 import { memberPriceOre } from "./pricing";
 
 export type AdminMembership = "external" | "member";
@@ -158,12 +160,31 @@ function addRow(totals: AdminTotals, row: AdminBookingRow): AdminTotals {
   };
 }
 
-// An admin can cancel what a member can (#5): a confirmed booking whose
-// start has not passed. The write re-checks it at the confirm moment.
-export function canAdminCancel(row: AdminBookingRow, now: Date): boolean {
-  return (
-    row.bookingStatus === "confirmed" && Date.parse(row.startAt) > now.getTime()
+// The admin overview's cancel decision (#155): the one policy in
+// ./cancellation.ts answers both whether the booking can cancel and what
+// fee the screen states, from the row's frozen snapshot (ADR-0005). The
+// write re-checks the same conditions at the confirm moment.
+export function cancellationPolicyOfRow(
+  row: AdminBookingRow,
+  now: Date
+): CancellationPolicy {
+  return cancellationPolicy(
+    {
+      discountPercent: row.discountPercent,
+      roomPriceOre: row.roomPriceOre,
+      startAt: new Date(row.startAt),
+      status: row.bookingStatus,
+      waived: row.cancellationFeeWaived,
+    },
+    now
   );
+}
+
+// An admin can cancel what a member can (#5): a confirmed booking whose
+// start has not passed — the policy's may-cancel, which the row menu and
+// the detail sheet read. The write re-checks it at the confirm moment.
+export function canAdminCancel(row: AdminBookingRow, now: Date): boolean {
+  return cancellationPolicyOfRow(row, now).mayCancel;
 }
 
 /** The totals of the filtered set: every column sums down its rows. */

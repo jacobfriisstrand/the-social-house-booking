@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingCancellationFeeOre,
+  type CancellationInput,
   cancellationFeeOre,
   cancellationPercent,
+  cancellationPolicy,
   memberPriceOreForBooking,
   payableCancellationFeeOre,
 } from "./cancellation";
@@ -163,5 +165,76 @@ describe("payableCancellationFeeOre", () => {
     expect(payableCancellationFeeOre(60_000, true)).toBeNull();
     expect(payableCancellationFeeOre(0, false)).toBe(0);
     expect(payableCancellationFeeOre(null, false)).toBeNull();
+  });
+});
+
+describe("cancellationPolicy", () => {
+  // A booking frozen at 240000 øre room rent with a 50 % member discount —
+  // member price 120000 øre, the ADR-0006 spec example. The now instants
+  // read against a start of 2026-10-01T10:00:00Z.
+  const input: CancellationInput = {
+    discountPercent: 50,
+    roomPriceOre: 240_000,
+    startAt: new Date("2026-10-01T10:00:00Z"),
+    status: "confirmed",
+    waived: false,
+  };
+  // The refusals read no fee, so any fixed instant before the start works.
+  const now = new Date("2026-09-29T10:00:00Z");
+
+  it("cancels a confirmed upcoming booking at the tier fee", () => {
+    // 48 hours before: the 50 % tier on the member price → 60000 øre.
+    expect(cancellationPolicy(input, now)).toEqual({
+      feeOre: 60_000,
+      mayCancel: true,
+    });
+  });
+
+  it("shows no fee more than 72 hours before", () => {
+    expect(cancellationPolicy(input, new Date("2026-09-28T09:00:00Z"))).toEqual(
+      { feeOre: 0, mayCancel: true }
+    );
+  });
+
+  it("refuses a hold that has expired", () => {
+    // An expired hold never became a booking — nothing to cancel.
+    expect(cancellationPolicy({ ...input, status: "expired" }, now)).toEqual({
+      mayCancel: false,
+      refusal: "not_cancellable",
+    });
+  });
+
+  it("refuses a standing hold pending verification", () => {
+    expect(
+      cancellationPolicy({ ...input, status: "pending_verification" }, now)
+    ).toEqual({ mayCancel: false, refusal: "not_cancellable" });
+  });
+
+  it("refuses an already cancelled booking", () => {
+    expect(cancellationPolicy({ ...input, status: "cancelled" }, now)).toEqual({
+      mayCancel: false,
+      refusal: "already_cancelled",
+    });
+  });
+
+  it("refuses a meeting whose start has passed", () => {
+    expect(cancellationPolicy(input, new Date("2026-10-01T10:00:01Z"))).toEqual(
+      { mayCancel: false, refusal: "start_passed" }
+    );
+  });
+
+  it("refuses at the start instant — the cut is strict", () => {
+    expect(cancellationPolicy(input, new Date("2026-10-01T10:00:00Z"))).toEqual(
+      { mayCancel: false, refusal: "start_passed" }
+    );
+  });
+
+  it("reads a waived fee as no fee", () => {
+    // The booking can still cancel; the screen states 0 because the waived
+    // flag (Bilag 1 "Ombooking og fejl") means nothing is charged.
+    expect(cancellationPolicy({ ...input, waived: true }, now)).toEqual({
+      feeOre: 0,
+      mayCancel: true,
+    });
   });
 });

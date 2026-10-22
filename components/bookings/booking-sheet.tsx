@@ -41,6 +41,11 @@ function MemberCancelDialog({
     () => cancelOwnBooking(booking.bookingId),
     [booking.bookingId]
   );
+  // The dialog only opens on a cancellable booking, so the policy has a
+  // fee to state; a refusal rides a "no" and never reaches this dialog.
+  const feeOre = booking.cancellationPolicy.mayCancel
+    ? booking.cancellationPolicy.feeOre
+    : 0;
   return (
     <CancelConfirmDialog
       cancel={cancel}
@@ -50,7 +55,7 @@ function MemberCancelDialog({
       <CancellationSummary
         bookingNumber={booking.bookingNumber}
         endAt={booking.endAt}
-        feeOre={booking.liveCancellationFeeOre ?? 0}
+        feeOre={feeOre}
         startAt={booking.bookingStartAt}
       />
     </CancelConfirmDialog>
@@ -82,9 +87,9 @@ function BookingSheetDetails({
   booking: BookingOverviewRow;
   onCancel: () => void;
 }) {
-  const canCancel =
-    booking.bookingStatus === "confirmed" &&
-    booking.liveCancellationFeeOre !== null;
+  // The cancel decision rides the row's policy: it knows the booking's
+  // status and whether the start has passed, so no separate booking check.
+  const canCancel = booking.cancellationPolicy.mayCancel;
 
   return (
     <>

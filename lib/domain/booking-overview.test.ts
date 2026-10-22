@@ -179,10 +179,13 @@ describe("sortBookingOverview", () => {
     bookerName: "Anna",
     bookingNumber: bookingId,
     cancellationFeeOre: null,
+    cancellationPolicy: {
+      mayCancel: false,
+      refusal: "not_cancellable",
+    },
     cancelledAt: null,
     invoiceDate: null,
     invoiceNumber: null,
-    liveCancellationFeeOre: null,
     price: {
       addOnLines: [],
       addOnsOre: 0,

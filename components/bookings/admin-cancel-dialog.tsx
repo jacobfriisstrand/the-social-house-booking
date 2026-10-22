@@ -8,22 +8,23 @@ import { useCallback, useState } from "react";
 import { CancelConfirmDialog } from "@/components/bookings/cancel-confirm-dialog";
 import { CancellationSummary } from "@/components/bookings/cancellation-summary";
 import { cancelBookingAsAdmin } from "@/lib/bookings/admin-cancel-actions";
-import type { AdminBookingRow } from "@/lib/domain/admin-bookings";
-import { bookingCancellationFeeOre } from "@/lib/domain/cancellation";
+import {
+  type AdminBookingRow,
+  cancellationPolicyOfRow,
+} from "@/lib/domain/admin-bookings";
 import { messages } from "@/messages/da";
 
 const copy = messages.bookings.admin.cancel;
 
-const liveFeeOre = (row: AdminBookingRow): number =>
-  bookingCancellationFeeOre(
-    {
-      bookingDiscountPercent: row.discountPercent,
-      bookingEndAt: new Date(row.endAt),
-      bookingRoomPriceOre: row.roomPriceOre,
-      bookingStartAt: new Date(row.startAt),
-    },
-    new Date()
-  );
+// The fee the dialog states, read when it opens: the one policy answers
+// both whether the booking can cancel and what fee the screen shows
+// (#155); the action recomputes it at the confirm moment. The dialog only
+// opens on a row the canAdminCancel guard has admitted, so a refusal
+// reads as no fee.
+const liveFeeOre = (row: AdminBookingRow): number => {
+  const policy = cancellationPolicyOfRow(row, new Date());
+  return policy.mayCancel ? policy.feeOre : 0;
+};
 
 export function AdminCancelDialog({
   onClose,
