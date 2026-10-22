@@ -732,8 +732,6 @@ export function AdminBookingsTable({
     [selection.selectedEntries, now]
   );
 
-  // The row-scoped overlays read the rows through their hook; `overlayOpen`
-  // drives the mount.
   // The row-scoped overlays read the rows through the shared hook
   // (#153): which sheet is open for which Booking, and the rows behind
   // them — the detail sheet, the edit sheet, the cancel confirm.

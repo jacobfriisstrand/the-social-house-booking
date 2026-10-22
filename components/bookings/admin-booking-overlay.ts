@@ -80,8 +80,7 @@ export function overlayRowById(
   if (overlay === null) {
     return null;
   }
-  const found = rows.find((row) => row.bookingId === overlay.bookingId);
-  return found ?? null;
+  return byId(rows, overlay.bookingId);
 }
 
 /** Every kind's row live from the current rows: the detail sheet and the
@@ -182,7 +181,8 @@ export function useAdminBookingOverlay(
     closeOverlay,
     detailOpen: state.overlayOpen && activeKind === "detail",
     detailRow: resolved.detailRow,
-    editOpen: state.overlayOpen && activeKind === "edit",
+    editOpen:
+      state.overlayOpen && activeKind === "edit" && resolved.editRow !== null,
     editRow: resolved.editRow,
     openCancel,
     openDetail,
