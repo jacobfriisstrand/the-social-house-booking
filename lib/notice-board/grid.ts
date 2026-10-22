@@ -2,7 +2,6 @@
 // column from lib/domain/day-grid.ts, the status line when the date is
 // today, and what each block shows (view.ts). The client component only
 // renders the result.
-import type { DialogRoom } from "@/components/bookings/booking-form";
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import {
   dayGridColumn,
@@ -12,7 +11,7 @@ import {
   type PlacedCell,
   roomStatusAt,
 } from "@/lib/domain/day-grid";
-import type { PublicRoom } from "@/lib/rooms/public-data";
+import type { DialogRoom, PublicRoom } from "@/lib/rooms/public-data";
 import type { BookingDetail, DayEntry } from "./data";
 import {
   bookingView,

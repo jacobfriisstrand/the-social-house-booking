@@ -59,14 +59,11 @@ import {
   bookingPriceOverview,
   selectedBookingAddOns,
 } from "@/lib/domain/booking-price";
-import type {
-  SpecialClosingDay,
-  WeeklyOpeningHour,
-} from "@/lib/domain/opening-hours";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { ACCEPTED_ON_BOOKING, type CurrentTerms } from "@/lib/domain/terms";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
+import type { DialogRoom } from "@/lib/rooms/public-data";
 import {
   adminBookingSchema,
   bookingFormSchema,
@@ -83,17 +80,6 @@ import { SlotPicker } from "./slot-picker";
 
 const copy = messages.booking.dialog;
 const DEFAULT_PARTICIPANTS = 2;
-
-export interface DialogRoom {
-  addons: AddOn[];
-  capacity: number;
-  hourlyPriceOre: number;
-  location: string | null;
-  name: string;
-  roomId: string;
-  specialDays: SpecialClosingDay[];
-  weekly: WeeklyOpeningHour[];
-}
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 type BookingState = AdminBookingState | HoldState;

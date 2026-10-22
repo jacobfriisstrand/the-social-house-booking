@@ -4,10 +4,10 @@
 // blank cell that looks bookable but does nothing.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { DialogRoom } from "@/components/bookings/booking-form";
 import type { BookingViewer } from "@/lib/bookings/viewer";
 import type { StartSlotStatus } from "@/lib/domain/availability";
 import type { PlacedCell } from "@/lib/domain/day-grid";
+import type { DialogRoom } from "@/lib/rooms/public-data";
 
 // The component's import chain reaches lib/supabase/server, which asserts
 // the environment at module load; the grid renders without a client, so

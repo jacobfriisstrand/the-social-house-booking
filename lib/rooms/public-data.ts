@@ -25,6 +25,13 @@ export interface PublicRoom {
   weekly: WeeklyOpeningHour[];
 }
 
+// What the booking dialog receives: everything a member room shows
+// publicly except what stays on the server (photos and texts).
+export type DialogRoom = Omit<
+  PublicRoom,
+  "description" | "images" | "practicalNotes"
+>;
+
 const publicAddon = (addon: AddonOption): AddOn => ({
   addonId: addon.addonId,
   description: addon.description,
