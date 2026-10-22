@@ -1,75 +1,27 @@
 // The bookings table's exports (#123): the same columns the admin
-// Bookinger table shows (the COLUMNS list in
-// components/bookings/admin-bookings-table.tsx — keep the two in sync),
-// from the same AdminBookingRow the table renders. One ExportTable feeds
-// both formats: the CSV (Excel/Numbers) and the PDF. Amounts are integer
-// øre (ADR-0019) exported as kroner with comma decimals, still excl. VAT
-// (ADR-0020); the " kr" unit stays out of the cells so Excel can sum the
-// column. The table's "-" placeholder carries over.
+// Bookinger table shows, rendered from the one shared definition
+// (ADMIN_COLUMNS in lib/bookings/admin-columns.ts) the table renders
+// from too (#157). One ExportTable feeds both formats: the CSV
+// (Excel/Numbers) and the PDF. Amounts are integer øre (ADR-0019)
+// exported as kroner with comma decimals, still excl. VAT (ADR-0020);
+// the " kr" unit stays out of the cells so Excel can sum the column.
+// The table's "-" placeholder carries over.
+
+import { ADMIN_COLUMNS } from "@/lib/bookings/admin-columns";
 import type { AdminBookingRow } from "@/lib/domain/admin-bookings";
-import { adminRowParts } from "@/lib/domain/admin-bookings";
-import type { ExportCell, ExportTable } from "@/lib/export/table";
-import {
-  formatDate,
-  formatDateTime,
-  formatKronerDecimal,
-  formatOre,
-} from "@/lib/format";
+import { adminRowTotalOre } from "@/lib/domain/admin-bookings";
+import type { ExportTable } from "@/lib/export/table";
+import { formatDate, formatOre } from "@/lib/format";
 import { messages } from "@/messages/da";
 
-const copy = messages.bookings;
-
-const NONE = "-";
-
-// "-" when the table would show NONE (a waived fee, a zero basis).
-const oreCell = (ore: number | null): string =>
-  ore === null ? NONE : formatKronerDecimal(ore);
-
-const invoicingLabel: Record<AdminBookingRow["invoicingStatus"], string> = {
-  invoiced: copy.invoicing.invoiced,
-  not_invoicable: copy.invoicing.notInvoicable,
-  not_invoiced: copy.invoicing.notInvoiced,
-};
-
-// The row's total: the room price after discount, or — on a cancelled
-// booking (ADR-0006) — the payable fee alone; the exact expression the
-// table's BookingRow renders.
-function totalOre(row: AdminBookingRow): number | null {
-  const parts = adminRowParts(row);
-  return parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
-}
-
-function bookingCells(row: AdminBookingRow): ExportCell[] {
-  return [
-    invoicingLabel[row.invoicingStatus],
-    row.bookingStatus === "cancelled" ? messages.common.yes : NONE,
-    row.bookingNumber,
-    row.companyName,
-    row.roomName,
-    formatDateTime(row.startAt),
-    formatDateTime(row.endAt),
-    String(row.participants),
-    row.addOns.length === 0 ? NONE : copy.columns.addOnsYes,
-    oreCell(totalOre(row)),
-  ];
-}
-
-/** The bookings table both formats render: the header row, one row per booking. */
+/** The bookings table both formats render: the header row, one row per
+ * booking. */
 export function bookingsTable(rows: readonly AdminBookingRow[]): ExportTable {
   return {
-    headers: [
-      copy.columns.status,
-      copy.status.cancelled,
-      copy.columns.bookingNumber,
-      messages.bookings.admin.columns.company,
-      copy.columns.room,
-      copy.columns.start,
-      copy.columns.end,
-      copy.columns.participants,
-      copy.columns.addOns,
-      messages.bookings.admin.columns.totalPrice,
-    ],
-    rows: rows.map(bookingCells),
+    headers: ADMIN_COLUMNS.flatMap((column) => column.csvHeaders),
+    rows: rows.map((row) =>
+      ADMIN_COLUMNS.flatMap((column) => column.csvCells(row))
+    ),
   };
 }
 
@@ -124,6 +76,9 @@ export function bookingsTotal(
   if (rows.length === 0) {
     return undefined;
   }
-  const sumOre = rows.reduce((sum, row) => sum + (totalOre(row) ?? 0), 0);
+  const sumOre = rows.reduce(
+    (sum, row) => sum + (adminRowTotalOre(row) ?? 0),
+    0
+  );
   return `${messages.common.totalLabel}: ${formatOre(sumOre)}`;
 }

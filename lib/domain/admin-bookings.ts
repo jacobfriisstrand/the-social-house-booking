@@ -123,6 +123,15 @@ export function adminRowParts(row: AdminBookingRow): AdminRowParts {
   };
 }
 
+/** One row's total: the room price after discount, or — on a cancelled
+ * booking, whose room was never served (ADR-0006) — the payable fee
+ * alone. A waived fee leaves nothing to invoice. The number the table's
+ * total column renders and the CSV export writes. */
+export function adminRowTotalOre(row: AdminBookingRow): number | null {
+  const parts = adminRowParts(row);
+  return parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
+}
+
 /** The column values the totals footer and the breakdowns sum. */
 export interface AdminTotals {
   addOnsOre: number;

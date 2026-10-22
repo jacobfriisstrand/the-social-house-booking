@@ -77,12 +77,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
+import { ADMIN_COLUMNS, type AdminColumn } from "@/lib/bookings/admin-columns";
 import type { AdminViewParams } from "@/lib/bookings/admin-view-params";
 import { setBookingsInvoicingStatus } from "@/lib/bookings/invoicing-actions";
 import {
   type AdminBookingRow,
-  type AdminSortKey,
-  adminRowParts,
+  adminRowTotalOre,
   canAdminCancel,
   companyCashFlow,
   type InvoicingActionAllowance,
@@ -124,14 +124,6 @@ function bookingRowById(
   return rows.find((row) => row.bookingId === bookingId) ?? null;
 }
 
-interface ColumnDef {
-  align?: "right";
-  key: AdminSortKey;
-  label: string;
-  // Explicit width in a table-fixed table; the rest share what remains.
-  width?: string;
-}
-
 // The columns between the first and the last share the width evenly
 // (table-fixed); every money column is right-aligned (DESIGN.md
 // "Components"). Status first after the checkbox and as narrow as the
@@ -147,27 +139,17 @@ interface ColumnDef {
 // columns — 211 + 7 × 175 ≈ 1436.
 const TABLE_CLASS = "min-w-[92rem] table-fixed";
 
-const COLUMNS: ColumnDef[] = [
-  { key: "status", label: bookingsCopy.columns.status, width: "w-36" },
-  { key: "bookingNumber", label: bookingsCopy.columns.bookingNumber },
-  { key: "company", label: copy.columns.company },
-  { key: "room", label: bookingsCopy.columns.room },
-  { key: "date", label: bookingsCopy.columns.dateTime },
-  { key: "participants", label: bookingsCopy.columns.participants },
-  { key: "addOns", label: bookingsCopy.columns.addOns },
-  {
-    align: "right",
-    key: "memberPrice",
-    label: copy.columns.totalPrice,
-  },
-];
-
+// The columns the table and the CSV export both render (#157): the
+// header row, the colgroup and the skeleton row map over the one
+// ADMIN_COLUMNS list (lib/bookings/admin-columns.ts), so a column added
+// or dropped there updates every rendering at once — the row's own
+// cells keep their bespoke markup (the badges, the two-line date).
 function SortHead({
   column,
   onParamChange,
   params,
 }: {
-  column: ColumnDef;
+  column: AdminColumn;
   onParamChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
 }) {
@@ -368,7 +350,6 @@ function BookingRow({
   toggle: (bookingId: string, shiftKey: boolean) => void;
   moving: boolean;
 }) {
-  const parts = adminRowParts(row);
   // The invoice mark waits for the end time; refusing and un-invoicing do
   // not.
   const ended = new Date(row.endAt).getTime() <= now.getTime();
@@ -384,11 +365,9 @@ function BookingRow({
     () => onDetail(row.bookingId),
     [onDetail, row.bookingId]
   );
-  // The row's total: the room price after discount, or — on a cancelled
-  // booking, whose room was never served (ADR-0006) — the payable fee
-  // alone. A waived fee leaves nothing to invoice.
-  const amountOre =
-    parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
+  // The row's total (adminRowTotalOre): the room price after discount,
+  // or on a cancelled booking (ADR-0006) the payable fee alone.
+  const amountOre = adminRowTotalOre(row);
 
   return (
     // Clicking the row opens the detail sheet; the tick and the ⋯ menu
@@ -468,7 +447,7 @@ function SkeletonRow() {
       <TableCell>
         <Skeleton className="size-4" />
       </TableCell>
-      {COLUMNS.map((column) => (
+      {ADMIN_COLUMNS.map((column) => (
         <TableCell
           className={column.align === "right" ? "text-right" : undefined}
           key={column.key}
@@ -527,7 +506,7 @@ function HeaderRow({
           />
         </TableHead>
         {selectionCount > 0 ? (
-          <TableHead colSpan={COLUMNS.length + 1}>
+          <TableHead colSpan={ADMIN_COLUMNS.length + 1}>
             <div className="flex items-center gap-2">
               <p className="whitespace-nowrap text-sm">
                 {copy.selection.selected(selectionCount)}
@@ -577,7 +556,7 @@ function HeaderRow({
           </TableHead>
         ) : (
           <>
-            {COLUMNS.map((column) => (
+            {ADMIN_COLUMNS.map((column) => (
               <SortHead
                 column={column}
                 key={column.key}
@@ -797,12 +776,12 @@ export function AdminBookingsTable({
   // The column grid stated once, up front: table-fixed takes the widths
   // from the cols instead of whichever header row renders first, so the
   // swap between the column titles and the bulk actions cannot shift the
-  // columns. The cols derive from COLUMNS so the widths cannot desync;
-  // the checkbox and the ⋯ actions bookend the sortable columns.
+  // columns. The cols derive from ADMIN_COLUMNS so the widths cannot
+  // desync; the checkbox and the ⋯ actions bookend the sortable columns.
   const columnGrid = (
     <colgroup>
       <col className="w-10" />
-      {COLUMNS.map((column) => (
+      {ADMIN_COLUMNS.map((column) => (
         <col className={column.width} key={column.key} />
       ))}
       <col className="w-14" />
