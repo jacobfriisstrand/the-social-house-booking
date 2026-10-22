@@ -32,6 +32,7 @@ const booking: CancellationBooking = {
   booking_addon_total_ore: 0,
   booking_booker_email: "booker@rituals.dk",
   booking_booker_name: "Bo Booker",
+  booking_cancellation_fee_waived: false,
   booking_company_id: "c1",
   booking_discount_percent: 0,
   booking_end_at: "2026-10-23T11:00:00+02:00",

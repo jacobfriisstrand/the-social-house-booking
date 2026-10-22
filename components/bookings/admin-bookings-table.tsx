@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { useAdminBookingOverlay } from "@/components/bookings/admin-booking-overlay";
 import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
 import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
@@ -76,12 +77,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
+import { ADMIN_COLUMNS, type AdminColumn } from "@/lib/bookings/admin-columns";
 import type { AdminViewParams } from "@/lib/bookings/admin-view-params";
 import { setBookingsInvoicingStatus } from "@/lib/bookings/invoicing-actions";
 import {
   type AdminBookingRow,
-  type AdminSortKey,
-  adminRowParts,
+  adminRowTotalOre,
   canAdminCancel,
   companyCashFlow,
   type InvoicingActionAllowance,
@@ -97,13 +98,6 @@ import { messages } from "@/messages/da";
 
 const copy = messages.bookings.admin;
 const bookingsCopy = messages.bookings;
-
-/** One row-scoped overlay: which booking and which sheet — the detail
- * view or the edit sheet; the invoice dialog has its own ids state. */
-interface Overlay {
-  bookingId: string;
-  kind: "detail" | "edit";
-}
 
 const NONE = "-";
 
@@ -130,14 +124,6 @@ function bookingRowById(
   return rows.find((row) => row.bookingId === bookingId) ?? null;
 }
 
-interface ColumnDef {
-  align?: "right";
-  key: AdminSortKey;
-  label: string;
-  // Explicit width in a table-fixed table; the rest share what remains.
-  width?: string;
-}
-
 // The columns between the first and the last share the width evenly
 // (table-fixed); every money column is right-aligned (DESIGN.md
 // "Components"). Status first after the checkbox and as narrow as the
@@ -153,27 +139,17 @@ interface ColumnDef {
 // columns — 211 + 7 × 175 ≈ 1436.
 const TABLE_CLASS = "min-w-[92rem] table-fixed";
 
-const COLUMNS: ColumnDef[] = [
-  { key: "status", label: bookingsCopy.columns.status, width: "w-36" },
-  { key: "bookingNumber", label: bookingsCopy.columns.bookingNumber },
-  { key: "company", label: copy.columns.company },
-  { key: "room", label: bookingsCopy.columns.room },
-  { key: "date", label: bookingsCopy.columns.dateTime },
-  { key: "participants", label: bookingsCopy.columns.participants },
-  { key: "addOns", label: bookingsCopy.columns.addOns },
-  {
-    align: "right",
-    key: "memberPrice",
-    label: copy.columns.totalPrice,
-  },
-];
-
+// The columns the table and the CSV export both render (#157): the
+// header row, the colgroup and the skeleton row map over the one
+// ADMIN_COLUMNS list (lib/bookings/admin-columns.ts), so a column added
+// or dropped there updates every rendering at once — the row's own
+// cells keep their bespoke markup (the badges, the two-line date).
 function SortHead({
   column,
   onParamChange,
   params,
 }: {
-  column: ColumnDef;
+  column: AdminColumn;
   onParamChange: (changes: Partial<AdminViewParams>) => void;
   params: AdminViewParams;
 }) {
@@ -238,20 +214,6 @@ function CancelMenuItem({
       </MenuItem>
     </>
   );
-}
-
-// The cancel confirm for the picked booking; nothing while none is picked.
-function PickedCancelDialog({
-  bookingId,
-  onClose,
-  rows,
-}: {
-  bookingId: string | null;
-  onClose: () => void;
-  rows: AdminBookingRow[];
-}) {
-  const row = bookingRowById(rows, bookingId);
-  return row ? <AdminCancelDialog onClose={onClose} row={row} /> : null;
 }
 
 // One row's ⋯ menu (#9): the details view, the three invoice actions,
@@ -388,7 +350,6 @@ function BookingRow({
   toggle: (bookingId: string, shiftKey: boolean) => void;
   moving: boolean;
 }) {
-  const parts = adminRowParts(row);
   // The invoice mark waits for the end time; refusing and un-invoicing do
   // not.
   const ended = new Date(row.endAt).getTime() <= now.getTime();
@@ -404,11 +365,9 @@ function BookingRow({
     () => onDetail(row.bookingId),
     [onDetail, row.bookingId]
   );
-  // The row's total: the room price after discount, or — on a cancelled
-  // booking, whose room was never served (ADR-0006) — the payable fee
-  // alone. A waived fee leaves nothing to invoice.
-  const amountOre =
-    parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
+  // The row's total (adminRowTotalOre): the room price after discount,
+  // or on a cancelled booking (ADR-0006) the payable fee alone.
+  const amountOre = adminRowTotalOre(row);
 
   return (
     // Clicking the row opens the detail sheet; the tick and the ⋯ menu
@@ -488,7 +447,7 @@ function SkeletonRow() {
       <TableCell>
         <Skeleton className="size-4" />
       </TableCell>
-      {COLUMNS.map((column) => (
+      {ADMIN_COLUMNS.map((column) => (
         <TableCell
           className={column.align === "right" ? "text-right" : undefined}
           key={column.key}
@@ -547,7 +506,7 @@ function HeaderRow({
           />
         </TableHead>
         {selectionCount > 0 ? (
-          <TableHead colSpan={COLUMNS.length + 1}>
+          <TableHead colSpan={ADMIN_COLUMNS.length + 1}>
             <div className="flex items-center gap-2">
               <p className="whitespace-nowrap text-sm">
                 {copy.selection.selected(selectionCount)}
@@ -597,7 +556,7 @@ function HeaderRow({
           </TableHead>
         ) : (
           <>
-            {COLUMNS.map((column) => (
+            {ADMIN_COLUMNS.map((column) => (
               <SortHead
                 column={column}
                 key={column.key}
@@ -611,56 +570,6 @@ function HeaderRow({
       </TableRow>
     </TableHeader>
   );
-}
-
-// The row-scoped overlays (detail sheet, edit sheet) share one state: the
-// overlay content stays set after close — the exit animation plays over
-// it — and a new open replaces it. `overlayOpen` drives the mount.
-function useBookingOverlay(rows: AdminBookingRow[]) {
-  const [overlay, setOverlay] = useState<Overlay | null>(null);
-  const [overlayOpen, setOverlayOpen] = useState(false);
-  const detailRow = useMemo(
-    () =>
-      bookingRowById(
-        rows,
-        overlay?.kind === "detail" ? overlay.bookingId : null
-      ),
-    [rows, overlay]
-  );
-  const editRow = useMemo(
-    () =>
-      bookingRowById(rows, overlay?.kind === "edit" ? overlay.bookingId : null),
-    [rows, overlay]
-  );
-  const openOverlay = useCallback(
-    (bookingId: string, kind: Overlay["kind"]): void => {
-      setOverlay({ bookingId, kind });
-      setOverlayOpen(true);
-    },
-    []
-  );
-  const openDetail = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "detail"),
-    [openOverlay]
-  );
-  const openEdit = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "edit"),
-    [openOverlay]
-  );
-  const closeOverlay = useCallback((open: boolean): void => {
-    if (!open) {
-      setOverlayOpen(false);
-    }
-  }, []);
-  return {
-    closeOverlay,
-    detailRow,
-    editRow,
-    openDetail,
-    openEdit,
-    overlay,
-    overlayOpen,
-  };
 }
 
 // The bulk and row-scoped invoicing moves: the invoice dialog's ids (one
@@ -728,13 +637,6 @@ function useInvoicingActions(
     },
     [router, selection.clearSelection]
   );
-  // The booking picked for the cancel confirm, if any.
-  const [cancelId, setCancelId] = useState<string | null>(null);
-  const openCancel = useCallback(
-    (bookingId: string): void => setCancelId(bookingId),
-    []
-  );
-  const closeCancel = useCallback((): void => setCancelId(null), []);
   const closeDialog = useCallback((open: boolean): void => {
     if (!open) {
       setDialogIds(null);
@@ -757,8 +659,6 @@ function useInvoicingActions(
     [move, selection.selected]
   );
   return {
-    cancelId,
-    closeCancel,
     closeDialog,
     dialogBookings,
     dialogIds,
@@ -767,7 +667,6 @@ function useInvoicingActions(
     moveSelectedNotInvoiced,
     moving,
     openBulkDialog,
-    openCancel,
     openRowInvoice,
   };
 }
@@ -812,21 +711,23 @@ export function AdminBookingsTable({
     [selection.selectedEntries, now]
   );
 
-  // The row-scoped overlays read the rows through their hook; `overlayOpen`
-  // drives the mount.
+  // The row-scoped overlays read the rows through the shared hook
+  // (#153): which sheet is open for which Booking, and the rows behind
+  // them — the detail sheet, the edit sheet, the cancel confirm.
   const {
+    cancelRow,
+    closeCancel,
     closeOverlay,
+    detailOpen,
     detailRow,
+    editOpen,
     editRow,
+    openCancel,
     openDetail,
     openEdit,
-    overlay,
-    overlayOpen,
-  } = useBookingOverlay(rows);
+  } = useAdminBookingOverlay(rows);
 
   const {
-    cancelId,
-    closeCancel,
     closeDialog,
     dialogBookings,
     dialogIds,
@@ -835,7 +736,6 @@ export function AdminBookingsTable({
     moveSelectedNotInvoicable,
     moveSelectedNotInvoiced,
     openBulkDialog,
-    openCancel,
     openRowInvoice,
   } = useInvoicingActions(rows, router, selection);
 
@@ -876,12 +776,12 @@ export function AdminBookingsTable({
   // The column grid stated once, up front: table-fixed takes the widths
   // from the cols instead of whichever header row renders first, so the
   // swap between the column titles and the bulk actions cannot shift the
-  // columns. The cols derive from COLUMNS so the widths cannot desync;
-  // the checkbox and the ⋯ actions bookend the sortable columns.
+  // columns. The cols derive from ADMIN_COLUMNS so the widths cannot
+  // desync; the checkbox and the ⋯ actions bookend the sortable columns.
   const columnGrid = (
     <colgroup>
       <col className="w-10" />
-      {COLUMNS.map((column) => (
+      {ADMIN_COLUMNS.map((column) => (
         <col className={column.width} key={column.key} />
       ))}
       <col className="w-14" />
@@ -1039,24 +939,22 @@ export function AdminBookingsTable({
       <BookingDetailSheet
         onCancel={openCancel}
         onOpenChange={closeOverlay}
-        open={overlayOpen && overlay?.kind === "detail"}
+        open={detailOpen}
         row={detailRow}
       />
-      <PickedCancelDialog
-        bookingId={cancelId}
-        onClose={closeCancel}
-        rows={rows}
-      />
+      {cancelRow ? (
+        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
+      ) : null}
       <BookingEditSheet
-        bookingId={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        bookingId={editRow?.bookingId ?? ""}
         bookingNumber={editRow?.bookingNumber ?? ""}
         // Fresh form per booking: the manual-amount form bakes the booking
         // id in at init, so a reused instance would post to the previous
         // booking's id.
-        key={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        key={editRow?.bookingId ?? ""}
         manualAmounts={editRow?.manualAmounts ?? EMPTY_MANUAL_AMOUNTS}
         onOpenChange={closeOverlay}
-        open={overlayOpen && overlay?.kind === "edit"}
+        open={editOpen}
       />
     </div>
   );

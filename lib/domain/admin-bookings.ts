@@ -7,14 +7,15 @@
 // (ADR-0006) as its whole basis, and its snapshot parts count nothing in
 // the totals. All amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
 
-import { outstandingInvoiceBasisOre } from "./booking-invoicing";
+import { invoiceBasisParts, invoiceBasisTotalOre } from "./booking-invoicing";
 import type {
   BookingAddonOverview,
   BookingInvoicingStatus,
   BookingOverviewStatus,
   ManualAmountEntry,
 } from "./booking-overview";
-import { payableCancellationFeeOre } from "./cancellation";
+import type { CancellationPolicy } from "./cancellation";
+import { cancellationPolicy } from "./cancellation";
 import { memberPriceOre } from "./pricing";
 
 export type AdminMembership = "external" | "member";
@@ -81,15 +82,22 @@ export interface AdminRowParts {
 }
 
 export function adminRowParts(row: AdminBookingRow): AdminRowParts {
+  // The one invoicing-basis policy (lib/domain/booking-invoicing.ts): the
+  // fee column on a cancelled row, the whole basis on every row.
+  const basis = invoiceBasisParts({
+    addonTotalOre: row.addonTotalOre,
+    cancellationFeeOre: row.cancellationFeeOre,
+    cancellationFeeWaived: row.cancellationFeeWaived,
+    expectedTotalOre: row.expectedTotalOre,
+    manualAmountsOre: row.manualAmountsOre,
+    status: row.bookingStatus,
+  });
   if (row.bookingStatus === "cancelled") {
-    const feeOre = payableCancellationFeeOre(
-      row.cancellationFeeOre,
-      row.cancellationFeeWaived
-    );
+    const feeOre = basis.cancellationFeesOre;
     return {
       addOnsOre: null,
-      basisOre: feeOre ?? 0,
-      feeOre: feeOre ?? 0,
+      basisOre: feeOre,
+      feeOre,
       manualAmountsOre: null,
       memberPriceOre: null,
       minutes: null,
@@ -100,18 +108,11 @@ export function adminRowParts(row: AdminBookingRow): AdminRowParts {
   return {
     addOnsOre: row.addonTotalOre,
     // #126: the invoicing basis reads the STORED total (the frozen
-    // booking_expected_total_ore), not a recomputation from the parts —
-    // an admin's explicit total must win here, on the detail sheet and in
-    // the exports alike. For every booking without an override the two are
-    // identical by construction (booking_addons_sync_totals), so this is a
-    // no-op except where an admin set the price.
-    basisOre: outstandingInvoiceBasisOre({
-      cancellationFeeOre: row.cancellationFeeOre,
-      expectedTotalOre: row.expectedTotalOre,
-      manualAmountsOre: row.manualAmountsOre,
-      status: row.bookingStatus,
-      waived: row.cancellationFeeWaived,
-    }),
+    // booking_expected_total_ore) — the policy's room rent is the remainder
+    // of the expected total, so the parts add up to the stored total and an
+    // admin's explicit price wins here, on the detail sheet and in the
+    // exports alike.
+    basisOre: invoiceBasisTotalOre(basis),
     feeOre: 0,
     manualAmountsOre: row.manualAmountsOre,
     memberPriceOre: memberPrice,
@@ -120,6 +121,15 @@ export function adminRowParts(row: AdminBookingRow): AdminRowParts {
     ),
     roomPriceOre: row.roomPriceOre,
   };
+}
+
+/** One row's total: the room price after discount, or — on a cancelled
+ * booking, whose room was never served (ADR-0006) — the payable fee
+ * alone. A waived fee leaves nothing to invoice. The number the table's
+ * total column renders and the CSV export writes. */
+export function adminRowTotalOre(row: AdminBookingRow): number | null {
+  const parts = adminRowParts(row);
+  return parts.memberPriceOre ?? (parts.basisOre === 0 ? null : parts.basisOre);
 }
 
 /** The column values the totals footer and the breakdowns sum. */
@@ -159,12 +169,31 @@ function addRow(totals: AdminTotals, row: AdminBookingRow): AdminTotals {
   };
 }
 
-// An admin can cancel what a member can (#5): a confirmed booking whose
-// start has not passed. The write re-checks it at the confirm moment.
-export function canAdminCancel(row: AdminBookingRow, now: Date): boolean {
-  return (
-    row.bookingStatus === "confirmed" && Date.parse(row.startAt) > now.getTime()
+// The admin overview's cancel decision (#155): the one policy in
+// ./cancellation.ts answers both whether the booking can cancel and what
+// fee the screen states, from the row's frozen snapshot (ADR-0005). The
+// write re-checks the same conditions at the confirm moment.
+export function cancellationPolicyOfRow(
+  row: AdminBookingRow,
+  now: Date
+): CancellationPolicy {
+  return cancellationPolicy(
+    {
+      discountPercent: row.discountPercent,
+      roomPriceOre: row.roomPriceOre,
+      startAt: new Date(row.startAt),
+      status: row.bookingStatus,
+      waived: row.cancellationFeeWaived,
+    },
+    now
   );
+}
+
+// An admin can cancel what a member can (#5): a confirmed booking whose
+// start has not passed — the policy's may-cancel, which the row menu and
+// the detail sheet read. The write re-checks it at the confirm moment.
+export function canAdminCancel(row: AdminBookingRow, now: Date): boolean {
+  return cancellationPolicyOfRow(row, now).mayCancel;
 }
 
 /** The totals of the filtered set: every column sums down its rows. */
@@ -335,23 +364,39 @@ export function invoicingActionAllowance(
   };
 }
 
+/** The invoice-ready end cut (#143), stated once: a booking is
+ * invoice-ready only when its meeting end lies strictly before now — the
+ * same strict less-than the worklist SQL chains (booking_end_at.lt in
+ * listAdminBookings, countOutstandingInvoices), so the cash-flow total
+ * and the worklist badge cannot disagree for a booking that ends exactly
+ * now. The invoicing actions keep their own inclusive ended rule
+ * (invoicingActionAllowance): do not swap the two. */
+export function isInvoiceReadyEnd(
+  endAt: AdminBookingRow["endAt"],
+  now: Date
+): boolean {
+  return new Date(endAt).getTime() < now.getTime();
+}
+
 /** One row's invoice-ready amount (#120, #121): what the booking can
- * still be invoiced for, zero unless it has ended and still waits for an
- * invoice — the worklist's set (outstandingInvoicesFilter,
- * countOutstandingInvoices). The amount is the row's whole basis
+ * still be invoiced for, zero unless its meeting end lies strictly
+ * before now (isInvoiceReadyEnd) and it still waits for an invoice — the
+ * worklist's set (outstandingInvoicesFilter, countOutstandingInvoices).
+ * The amount is the row's whole basis
  * (adminRowParts): the frozen expected total plus manual amounts on
  * a confirmed booking, the payable cancellation fee alone on a cancelled
  * one (ADR-0006). An invoiced or refused row counts nothing — invoiced
  * bookings must not be re-summed as open (the manual-amounts guard,
- * migration 20261002073814) — and so does a booking that has not ended.
- * Shares the basis with outstandingInvoiceBasisOre
- * (lib/domain/booking-invoicing.ts): expected total and parts agree by
+ * migration 20261002073814) — and so does one whose end is not strictly
+ * before now (isInvoiceReadyEnd). The amount is the row's whole basis
+ * (adminRowParts) — the invoicing-basis policy
+ * (lib/domain/booking-invoicing.ts); expected total and parts agree by
  * construction (lib/domain/snapshot.ts). */
 export function invoiceReadyOre(row: AdminBookingRow, now: Date): number {
   if (row.invoicingStatus !== "not_invoiced") {
     return 0;
   }
-  if (new Date(row.endAt).getTime() > now.getTime()) {
+  if (!isInvoiceReadyEnd(row.endAt, now)) {
     return 0;
   }
   return adminRowParts(row).basisOre;

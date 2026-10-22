@@ -3,6 +3,7 @@ import {
   type SortValue,
   sortByColumn,
 } from "@/lib/table-sort";
+import type { CancellationPolicy } from "./cancellation";
 import { periodUtcWindow } from "./periods";
 import type { PriceOverviewModel } from "./price-overview";
 
@@ -55,6 +56,11 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   bookerName: string;
   bookingNumber: string;
   cancellationFeeOre: number | null;
+  // The cancel decision at load (#155): the one policy in
+  // ./cancellation.ts states whether the sheet's cancel flow may run and
+  // what fee the destructive confirm shows. The confirm recomputes
+  // server-side at the exact moment.
+  cancellationPolicy: CancellationPolicy;
   // The instant the cancellation flow froze (null on a live booking); the
   // detail sheet shows it on a cancelled row.
   cancelledAt: string | null;
@@ -63,11 +69,6 @@ export interface BookingOverviewRow extends BookingOverviewEntry {
   // (the lifecycle trigger, migration 20261006081139).
   invoiceDate: string | null;
   invoiceNumber: string | null;
-  // The fee as it stands at load, for the cancel flow (#5): set only for a
-  // confirmed booking whose start has not passed. The confirm recomputes
-  // the fee server-side at the exact moment; this is the number the
-  // destructive confirm states.
-  liveCancellationFeeOre: number | null;
   price: PriceOverviewModel;
   roomName: string;
 }

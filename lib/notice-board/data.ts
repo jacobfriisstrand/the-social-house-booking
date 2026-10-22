@@ -3,7 +3,7 @@
 // booker data; the bookings table adds detail only where RLS allows it —
 // a company's own bookings, or every booking for an admin.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { bookingPriceOverview } from "@/lib/bookings/new-booking";
+import { bookingPriceOverviewFromRow } from "@/lib/bookings/rows";
 import { bufferEndAt } from "@/lib/domain/buffer";
 import { cphDate } from "@/lib/domain/opening-hours";
 import type { PriceOverviewModel } from "@/lib/domain/price-overview";
@@ -160,7 +160,7 @@ async function listAdminDetails(
         kind: "admin",
         participantCount: row.booking_participant_count,
         practicalNotes: row.booking_practical_notes,
-        price: bookingPriceOverview(row),
+        price: bookingPriceOverviewFromRow(row),
         status: row.booking_status,
       },
     ])

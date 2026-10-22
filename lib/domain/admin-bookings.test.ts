@@ -12,6 +12,7 @@ import {
   invoiceReadyOre,
   invoiceReadyTotalOre,
   invoicingActionAllowance,
+  isInvoiceReadyEnd,
   shiftRangeIds,
   sortAdminRows,
 } from "./admin-bookings";
@@ -409,6 +410,18 @@ describe("invoiceReadyOre", () => {
 
   it("counts nothing before the booking has ended", () => {
     expect(invoiceReadyOre(booking(unended), now)).toBe(0);
+  });
+
+  it("agrees with the worklist SQL on the boundary: a meeting ending exactly now is not ready (#143)", () => {
+    // The worklist queries chain booking_end_at.lt."now"
+    // (listAdminBookings, countOutstandingInvoices); isInvoiceReadyEnd
+    // states the same strict cut, so the cash-flow total and the
+    // worklist badge cannot disagree for a booking that ends exactly
+    // now.
+    expect(isInvoiceReadyEnd("2026-10-01T12:00:00Z", now)).toBe(false);
+    expect(
+      invoiceReadyOre(booking({ endAt: "2026-10-01T12:00:00Z" }), now)
+    ).toBe(0);
   });
 
   it("counts nothing once invoiced or refused", () => {

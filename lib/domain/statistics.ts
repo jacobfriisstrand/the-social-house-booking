@@ -6,10 +6,16 @@
 // invoicing worklist draws (lib/bookings/filters.ts); the rest of the
 // month is "expected" and never enters the invoicing basis. A booking
 // marked not invoicable stays in the booking counts and out of every
-// amount. Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
+// amount. Each booking's amounts come from the one invoicing-basis policy
+// (lib/domain/booking-invoicing.ts) — the same numbers the invoicing
+// worklist sums. Amounts integer øre, excl. VAT (ADR-0019, ADR-0020).
 
+import {
+  type InvoiceBasisParts,
+  invoiceBasisParts,
+  invoiceBasisTotalOre,
+} from "./booking-invoicing";
 import type { BookingInvoicingStatus } from "./booking-overview";
-import { payableCancellationFeeOre } from "./cancellation";
 import { cphDate } from "./opening-hours";
 import { cphToUtc } from "./time";
 
@@ -30,15 +36,7 @@ export interface StatisticsBooking {
   status: "cancelled" | "confirmed";
 }
 
-// The four parts of the invoicing basis; they always add up to it.
-interface BasisParts {
-  addonsOre: number;
-  cancellationFeesOre: number;
-  manualAmountsOre: number;
-  roomRentOre: number;
-}
-
-export interface MonthStatistics extends BasisParts {
+export interface MonthStatistics extends InvoiceBasisParts {
   basisOre: number;
   bookings: number;
   cancellations: number;
@@ -119,56 +117,12 @@ export function percentChange(
   return (current - previous) / previous;
 }
 
-// What one booking adds to the invoicing basis, part by part: a held
-// meeting its frozen room rent after discount (ADR-0005), add-ons and
-// manual amounts (#16); a cancellation only its payable fee (ADR-0006).
-// The sum equals the worklist's outstandingInvoiceBasisOre.
-function basisParts(booking: StatisticsBooking): BasisParts {
-  if (booking.status === "cancelled") {
-    return {
-      addonsOre: 0,
-      cancellationFeesOre:
-        payableCancellationFeeOre(
-          booking.cancellationFeeOre,
-          booking.cancellationFeeWaived
-        ) ?? 0,
-      manualAmountsOre: 0,
-      roomRentOre: 0,
-    };
-  }
-  return {
-    addonsOre: booking.addonTotalOre,
-    cancellationFeesOre: 0,
-    manualAmountsOre: booking.manualAmountsOre,
-    // The room rent is the remainder of the invoicing basis, so the parts
-    // always add up to it — including an admin's total-price override
-    // (#126), which may sit below the add-on lines and make this line
-    // negative. Floor it and the month's basis would overstate the real
-    // invoice amount.
-    roomRentOre: booking.expectedTotalOre - booking.addonTotalOre,
-  };
-}
-
-const partsTotal = (parts: BasisParts): number =>
-  parts.roomRentOre +
-  parts.addonsOre +
-  parts.cancellationFeesOre +
-  parts.manualAmountsOre;
-
-// What a finished booking adds to the month's invoicing basis: its parts,
-// or nothing when it is marked not invoicable.
-export function heldBasisOre(booking: StatisticsBooking): number {
-  return booking.invoicingStatus === "not_invoicable"
-    ? 0
-    : partsTotal(basisParts(booking));
-}
-
 function addAmounts(
   stats: MonthStatistics,
   booking: StatisticsBooking,
-  parts: BasisParts
+  parts: InvoiceBasisParts
 ): void {
-  const total = partsTotal(parts);
+  const total = invoiceBasisTotalOre(parts);
   stats.roomRentOre += parts.roomRentOre;
   stats.addonsOre += parts.addonsOre;
   stats.cancellationFeesOre += parts.cancellationFeesOre;
@@ -192,9 +146,11 @@ function addCounts(stats: MonthStatistics, booking: StatisticsBooking): void {
 }
 
 // A meeting not yet over is expected value: a confirmed booking with its
-// whole basis, a cancellation with its payable fee.
+// whole basis, a cancellation with its payable fee — the booking's whole
+// lifecycle money, read straight off the policy without the invoicing
+// status in play.
 function addExpected(stats: MonthStatistics, booking: StatisticsBooking): void {
-  stats.expectedOre += partsTotal(basisParts(booking));
+  stats.expectedOre += invoiceBasisTotalOre(invoiceBasisParts(booking));
   if (booking.status === "confirmed") {
     stats.expectedBookings += 1;
   }
@@ -210,8 +166,11 @@ function tally(
     return;
   }
   addCounts(stats, booking);
+  // The policy prices the booking regardless of invoicing status; the
+  // monthly economy drops a refused booking's amounts from every part
+  // column, so its basis stays zero without the parts overstating it.
   if (booking.invoicingStatus !== "not_invoicable") {
-    addAmounts(stats, booking, basisParts(booking));
+    addAmounts(stats, booking, invoiceBasisParts(booking));
   }
 }
 

@@ -11,8 +11,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingCancelledAdminVariables } from "@/emails/templates/admin-booking-cancelled.ts";
 import { bookingCancelledVariables } from "@/emails/templates/booking-cancelled.ts";
 import {
+  type BookingStatus,
   bookingCancellationFeeOre,
   type CancellationBasis,
+  type CancellationPolicy,
+  type CancellationRefusal,
+  cancellationPolicy,
 } from "@/lib/domain/cancellation";
 import { sendMail } from "@/lib/email/send-mail";
 import { env } from "@/lib/env";
@@ -29,6 +33,7 @@ export interface CancellationBooking {
   booking_addon_total_ore: number;
   booking_booker_email: string;
   booking_booker_name: string;
+  booking_cancellation_fee_waived: boolean;
   booking_company_id: string;
   booking_discount_percent: number;
   booking_end_at: string;
@@ -37,18 +42,45 @@ export interface CancellationBooking {
   booking_number: string;
   booking_room_price_ore: number;
   booking_start_at: string;
-  booking_status: Database["public"]["Enums"]["booking_status"];
+  booking_status: BookingStatus;
   companies: { company_display_name: string } | null;
   rooms: { room_name: string } | null;
 }
 
 export const CANCEL_SELECT = `
   booking_addon_total_ore, booking_booker_email, booking_booker_name,
-  booking_company_id, booking_discount_percent, booking_end_at,
-  booking_expected_total_ore, booking_id, booking_number,
-  booking_room_price_ore, booking_start_at, booking_status,
-  companies ( company_display_name ),
+  booking_cancellation_fee_waived, booking_company_id,
+  booking_discount_percent, booking_end_at, booking_expected_total_ore,
+  booking_id, booking_number, booking_room_price_ore, booking_start_at,
+  booking_status, companies ( company_display_name ),
   rooms ( room_name )`;
+
+// The booking's cancellation decision, from the row the confirm flow read:
+// the one policy in lib/domain/cancellation.ts answers both whether the
+// booking can cancel and what fee the screen states. The reminder job and
+// the confirm flow both read it, so it takes only the columns the policy
+// reads.
+export const cancellationPolicyOf = (
+  booking: Pick<
+    CancellationBooking,
+    | "booking_cancellation_fee_waived"
+    | "booking_discount_percent"
+    | "booking_room_price_ore"
+    | "booking_start_at"
+    | "booking_status"
+  >,
+  now: Date
+): CancellationPolicy =>
+  cancellationPolicy(
+    {
+      discountPercent: booking.booking_discount_percent,
+      roomPriceOre: booking.booking_room_price_ore,
+      startAt: new Date(booking.booking_start_at),
+      status: booking.booking_status,
+      waived: booking.booking_cancellation_fee_waived,
+    },
+    now
+  );
 
 export async function loadBookingForCancellation(
   client: CancellationClient,
@@ -182,14 +214,6 @@ export interface CancellationOutcome {
   feeOre: number;
 }
 
-// Why a booking cannot be cancelled right now (#5). Each state maps to one
-// plain sentence; a row the caller cannot see (RLS on the session path)
-// reads as not cancellable, never as someone else's booking.
-export type CancellationRefusal =
-  | "already_cancelled"
-  | "not_cancellable"
-  | "start_passed";
-
 const refusalMessages: Record<CancellationRefusal, string> = {
   already_cancelled: messages.cancellation.alreadyCancelled,
   not_cancellable: messages.booking.errors.notCancellable,
@@ -198,26 +222,6 @@ const refusalMessages: Record<CancellationRefusal, string> = {
 
 export const refusalMessage = (refusal: CancellationRefusal): string =>
   refusalMessages[refusal];
-
-// The guard the screens show before the write: only a confirmed booking
-// whose start has not passed can cancel. The write re-checks the same
-// conditions atomically (cancelConfirmedBooking), so a booking that slips
-// past while the screen is open still fails the write, never the rules.
-export function refuseCancellation(
-  booking: CancellationBooking,
-  now: Date
-): CancellationRefusal | null {
-  if (booking.booking_status === "cancelled") {
-    return "already_cancelled";
-  }
-  if (booking.booking_status !== "confirmed") {
-    return "not_cancellable";
-  }
-  if (new Date(booking.booking_start_at).getTime() <= now.getTime()) {
-    return "start_passed";
-  }
-  return null;
-}
 
 export interface ConfirmCancellationOutcome {
   feeOre: number;
@@ -243,9 +247,14 @@ export async function confirmCancellation(
   if (!booking) {
     return { ok: false, refusal: "not_cancellable" };
   }
-  const refusal = refuseCancellation(booking, now);
-  if (refusal) {
-    return { ok: false, refusal };
+  // The pre-write check reads the one policy: only a confirmed booking
+  // whose start has not passed can cancel. The write re-checks the same
+  // conditions atomically (cancelConfirmedBooking), so a booking that
+  // slips past while the screen is open still fails the write, never the
+  // rules.
+  const policy = cancellationPolicyOf(booking, now);
+  if (!policy.mayCancel) {
+    return { ok: false, refusal: policy.refusal };
   }
   const outcome = await cancelConfirmedBooking(client, bookingId, {
     cancelledBy,

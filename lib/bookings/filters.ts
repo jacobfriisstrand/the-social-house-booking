@@ -1,5 +1,5 @@
 // The PostgREST logical-tree filters behind the count badges
-// (lib/bookings/data.ts), as pure strings so the badge rules are testable
+// (lib/bookings/badge-counts.ts), as pure strings so the badge rules are testable
 // without a database. Timestamp values are double-quoted: the logical-tree
 // parser reads the rest of the token as the value, and the quote keeps the
 // ISO instant unambiguous.

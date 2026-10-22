@@ -19,9 +19,10 @@ import type { Hold } from "@/lib/bookings/actions";
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import type { BookingViewer } from "@/lib/bookings/viewer";
 import type { CurrentTerms } from "@/lib/domain/terms";
+import type { DialogRoom } from "@/lib/rooms/public-data";
 import type { RoomPrefill } from "@/lib/validation/room-search";
 import { messages } from "@/messages/da";
-import { BookingForm, type DialogRoom, FORM_STEP_COUNT } from "./booking-form";
+import { BookingForm, FORM_STEP_COUNT } from "./booking-form";
 import { BookingSteps } from "./booking-steps";
 import { VerificationStep } from "./verification-step";
 

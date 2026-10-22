@@ -1,15 +1,11 @@
 // Shared by the company's hold (#2) and admin's direct booking (#14): the
 // room lookup with the opening-hours fit (#4), the insert row with its
-// price snapshot, the frozen price overview (#6) read back from that
-// snapshot, the step type both flows chain on, and the Postgres error code
-// an unavailable slot raises.
+// price snapshot and the snapshot columns read back after the write, the
+// step type both flows chain on, and the Postgres error code an
+// unavailable slot raises.
 import type { PostgrestError } from "@supabase/supabase-js";
 import { bufferEndAt } from "@/lib/domain/buffer";
 import { bookingWithinOpeningHours } from "@/lib/domain/opening-hours";
-import {
-  type PriceOverviewModel,
-  priceOverview,
-} from "@/lib/domain/price-overview";
 import { buildSnapshot } from "@/lib/domain/snapshot";
 import { hoursBetween } from "@/lib/domain/time";
 import type { Database } from "@/lib/supabase/database.types";
@@ -18,6 +14,7 @@ import type { PendingBookingInput } from "@/lib/validation/booking";
 import type { FormError } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { loadRoomOpening } from "./availability";
+import type { BookingPriceRow } from "./rows";
 
 const { errors } = messages.booking;
 
@@ -233,54 +230,14 @@ export async function confirmPendingBooking(
   return error;
 }
 
-// The columns a price overview is read from: the snapshot only. Later
-// reads of a confirmed booking never recompute from live room or company
-// prices (#6, ADR-0005). The manual amounts (ADR-0010) are the
-// post-meeting additions that ride along when the row carries them —
-// only the member booking sheet's read does.
-export interface BookingPriceRow {
-  booking_addon_total_ore: number;
-  booking_discount_percent: number;
-  booking_end_at: string;
-  booking_expected_total_ore: number;
-  booking_room_price_ore: number;
-  booking_start_at: string;
-  manual_amounts?: Array<{
-    manual_amount_amount_ore: number;
-    manual_amount_id: string;
-    manual_amount_note: string;
-  }> | null;
-}
-
 const SNAPSHOT_COLUMNS =
-  "booking_addon_total_ore, booking_discount_percent, booking_end_at, booking_expected_total_ore, booking_room_price_ore, booking_start_at";
+  "booking_addon_total_ore, booking_discount_percent, booking_expected_total_ore, booking_room_price_ore";
 
-// The frozen overview of a booking, from its snapshot columns. The total
-// is the stored booking_expected_total_ore; the room total and discount
-// are the frozen inputs the snapshot was built from. The manual amounts
-// (ADR-0010), oldest first, are the extra price rows on top of it, and
-// the caller's add-on lines (ADR-0011) feed the hover card — a booking
-// without either reads exactly as before.
-export const bookingPriceOverview = (
-  row: BookingPriceRow,
-  addOnLines?: PriceOverviewModel["addOnLines"]
-): PriceOverviewModel =>
-  priceOverview({
-    addOnLines,
-    addOnsOre: row.booking_addon_total_ore,
-    discountPercent: row.booking_discount_percent,
-    manualAmounts: (row.manual_amounts ?? []).map((amount) => ({
-      amountOre: amount.manual_amount_amount_ore,
-      manualAmountId: amount.manual_amount_id,
-      note: amount.manual_amount_note,
-    })),
-    roomTotalOre: row.booking_room_price_ore,
-    totalOre: row.booking_expected_total_ore,
-  });
-
-// The snapshot columns of one booking, read back after the add-on lines
-// are written so the overview includes them (the sync trigger has updated
-// the totals by then). Null when the row is gone or not readable (RLS).
+// The price columns of one booking, read back after the add-on lines are
+// written so the overview includes them (the sync trigger has updated the
+// totals by then). The time columns stay out of the read: the frozen
+// overview composes from the stored numbers only, never from the booked
+// hours (ADR-0005). Null when the row is gone or not readable (RLS).
 export async function readBookingPriceRow(
   supabase: SessionClient,
   bookingId: string

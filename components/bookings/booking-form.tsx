@@ -53,21 +53,17 @@ import {
 import type { SerializedPeriod } from "@/lib/bookings/availability";
 import { getRoomDayPeriods } from "@/lib/bookings/availability-actions";
 import type { BookingViewer } from "@/lib/bookings/viewer";
-import { type AddOn, addonLines, linesTotalOre } from "@/lib/domain/addons";
+import type { AddOn } from "@/lib/domain/addons";
 import { endOptions, type Period, startSlots } from "@/lib/domain/availability";
-import type {
-  SpecialClosingDay,
-  WeeklyOpeningHour,
-} from "@/lib/domain/opening-hours";
 import {
-  type PriceOverviewModel,
-  priceOverview,
-} from "@/lib/domain/price-overview";
-import { roomTotalOre } from "@/lib/domain/pricing";
-import { buildSnapshot } from "@/lib/domain/snapshot";
+  bookingPriceOverview,
+  selectedBookingAddOns,
+} from "@/lib/domain/booking-price";
+import type { PriceOverviewModel } from "@/lib/domain/price-overview";
 import { ACCEPTED_ON_BOOKING, type CurrentTerms } from "@/lib/domain/terms";
 import { cphToUtc, hoursBetween } from "@/lib/domain/time";
 import { formatDate, formatTime, formatWeekday } from "@/lib/format";
+import type { DialogRoom } from "@/lib/rooms/public-data";
 import {
   adminBookingSchema,
   bookingFormSchema,
@@ -84,17 +80,6 @@ import { SlotPicker } from "./slot-picker";
 
 const copy = messages.booking.dialog;
 const DEFAULT_PARTICIPANTS = 2;
-
-export interface DialogRoom {
-  addons: AddOn[];
-  capacity: number;
-  hourlyPriceOre: number;
-  location: string | null;
-  name: string;
-  roomId: string;
-  specialDays: SpecialClosingDay[];
-  weekly: WeeklyOpeningHour[];
-}
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 type BookingState = AdminBookingState | HoldState;
@@ -252,51 +237,11 @@ function useStepRevalidation(
   return useCallback(() => setAttemptedStep(step), [step]);
 }
 
+// The booked hours from the form's ISO instants: the plain input the
+// price module takes. The dialog's slot can be half-empty while the
+// visitor is still picking — an empty side prices nothing.
 const hoursOf = (startAt: string, endAt: string): number =>
   startAt && endAt ? hoursBetween(new Date(startAt), new Date(endAt)) : 0;
-
-const selectedAddOns = (room: DialogRoom, addOnIds: string[]): AddOn[] =>
-  room.addons.filter((addOn) => addOnIds.includes(addOn.addonId));
-
-// The price overview before there is a hold: the same arithmetic the
-// snapshot uses (lines at full price, discount on the room only), from the
-// prices on the page. Once "Book nu" creates the hold, the verification
-// step shows the frozen overview instead (#6).
-const livePriceOverview = (
-  room: DialogRoom,
-  values: Pick<
-    BookingFormValues,
-    "addOnIds" | "addOnQuantities" | "endAt" | "participantCount" | "startAt"
-  >,
-  discountPercent: number
-): PriceOverviewModel => {
-  const hours = hoursOf(values.startAt, values.endAt);
-  const selected = selectedAddOns(room, values.addOnIds);
-  // #119: the chosen quantities ride into the lines; an add-on without an
-  // explicit choice prices at the full headcount.
-  const optionsByAddonId = new Map(
-    selected.map((addOn) => [
-      addOn.addonId,
-      { quantity: values.addOnQuantities?.[addOn.addonId] },
-    ])
-  );
-  const input = {
-    addOnsOre: linesTotalOre(
-      addonLines(selected, values.participantCount || 0, optionsByAddonId)
-    ),
-    discountPercent,
-    hours,
-    roomHourlyPriceOre: room.hourlyPriceOre,
-  };
-  // The overview's room line is the room's total for the chosen hours —
-  // rounded here, at the only place that still derives it from the hourly
-  // price; every frozen surface reads booking_room_price_ore directly.
-  return priceOverview({
-    ...input,
-    roomTotalOre: roomTotalOre(room.hourlyPriceOre, hours),
-    totalOre: buildSnapshot(input).totalOre,
-  });
-};
 
 // The overview reads the add-ons back, one per line instead of a comma
 // list; a per-participant add-on carries its chosen quantity — the
@@ -307,26 +252,13 @@ const addOnReadBack = (
   participantCount: number,
   quantities: Record<string, number> | undefined
 ): { addonId: string; label: string }[] =>
-  selectedAddOns(room, addOnIds).map((addOn) => ({
+  selectedBookingAddOns(room.addons, addOnIds).map((addOn) => ({
     addonId: addOn.addonId,
     label:
       addOn.pricingModel === "per_participant"
         ? `${addOn.name} (${quantities?.[addOn.addonId] ?? participantCount} stk.)`
         : addOn.name,
   }));
-
-// #126: the admin's explicit total replaces the computed one in the
-// overview — the computed rows stay as the basis it was set from. A
-// non-finite value (the number input reports NaN while cleared) falls
-// back to the computed total instead of rendering "NaN".
-const overviewPrice = (
-  admin: boolean,
-  live: PriceOverviewModel,
-  totalPriceOre: number | undefined
-): PriceOverviewModel =>
-  admin && typeof totalPriceOre === "number" && Number.isFinite(totalPriceOre)
-    ? { ...live, totalOre: totalPriceOre }
-    : live;
 
 const companyName = (
   viewer: BookingViewer,
@@ -962,18 +894,27 @@ export function BookingForm({
       "totalPriceOre",
     ],
   });
-  const live = livePriceOverview(
-    room,
-    {
-      addOnIds,
-      addOnQuantities,
-      endAt: slot.endAt,
+  // The pre-confirmation price is the shared composition's (lib/domain/
+  // booking-price): the form only maps its fields onto the plain input —
+  // hours from the chosen slot, the add-on selection, the discount for
+  // the viewer, and the viewer itself; an admin may set an explicit total
+  // (#126, which the module guards: a non-finite value falls back to the
+  // computed total).
+  const price = bookingPriceOverview({
+    addOnSelection: {
       participantCount,
-      startAt: slot.startAt,
+      quantities: addOnQuantities,
+      selectedIds: addOnIds,
     },
-    discountFor(viewer, companyId)
-  );
-  const price = overviewPrice(viewer.kind === "admin", live, totalPriceOre);
+    discountPercent: discountFor(viewer, companyId),
+    hours: hoursOf(slot.startAt, slot.endAt),
+    roomAddOns: room.addons,
+    roomHourlyPriceOre: room.hourlyPriceOre,
+    viewer:
+      viewer.kind === "admin"
+        ? { kind: "admin", overrideOre: totalPriceOre }
+        : { kind: "company" },
+  });
   const back = useCallback(() => onStepChange(step - 1), [onStepChange, step]);
   const next = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {

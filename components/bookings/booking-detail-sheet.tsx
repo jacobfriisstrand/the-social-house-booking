@@ -29,7 +29,7 @@ import {
   adminRowParts,
   canAdminCancel,
 } from "@/lib/domain/admin-bookings";
-import { priceOverview } from "@/lib/domain/price-overview";
+import { frozenBookingPriceOverview } from "@/lib/domain/booking-price";
 import {
   formatDate,
   formatDateString,
@@ -188,18 +188,7 @@ export function BookingDetailSheet({
           {row.bookingStatus === "cancelled" ? (
             <CancelledPrice row={row} />
           ) : (
-            <PriceOverview
-              model={priceOverview({
-                addOnLines: row.addOns,
-                addOnsOre: row.addonTotalOre,
-                discountPercent: row.discountPercent,
-                manualAmounts: row.manualAmounts,
-                roomTotalOre: row.roomPriceOre,
-                // #126: the stored total — an admin's explicit price shows
-                // here exactly as set, not recomputed from the parts.
-                totalOre: row.expectedTotalOre,
-              })}
-            />
+            <PriceOverview model={frozenBookingPriceOverview(row)} />
           )}
           <CancelButton onCancel={onCancel} row={row} />
         </div>
