@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { useAdminBookingOverlay } from "@/components/bookings/admin-booking-overlay";
 import { AdminCancelDialog } from "@/components/bookings/admin-cancel-dialog";
 import { BookingDetailSheet } from "@/components/bookings/booking-detail-sheet";
 import { BookingEditSheet } from "@/components/bookings/booking-edit-sheet";
@@ -97,13 +98,6 @@ import { messages } from "@/messages/da";
 
 const copy = messages.bookings.admin;
 const bookingsCopy = messages.bookings;
-
-/** One row-scoped overlay: which booking and which sheet — the detail
- * view or the edit sheet; the invoice dialog has its own ids state. */
-interface Overlay {
-  bookingId: string;
-  kind: "detail" | "edit";
-}
 
 const NONE = "-";
 
@@ -238,20 +232,6 @@ function CancelMenuItem({
       </MenuItem>
     </>
   );
-}
-
-// The cancel confirm for the picked booking; nothing while none is picked.
-function PickedCancelDialog({
-  bookingId,
-  onClose,
-  rows,
-}: {
-  bookingId: string | null;
-  onClose: () => void;
-  rows: AdminBookingRow[];
-}) {
-  const row = bookingRowById(rows, bookingId);
-  return row ? <AdminCancelDialog onClose={onClose} row={row} /> : null;
 }
 
 // One row's ⋯ menu (#9): the details view, the three invoice actions,
@@ -613,56 +593,6 @@ function HeaderRow({
   );
 }
 
-// The row-scoped overlays (detail sheet, edit sheet) share one state: the
-// overlay content stays set after close — the exit animation plays over
-// it — and a new open replaces it. `overlayOpen` drives the mount.
-function useBookingOverlay(rows: AdminBookingRow[]) {
-  const [overlay, setOverlay] = useState<Overlay | null>(null);
-  const [overlayOpen, setOverlayOpen] = useState(false);
-  const detailRow = useMemo(
-    () =>
-      bookingRowById(
-        rows,
-        overlay?.kind === "detail" ? overlay.bookingId : null
-      ),
-    [rows, overlay]
-  );
-  const editRow = useMemo(
-    () =>
-      bookingRowById(rows, overlay?.kind === "edit" ? overlay.bookingId : null),
-    [rows, overlay]
-  );
-  const openOverlay = useCallback(
-    (bookingId: string, kind: Overlay["kind"]): void => {
-      setOverlay({ bookingId, kind });
-      setOverlayOpen(true);
-    },
-    []
-  );
-  const openDetail = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "detail"),
-    [openOverlay]
-  );
-  const openEdit = useCallback(
-    (bookingId: string): void => openOverlay(bookingId, "edit"),
-    [openOverlay]
-  );
-  const closeOverlay = useCallback((open: boolean): void => {
-    if (!open) {
-      setOverlayOpen(false);
-    }
-  }, []);
-  return {
-    closeOverlay,
-    detailRow,
-    editRow,
-    openDetail,
-    openEdit,
-    overlay,
-    overlayOpen,
-  };
-}
-
 // The bulk and row-scoped invoicing moves: the invoice dialog's ids (one
 // instance for the bulk mark and the ⋯ menu's single-row mark), one status
 // move for the row menu and the bulk header, and the booking picked for
@@ -728,13 +658,6 @@ function useInvoicingActions(
     },
     [router, selection.clearSelection]
   );
-  // The booking picked for the cancel confirm, if any.
-  const [cancelId, setCancelId] = useState<string | null>(null);
-  const openCancel = useCallback(
-    (bookingId: string): void => setCancelId(bookingId),
-    []
-  );
-  const closeCancel = useCallback((): void => setCancelId(null), []);
   const closeDialog = useCallback((open: boolean): void => {
     if (!open) {
       setDialogIds(null);
@@ -757,8 +680,6 @@ function useInvoicingActions(
     [move, selection.selected]
   );
   return {
-    cancelId,
-    closeCancel,
     closeDialog,
     dialogBookings,
     dialogIds,
@@ -767,7 +688,6 @@ function useInvoicingActions(
     moveSelectedNotInvoiced,
     moving,
     openBulkDialog,
-    openCancel,
     openRowInvoice,
   };
 }
@@ -814,19 +734,23 @@ export function AdminBookingsTable({
 
   // The row-scoped overlays read the rows through their hook; `overlayOpen`
   // drives the mount.
+  // The row-scoped overlays read the rows through the shared hook
+  // (#153): which sheet is open for which Booking, and the rows behind
+  // them — the detail sheet, the edit sheet, the cancel confirm.
   const {
+    cancelRow,
+    closeCancel,
     closeOverlay,
+    detailOpen,
     detailRow,
+    editOpen,
     editRow,
+    openCancel,
     openDetail,
     openEdit,
-    overlay,
-    overlayOpen,
-  } = useBookingOverlay(rows);
+  } = useAdminBookingOverlay(rows);
 
   const {
-    cancelId,
-    closeCancel,
     closeDialog,
     dialogBookings,
     dialogIds,
@@ -835,7 +759,6 @@ export function AdminBookingsTable({
     moveSelectedNotInvoicable,
     moveSelectedNotInvoiced,
     openBulkDialog,
-    openCancel,
     openRowInvoice,
   } = useInvoicingActions(rows, router, selection);
 
@@ -1039,24 +962,22 @@ export function AdminBookingsTable({
       <BookingDetailSheet
         onCancel={openCancel}
         onOpenChange={closeOverlay}
-        open={overlayOpen && overlay?.kind === "detail"}
+        open={detailOpen}
         row={detailRow}
       />
-      <PickedCancelDialog
-        bookingId={cancelId}
-        onClose={closeCancel}
-        rows={rows}
-      />
+      {cancelRow ? (
+        <AdminCancelDialog onClose={closeCancel} row={cancelRow} />
+      ) : null}
       <BookingEditSheet
-        bookingId={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        bookingId={editRow?.bookingId ?? ""}
         bookingNumber={editRow?.bookingNumber ?? ""}
         // Fresh form per booking: the manual-amount form bakes the booking
         // id in at init, so a reused instance would post to the previous
         // booking's id.
-        key={overlay?.kind === "edit" ? overlay.bookingId : ""}
+        key={editRow?.bookingId ?? ""}
         manualAmounts={editRow?.manualAmounts ?? EMPTY_MANUAL_AMOUNTS}
         onOpenChange={closeOverlay}
-        open={overlayOpen && overlay?.kind === "edit"}
+        open={editOpen}
       />
     </div>
   );
