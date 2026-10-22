@@ -155,6 +155,23 @@
         "files": ["netlify/functions/common/job-call.mts"],
         "maxCrap": 48,
         "reason": "callScheduledJob is pinned by netlify/functions/common/job-call.test.mts (five cases, the host-named 404 included); the estimator does not credit .mts test imports."
+      },
+      {
+        "files": ["components/bookings/filter-row.tsx"],
+        "maxCyclomatic": 20,
+        "maxCognitive": 24,
+        "maxCrap": 250,
+        "reason": "The filter row's controls write the URL in one transition; the picker's draft/applied split mirrors the admin table's selection state. The split is queued with the table's."
+      },
+      {
+        "files": ["components/bookings/admin-calendar-grid.tsx"],
+        "maxCrap": 32,
+        "reason": "AdminCalendarGrid: the calendar's cell blocks and the popover's entry list ride the shared overlay state machine; the split is queued with the table's."
+      },
+      {
+        "files": ["components/bookings/booking-form.tsx"],
+        "maxCognitive": 20,
+        "reason": "BookingForm: the booking flow's steps share one form state; the split is queued with the table's."
       }
     ]
   },

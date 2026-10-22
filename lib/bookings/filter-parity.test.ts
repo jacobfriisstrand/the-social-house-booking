@@ -488,6 +488,37 @@ const describeCombo = (filter: BookingOverviewFilter): string =>
     }`,
   ].join(" ");
 
+// One filter-row combination's disagreements: the bookings the two sides
+// select differently, apart from the pinned member-only hold.
+const parityFailures = (
+  filter: BookingOverviewFilter,
+  memberKept: Set<string>,
+  adminKept: Set<string>
+): string[] => {
+  const label = describeCombo(filter);
+  const failures: string[] = [];
+  for (const syntheticRow of rows) {
+    const memberHas = memberKept.has(syntheticRow.booking_id);
+    const adminHas = adminKept.has(syntheticRow.booking_id);
+    if (
+      memberHas === adminHas ||
+      // The intended difference pinned in its own test: the standing hold
+      // lists only on the member side — never the other way around.
+      (syntheticRow.booking_id === "pending-live-hold" &&
+        memberHas &&
+        !adminHas)
+    ) {
+      continue;
+    }
+    failures.push(
+      `${label}: ${syntheticRow.booking_id} — member ${
+        memberHas ? "keeps" : "drops"
+      }, admin ${adminHas ? "keeps" : "drops"}`
+    );
+  }
+  return failures;
+};
+
 const STATE_SELECTIONS: readonly BookingStateBucket[][] = [
   [],
   ["upcoming"],
@@ -545,27 +576,7 @@ describe("member/admin filter parity (#152)", () => {
                 roomIds: [...roomIds],
               })
             );
-            const label = describeCombo(filter);
-            for (const syntheticRow of rows) {
-              const memberHas = memberKept.has(syntheticRow.booking_id);
-              const adminHas = adminKept.has(syntheticRow.booking_id);
-              if (
-                memberHas === adminHas ||
-                // The intended difference pinned in its own test: the
-                // standing hold lists only on the member side — never the
-                // other way around.
-                (syntheticRow.booking_id === "pending-live-hold" &&
-                  memberHas &&
-                  !adminHas)
-              ) {
-                continue;
-              }
-              failures.push(
-                `${label}: ${syntheticRow.booking_id} — member ${
-                  memberHas ? "keeps" : "drops"
-                }, admin ${adminHas ? "keeps" : "drops"}`
-              );
-            }
+            failures.push(...parityFailures(filter, memberKept, adminKept));
           }
         }
       }
