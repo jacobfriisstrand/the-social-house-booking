@@ -93,7 +93,13 @@ const notifyAdminOnFirstCompletion = async (
   await notifyAdminCompanyCompleted(company.data);
 };
 
-export type CompanyChangeState = FormState<MemberCompanyValues>;
+// saved: a first fill committed at once — the invitation's sign-up link
+// already verified the email. awaiting_new_email: a first fill that changed
+// the email and now waits for the new address to verify.
+export type CompanyChangeState =
+  | FormState<MemberCompanyValues>
+  | { status: "saved" }
+  | { email: string; status: "awaiting_new_email" };
 
 const actionUrl = (requestId: string, rawToken: string): string =>
   `${env.NEXT_PUBLIC_SITE_URL}/company-change/${requestId}?token=${encodeURIComponent(rawToken)}`;
@@ -166,6 +172,23 @@ export async function requestCompanyChange(
       error: messages.companySettings.errors.requestFailed,
       status: "error",
     };
+  }
+
+  // First fill: the invitation's sign-up link already verified the current
+  // email, so the review mail would only add friction. The action performs
+  // the approval the mail's link would have; a changed email still gets the
+  // new-address verification inside approveCompanyChange.
+  if (company.company_master_data_completed_at === null) {
+    const approved = await approveCompanyChange(inserted.data, token.raw);
+    if (!approved.success) {
+      return {
+        error: messages.masterData.errors.saveFailed,
+        status: "error",
+      };
+    }
+    return approved.email
+      ? { email: approved.email, status: "awaiting_new_email" }
+      : { status: "saved" };
   }
 
   try {

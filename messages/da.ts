@@ -672,6 +672,8 @@ export const messages = {
       "I kan ændre virksomhedens oplysninger. Ændringerne skal godkendes fra den nuværende primære email.",
     emailHint:
       "Ændring af primær email kræver godkendelse fra både den nuværende og den nye email.",
+    emailVerificationPending: (email: string) =>
+      `Ændringerne afventer bekræftelse på ${email} og er ikke aktive endnu.`,
     errors: {
       requestFailed:
         "Ændringerne kunne ikke sendes til godkendelse. Prøv igen.",

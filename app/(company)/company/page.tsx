@@ -17,7 +17,10 @@ export default async function CompanyMasterDataPage() {
     <main className="flex flex-col items-center gap-6 p-8">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <h1 className="font-semibold text-xl">{messages.masterData.title}</h1>
-        <MasterDataForm defaultValues={companyToMemberValues(company)} />
+        <MasterDataForm
+          defaultValues={companyToMemberValues(company)}
+          masterDataComplete={company.company_master_data_completed_at !== null}
+        />
       </div>
     </main>
   );
