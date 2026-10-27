@@ -11,6 +11,7 @@ import {
   adminValuesToUpdate,
   hasAllMasterData,
 } from "@/lib/domain/company-master-data";
+import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -123,8 +124,11 @@ export async function createCompany(
   return { inviteFailed, status: "created" };
 }
 
-// Same call as the first invite; Auth issues a fresh single-use link. Fails
-// once the company has set its password (then it is a password reset, #11).
+// Same call as the first invite; Auth issues a fresh single-use link. A used
+// link has confirmed the email, and Auth refuses a second invite for a
+// confirmed user ("email_exists") even though the password may not be set
+// yet. The password-reset mail drives the same /set-password flow, so that
+// is the resend then.
 export async function resendInvitation(
   companyId: string,
   _prevState: ResendInvitationState
@@ -146,10 +150,19 @@ export async function resendInvitation(
   const invited = await createAdminClient().auth.admin.inviteUserByEmail(
     company.company_email
   );
-  if (invited.error) {
+  if (!invited.error) {
+    return { status: "success" };
+  }
+  if (invited.error.code !== AUTH_EMAIL_EXISTS) {
     return { error: errors.resendFailed, status: "error" };
   }
-  return { status: "success" };
+  const reset = await supabase.auth.resetPasswordForEmail(
+    company.company_email,
+    { redirectTo: `${env.NEXT_PUBLIC_SITE_URL}/set-password` }
+  );
+  return reset.error
+    ? { error: errors.resendFailed, status: "error" }
+    : { status: "success" };
 }
 
 interface CurrentCompany {

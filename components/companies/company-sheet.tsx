@@ -59,9 +59,11 @@ export function CompanySheet({
           <SheetTitle>{company.company_display_name}</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-8">
-          {/* Re-inviting is only meaningful before the company has used the
-              invite: once its master data is filled in, Auth refuses a new
-              invite and the flow is "Glemt adgangskode". */}
+          {/* Before the master data is complete the company may still be
+              locked out: resendInvitation sends a fresh invite for an unused
+              link and a password-reset mail once the link is used. A
+              completed company is active and manages its own login from
+              /settings. */}
           {company.company_master_data_completed_at ? null : (
             <ResendInvitationButton companyId={company.company_id} />
           )}
