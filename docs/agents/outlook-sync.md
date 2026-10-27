@@ -50,8 +50,10 @@ no webhook exists in that direction.
 2. Every five minutes (production only), `netlify/functions/sync-calendar.mts`
    POSTs `/api/jobs/sync-calendar` with `JOB_SECRET`.
 3. The route (`app/api/jobs/sync-calendar/route.ts`) answers 503 until
-   `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET` and
-   `OUTLOOK_MAILBOX` are set for the context. Production carries
+   `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`, `OUTLOOK_MAILBOX` and one
+   complete credential — the certificate pair
+   (`OUTLOOK_CLIENT_CERT` + `OUTLOOK_CLIENT_CERT_KEY`, preferred) or
+   `OUTLOOK_CLIENT_SECRET` — are set for the context. Production carries
    `booking@thesocialhouse.dk`; the develop branch deploy (the
    `branch-deploy` context) carries the sandbox pair
    (an app registration in the sandbox tenant, the developer's own
@@ -75,13 +77,19 @@ no webhook exists in that direction.
 
 Auth: OAuth2 client-credentials against the Entra tenant, scope
 `https://graph.microsoft.com/.default`, application permission
-`Calendars.ReadWrite` on the shared mailbox. `lib/outlook/graph.ts` is the
+`Calendars.ReadWrite` on the shared mailbox. One credential per context
+(`lib/outlook/graph.ts`, discriminated union): a locally generated
+**certificate keypair** is the preferred credential (#100) — only the public
+certificate crosses to the tenant admin, and the request authenticates with
+a short-lived RS256 client assertion (RFC 7523, `x5t` thumbprint) instead of
+a shared secret — while the **client secret** stays supported and is what
+the sandbox pair carries. `lib/outlook/graph.ts` is the
 only Microsoft Graph caller (plain fetch, no SDK) and is Vitest-tested
 against stubbed fetch.
 
 ## Operations
 
-- `.env.example` documents the four `OUTLOOK_*` variables; they are set on
+- `.env.example` documents the `OUTLOOK_*` variables; they are set on
   Netlify contexts only, never locally (setup-netlify-env.sh picks up the
   production set). The mailbox is `OUTLOOK_MAILBOX`, not a constant:
   production `booking@thesocialhouse.dk` — Bilag 1 fixes the production
@@ -89,13 +97,16 @@ against stubbed fetch.
   sandbox mailbox.
 - Going live needs a Microsoft Entra app registration (client credentials)
   with `Calendars.ReadWrite` on the shared mailbox, granted admin consent.
-  `scripts/setup-azure-outlook.sh` walks the portal, proves the registration
-  with a direct token request plus a throwaway Graph event — the job routes
-  sit behind Netlify visitor protection until deploy.md go-live item 1, so a
-  hand-POST to `/api/jobs/*` 401s regardless — and writes the four
-  `OUTLOOK_*` variables to a Netlify context: the sandbox set on the develop
+  `scripts/setup-azure-outlook.sh` walks the portal, generates the preferred
+  certificate keypair locally (a client secret is the fallback), proves the
+  registration with a direct token request plus a throwaway Graph event
+  (`scripts/outlook-cert-verify.mjs` for the certificate path) — the job
+  routes sit behind Netlify visitor protection until deploy.md go-live item
+  1, so a hand-POST to `/api/jobs/*` 401s regardless — and writes the
+  `OUTLOOK_*` variables (mailbox, tenant, client id and one complete
+  credential) to a Netlify context: the sandbox set on the develop
   branch deploy, the production set at go-live.
-  Until the four variables are set on a context, the job is off there and no
+  Until the variables are set on a context, the job is off there and no
   data reaches Microsoft.
 - To force a run outside the schedule: `POST /api/jobs/sync-calendar` with
   `Authorization: Bearer $JOB_SECRET` — on production, on the develop branch

@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-// Pins the four-variable gate: the job stays off (503) until JOB_SECRET and
-// all four OUTLOOK_* variables exist for the context, and the captured
-// mailbox reaches createGraphClient. graph.test.ts and sync.test.ts pin the
+// Pins the credential gate: the job stays off (503) until JOB_SECRET, the
+// mailbox variables and one complete credential (certificate pair or client
+// secret) exist for the context, and the captured mailbox reaches
+// createGraphClient. graph.test.ts and sync.test.ts pin the
 // client and worker behind this route; nothing else covers the gate.
 const envState = vi.hoisted(() => ({}) as Record<string, string | undefined>);
 const state = vi.hoisted(() => ({
@@ -47,10 +48,20 @@ const fullEnv = () =>
   Object.assign(envState, {
     APP_ENV: undefined,
     JOB_SECRET: "job-secret",
+    OUTLOOK_CLIENT_CERT: undefined,
+    OUTLOOK_CLIENT_CERT_KEY: undefined,
     OUTLOOK_CLIENT_ID: "c",
     OUTLOOK_CLIENT_SECRET: "s",
     OUTLOOK_MAILBOX: "sandbox@example.com",
     OUTLOOK_TENANT_ID: "t",
+  });
+
+const fullCertEnv = () =>
+  Object.assign(envState, {
+    ...fullEnv(),
+    OUTLOOK_CLIENT_CERT: "cert-base64",
+    OUTLOOK_CLIENT_CERT_KEY: "key-base64",
+    OUTLOOK_CLIENT_SECRET: undefined,
   });
 
 describe("sync-calendar route gate", () => {
@@ -71,12 +82,44 @@ describe("sync-calendar route gate", () => {
     fullEnv();
     const res = await POST(req("Bearer job-secret"));
     expect(res.status).toBe(200);
-    expect(state.capturedConfig).toMatchObject({
+    expect(state.capturedConfig).toEqual({
       clientId: "c",
-      clientSecret: "s",
+      credential: { clientSecret: "s", kind: "secret" },
       mailbox: "sandbox@example.com",
       tenantId: "t",
     });
+  });
+
+  it("prefers the certificate pair when it is complete", async () => {
+    fullCertEnv();
+    const res = await POST(req("Bearer job-secret"));
+    expect(res.status).toBe(200);
+    expect(state.capturedConfig).toEqual({
+      clientId: "c",
+      credential: {
+        certificate: "cert-base64",
+        kind: "certificate",
+        privateKey: "key-base64",
+      },
+      mailbox: "sandbox@example.com",
+      tenantId: "t",
+    });
+  });
+
+  it("prefers the certificate even when a stale secret is still set", async () => {
+    fullCertEnv();
+    envState.OUTLOOK_CLIENT_SECRET = "stale";
+    await POST(req("Bearer job-secret"));
+    expect(state.capturedConfig).toMatchObject({
+      credential: { certificate: "cert-base64", kind: "certificate" },
+    });
+  });
+
+  it("answers 503 when no credential is complete", async () => {
+    fullCertEnv();
+    envState.OUTLOOK_CLIENT_CERT_KEY = undefined; // half-set pair
+    const res = await POST(req("Bearer job-secret"));
+    expect(res.status).toBe(503);
   });
 
   it("refuses a non-Bilag-1 mailbox on production, loudly", async () => {

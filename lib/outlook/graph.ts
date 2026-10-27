@@ -9,6 +9,7 @@
 // Netlify context — production writes `booking@thesocialhouse.dk` (Bilag 1
 // fixes the production value), the develop context carries the sandbox pair
 // for test runs. Locally it is unset, so the route answers 503.
+import { createHash, createSign, randomUUID } from "node:crypto";
 import type { GraphEventPayload } from "@/lib/domain/outlook-event";
 
 // The production mailbox is fixed by Bilag 1 (ADR-0003). The sync job refuses
@@ -16,12 +17,72 @@ import type { GraphEventPayload } from "@/lib/domain/outlook-event";
 // a typo in a context variable must never redirect booker data.
 export const OUTLOOK_PROD_MAILBOX = "booking@thesocialhouse.dk";
 
+// One credential per config, Entra client-credentials style. The certificate
+// is the preferred credential (#100): the keypair is generated locally and
+// only the public certificate crosses to the tenant admin — no secret is
+// ever exchanged by mail. The client secret stays supported so the sandbox
+// pair and existing contexts keep working unchanged.
+// Certificate values arrive base64-encoded (a PEM is multiline; Netlify env
+// vars are set by the wizard as single lines).
+export type GraphCredential =
+  | { certificate: string; kind: "certificate"; privateKey: string }
+  | { clientSecret: string; kind: "secret" };
+
 export interface GraphClientConfig {
   clientId: string;
-  clientSecret: string;
+  credential: GraphCredential;
   mailbox: string;
   tenantId: string;
 }
+
+// The x5t claim: SHA-1 over the certificate's DER bytes, base64url-encoded —
+// Entra matches it against the certificate uploaded under Certificates &
+// secrets. A value without the PEM armor means the base64 wrapped something
+// other than a certificate; fail here, at client creation, not on Graph.
+export const certificateThumbprint = (pem: string): string => {
+  if (!pem.includes("-----BEGIN CERTIFICATE-----")) {
+    throw new Error(
+      "OUTLOOK_CLIENT_CERT does not carry a certificate PEM (missing BEGIN CERTIFICATE armor)"
+    );
+  }
+  const body = pem
+    .replace(/-----(BEGIN|END) CERTIFICATE-----/g, "")
+    .replace(/\s+/g, "");
+  const der = Buffer.from(body, "base64");
+  if (der.length === 0) {
+    throw new Error("OUTLOOK_CLIENT_CERT does not decode to a certificate PEM");
+  }
+  return createHash("sha1").update(der).digest("base64url");
+};
+
+// The client assertion for certificate credentials: a short-lived RS256 JWT
+// signed with the private key (RFC 7523). Entra caps the lifetime at ten
+// minutes, so every mint is fresh — built per token request, never stored.
+export const clientAssertion = (input: {
+  clientId: string;
+  now: number;
+  privateKey: string;
+  tenantId: string;
+  thumbprint: string;
+}): string => {
+  const seconds = Math.floor(input.now / 1000);
+  const header = { alg: "RS256", typ: "JWT", x5t: input.thumbprint };
+  const claims = {
+    aud: `https://login.microsoftonline.com/${input.tenantId}/oauth2/v2.0/token`,
+    exp: seconds + 600,
+    iss: input.clientId,
+    jti: randomUUID(),
+    nbf: seconds - 60,
+    sub: input.clientId,
+  };
+  const encode = (value: object): string =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const signingInput = `${encode(header)}.${encode(claims)}`;
+  const signature = createSign("RSA-SHA256")
+    .update(signingInput)
+    .sign(input.privateKey);
+  return `${signingInput}.${signature.toString("base64url")}`;
+};
 
 export interface GraphClient {
   createEvent: (payload: GraphEventPayload) => Promise<string>;
@@ -65,6 +126,44 @@ const graphCode = async (response: Response): Promise<string> => {
 export function createGraphClient(config: GraphClientConfig): GraphClient {
   const eventsUrl = `${GRAPH_ORIGIN}/users/${config.mailbox}/events`;
   let token: { value: string; expiresAt: number } | null = null;
+  // The thumbprint is fixed by the certificate, not the clock: derive it once
+  // so a misconfigured value breaks at job start, not on the first token.
+  const thumbprint =
+    config.credential.kind === "certificate"
+      ? certificateThumbprint(
+          Buffer.from(config.credential.certificate, "base64").toString()
+        )
+      : null;
+
+  const tokenBody = (): URLSearchParams => {
+    const body = new URLSearchParams({
+      client_id: config.clientId,
+      grant_type: "client_credentials",
+      scope: TOKEN_SCOPE,
+    });
+    if (config.credential.kind === "secret") {
+      body.set("client_secret", config.credential.clientSecret);
+    } else {
+      body.set(
+        "client_assertion",
+        clientAssertion({
+          clientId: config.clientId,
+          now: Date.now(),
+          privateKey: Buffer.from(
+            config.credential.privateKey,
+            "base64"
+          ).toString(),
+          tenantId: config.tenantId,
+          thumbprint: thumbprint ?? "",
+        })
+      );
+      body.set(
+        "client_assertion_type",
+        "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+      );
+    }
+    return body;
+  };
 
   const bearer = async (): Promise<string> => {
     if (token && Date.now() < token.expiresAt) {
@@ -73,12 +172,7 @@ export function createGraphClient(config: GraphClientConfig): GraphClient {
     const response = await fetch(
       `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`,
       {
-        body: new URLSearchParams({
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          grant_type: "client_credentials",
-          scope: TOKEN_SCOPE,
-        }),
+        body: tokenBody(),
         method: "POST",
       }
     );

@@ -46,6 +46,12 @@ export const envSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: emptyToUndefined(z.string().min(1)),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  // Certificate credential pair for the Outlook sync (#100): base64-encoded
+  // PEMs (a PEM is multiline; Netlify env vars are single lines). The pair is
+  // optional — the client secret stays a supported alternative — and complete
+  // only when both halves are set.
+  OUTLOOK_CLIENT_CERT: emptyToUndefined(z.string().min(1)),
+  OUTLOOK_CLIENT_CERT_KEY: emptyToUndefined(z.string().min(1)),
   OUTLOOK_CLIENT_ID: emptyToUndefined(z.string().min(1)),
   OUTLOOK_CLIENT_SECRET: emptyToUndefined(z.string().min(1)),
   OUTLOOK_MAILBOX: emptyToUndefined(z.email()),
