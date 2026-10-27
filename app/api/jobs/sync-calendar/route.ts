@@ -7,7 +7,7 @@
 // docs/agents/supabase.md).
 import { env } from "@/lib/env";
 import { runScheduledJob } from "@/lib/jobs/run";
-import type { GraphClientConfig } from "@/lib/outlook/graph";
+import type { GraphClientConfig, GraphCredential } from "@/lib/outlook/graph";
 import { createGraphClient, OUTLOOK_PROD_MAILBOX } from "@/lib/outlook/graph";
 import { syncCalendarEvents } from "@/lib/outlook/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -17,19 +17,38 @@ const runJob = (config: GraphClientConfig) => {
   return syncCalendarEvents(admin, createGraphClient(config));
 };
 
+// The credential for the context: the certificate pair wins when complete
+// (the preferred credential, #100 — nothing secret ever crosses to the
+// tenant admin by mail); the client secret stays as the fallback, which is
+// what the sandbox context carries. A context holding both keeps working on
+// the certificate; a context with a half-set pair counts as unconfigured.
+const credentialFromEnv = (): GraphCredential | null => {
+  if (env.OUTLOOK_CLIENT_CERT && env.OUTLOOK_CLIENT_CERT_KEY) {
+    return {
+      certificate: env.OUTLOOK_CLIENT_CERT,
+      kind: "certificate",
+      privateKey: env.OUTLOOK_CLIENT_CERT_KEY,
+    };
+  }
+  if (env.OUTLOOK_CLIENT_SECRET) {
+    return { clientSecret: env.OUTLOOK_CLIENT_SECRET, kind: "secret" };
+  }
+  return null;
+};
+
 export async function POST(request: Request): Promise<Response> {
   // Empty means "not configured" (lib/env-schema.ts): the job stays off —
-  // locally and on deploy previews — until the four Graph variables are set
-  // for the context. Production carries the booking mailbox; the develop
-  // context carries the sandbox pair for test runs.
-  const config =
+  // locally and on deploy previews — until the Graph variables are set for
+  // the context: mailbox, tenant and client id, plus one complete credential.
+  const credential = credentialFromEnv();
+  const config: GraphClientConfig | null =
     env.OUTLOOK_TENANT_ID &&
     env.OUTLOOK_CLIENT_ID &&
-    env.OUTLOOK_CLIENT_SECRET &&
-    env.OUTLOOK_MAILBOX
+    env.OUTLOOK_MAILBOX &&
+    credential
       ? {
           clientId: env.OUTLOOK_CLIENT_ID,
-          clientSecret: env.OUTLOOK_CLIENT_SECRET,
+          credential,
           mailbox: env.OUTLOOK_MAILBOX,
           tenantId: env.OUTLOOK_TENANT_ID,
         }

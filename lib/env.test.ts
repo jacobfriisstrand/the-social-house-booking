@@ -25,8 +25,8 @@ describe("envSchema", () => {
     expect("PATH" in parsed).toBe(false);
   });
 
-  it("covers every variable in .env.example — exactly 19 today", () => {
-    expect(Object.keys(envSchema.shape).length).toBe(19);
+  it("covers every variable in .env.example — exactly 21 today", () => {
+    expect(Object.keys(envSchema.shape).length).toBe(21);
   });
 
   it("accepts exactly the three documented APP_ENV values", () => {
