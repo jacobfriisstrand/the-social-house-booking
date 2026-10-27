@@ -184,12 +184,15 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 
 # Microsoft Entra setup for the Outlook one-way calendar mirror (issue #13,
-# docs/agents/outlook-sync.md). Registers the app, mints the client secret,
-# grants Calendars.ReadWrite with admin consent, verifies the registration
-# with a direct token request plus a throwaway Graph event — the job routes
-# sit behind Netlify visitor protection until deploy.md go-live item 1, so a
-# hand-POST to /api/jobs proves nothing — then writes the four OUTLOOK_*
-# variables to the chosen Netlify context (the sandbox pair on the develop
+# docs/agents/outlook-sync.md). Registers the app, mints a credential — a
+# locally generated certificate keypair is preferred (#100): only the public
+# certificate is shared, no secret ever crosses by mail; a client secret is
+# the fallback — grants Calendars.ReadWrite with admin consent, verifies the
+# registration with a direct token request plus a throwaway Graph event — the
+# job routes sit behind Netlify visitor protection until deploy.md go-live
+# item 1, so a hand-POST to /api/jobs proves nothing — then writes the
+# OUTLOOK_* variables (mailbox, tenant, client id and one complete
+# credential) to the chosen Netlify context (the sandbox pair on the develop
 # branch deploy, the production pair at go-live) and offers the application
 # access policy last.
 #
@@ -326,17 +329,57 @@ save_state OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID"
 pause "Registration done."
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
-stage "Client secret"
-say "Same app page, left menu: Certificates & secrets."
-step "Client secrets tab → New client secret."
-step "Description: booking sync. Expires: pick the longest your tenant allows"
-step "(up to 24 months) and note the date — the sync stops when it lapses."
-step "Copy the Value column NOW; it is shown once. (The Secret ID column is"
-step "not the secret.)"
-ask_secret OUTLOOK_CLIENT_SECRET "Client secret Value (hidden):"
-[[ -z "$OUTLOOK_CLIENT_SECRET" ]] && warn "empty: the sync stays off until a secret is set on Netlify."
-save_state OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET"
-pause "Secret captured."
+stage "Credential: certificate (preferred) or client secret"
+say "Entra needs one credential for the client-credentials flow. The"
+say "certificate is the safer pair: the keypair is generated on this machine,"
+say "only the public certificate reaches the tenant admin, and nothing secret"
+say "is ever exchanged by mail (#100)."
+# State file values only pre-fill via ask; the cert pair is set here, so
+# load it back for the keep-or-regenerate offer on re-runs.
+OUTLOOK_CLIENT_CERT=$(_existing OUTLOOK_CLIENT_CERT || true)
+OUTLOOK_CLIENT_CERT_KEY=$(_existing OUTLOOK_CLIENT_CERT_KEY || true)
+if confirm "Generate a certificate keypair now? (recommended; N falls back to a client secret)"; then
+  if ! command -v openssl >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then
+    SKIPPED+=("Certificate credential (openssl and node are both required)")
+    warn "openssl or node missing; fall back to the client secret below."
+  elif [[ -n "$OUTLOOK_CLIENT_CERT" ]] && confirm "A keypair from an earlier run is saved in the state file. Keep it?"; then
+    note "Keeping the saved keypair and its uploaded certificate."
+  else
+    WORKDIR=$(mktemp -d)
+    step "Generating a 2048-bit keypair (three-year validity) in $WORKDIR…"
+    openssl req -x509 -newkey rsa:2048 -nodes -sha256 \
+      -keyout "$WORKDIR/booking-sync.key.pem" \
+      -out "$WORKDIR/booking-sync.cert.pem" \
+      -days 1095 -subj "/CN=the-social-house-booking-sync" 2>/dev/null
+    note "Private key: $WORKDIR/booking-sync.key.pem  — never leaves this machine"
+    note "Public cert: $WORKDIR/booking-sync.cert.pem  — this one is shared"
+    step "Upload the public certificate (portal → the app registration →"
+    step "Certificates & secrets → Certificates tab → Upload certificate):"
+    open_url "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
+    pause "Certificate uploaded?"
+    OUTLOOK_CLIENT_CERT=$(base64 < "$WORKDIR/booking-sync.cert.pem" | tr -d '\n')
+    OUTLOOK_CLIENT_CERT_KEY=$(base64 < "$WORKDIR/booking-sync.key.pem" | tr -d '\n')
+    note "Certificate expires: $(openssl x509 -enddate -noout -in "$WORKDIR/booking-sync.cert.pem" | cut -d= -f2)"
+    note "— renew before then; the sync stops when it lapses (same discipline"
+    note "as a client secret). The private key survives only in $ENV_FILE"
+    note "(chmod 600): deleting that file means generating and re-uploading."
+    save_state OUTLOOK_CLIENT_CERT "$OUTLOOK_CLIENT_CERT"
+    save_state OUTLOOK_CLIENT_CERT_KEY "$OUTLOOK_CLIENT_CERT_KEY"
+    rm -rf "$WORKDIR"
+  fi
+fi
+if [[ -z "$OUTLOOK_CLIENT_CERT" ]]; then
+  say "Client secret fallback: same app page, left menu: Certificates & secrets."
+  step "Client secrets tab → New client secret."
+  step "Description: booking sync. Expires: pick the longest your tenant allows"
+  step "(up to 24 months) and note the date — the sync stops when it lapses."
+  step "Copy the Value column NOW; it is shown once. (The Secret ID column is"
+  step "not the secret.)"
+  ask_secret OUTLOOK_CLIENT_SECRET "Client secret Value (hidden):"
+  [[ -z "$OUTLOOK_CLIENT_SECRET" ]] && warn "empty: the sync stays off until a secret is set on Netlify."
+  save_state OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET"
+fi
+pause "Credential captured."
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "API permission + admin consent"
@@ -352,14 +395,25 @@ pause "Consent granted (or scheduled with your admin)?"
 
 # ── 5 ─────────────────────────────────────────────────────────────────────
 stage "Verify: token + throwaway event, straight at Microsoft"
-say "This proves registration, secret, permission type and admin consent in"
-say "one pass, from this laptop. No deploy is involved: the job routes sit"
+say "This proves registration, credential, permission type and admin consent"
+say "in one pass, from this laptop. No deploy is involved: the job routes sit"
 say "behind Netlify visitor protection until the go-live checklist turns it"
 say "off (docs/agents/deploy.md), so a hand-POST to /api/jobs/* 401s and"
 say "proves nothing."
 ask_mailbox OUTLOOK_MAILBOX "Mailbox to verify against (a mailbox hosted in the target tenant, e.g. its admin user; production: booking@thesocialhouse.dk):"
 save_state OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX"
-if ! command -v curl >/dev/null 2>&1; then
+if [[ -n "$OUTLOOK_CLIENT_CERT" ]]; then
+  step "Verifying the certificate credential: token + throwaway event via node…"
+  if node scripts/outlook-cert-verify.mjs \
+      "$OUTLOOK_CLIENT_CERT" "$OUTLOOK_CLIENT_CERT_KEY" \
+      "$OUTLOOK_TENANT_ID" "$OUTLOOK_CLIENT_ID" "$OUTLOOK_MAILBOX"; then
+    GRAPH_VERIFIED="yes"
+  else
+    SKIPPED+=("Direct Graph verification (certificate credential failed)")
+    warn "invalid_client / AADSTS7000276 = certificate not uploaded (or the"
+    warn "wrong keypair); 403 access_rights_missing = consent not granted."
+  fi
+elif ! command -v curl >/dev/null 2>&1; then
   SKIPPED+=("Direct Graph verification (no curl)")
   warn "curl missing — run the token and event calls by hand against"
   warn "login.microsoftonline.com/$OUTLOOK_TENANT_ID/oauth2/v2.0/token and"
@@ -413,7 +467,7 @@ fi
 pause "Verification done."
 
 # ── 6 ─────────────────────────────────────────────────────────────────────
-stage "Netlify: write the four variables"
+stage "Netlify: write the credential variables"
 if [[ "$GRAPH_VERIFIED" != "yes" ]]; then
   say "Stage 5 did not prove the registration against Graph. At go-live a"
   say "pre-filled state file makes Enter-through easy — and easy to get wrong."
@@ -425,8 +479,9 @@ elif [[ "$GRAPH_VERIFIED" != "yes" ]] && ! confirm "Stage 5 verification did not
   SKIPPED+=("Netlify env write (stage 5 verification did not pass)")
   warn "Skipping the write. Re-run the wizard once stage 5 passes."
 else
-  say "Three secrets and the mailbox go to the Netlify site for the context(s)"
-  say "you pick. The mailbox is per context by design: production mirrors"
+  say "One credential (certificate pair or client secret) and the mailbox go"
+  say "to the Netlify site for the context(s) you pick. The mailbox is per"
+  say "context by design: production mirrors"
   say "booking@thesocialhouse.dk, the develop branch deploy the sandbox one."
   ask NETLIFY_CONTEXTS "Context(s), comma-separated (production at go-live; branch-deploy for the sandbox pair) [production]:"
   [[ -z "$NETLIFY_CONTEXTS" ]] && NETLIFY_CONTEXTS="production"
@@ -445,7 +500,15 @@ else
     fi
     netlify_env_one OUTLOOK_TENANT_ID "$OUTLOOK_TENANT_ID" secret "$ctx"
     netlify_env_one OUTLOOK_CLIENT_ID "$OUTLOOK_CLIENT_ID" secret "$ctx"
-    netlify_env_one OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret "$ctx"
+    if [[ -n "$OUTLOOK_CLIENT_CERT" ]]; then
+      netlify_env_one OUTLOOK_CLIENT_CERT "$OUTLOOK_CLIENT_CERT" secret "$ctx"
+      netlify_env_one OUTLOOK_CLIENT_CERT_KEY "$OUTLOOK_CLIENT_CERT_KEY" secret "$ctx"
+      note "A leftover OUTLOOK_CLIENT_SECRET on this context is ignored (the"
+      note "certificate wins). Tidy it away with:"
+      note "  netlify env:unset OUTLOOK_CLIENT_SECRET --context $ctx"
+    else
+      netlify_env_one OUTLOOK_CLIENT_SECRET "$OUTLOOK_CLIENT_SECRET" secret "$ctx"
+    fi
     netlify_env_one OUTLOOK_MAILBOX "$OUTLOOK_MAILBOX" public "$ctx"
   done
   note "The context picks the values up on its next deploy; the job route only"
@@ -496,8 +559,10 @@ note "production context, then force a run and watch the calendar:"
 note "  curl -s -X POST https://<prod-url>/api/jobs/sync-calendar \\"
 note "    -H 'Authorization: Bearer <JOB_SECRET from .env.local>'"
 note "A 401 there is visitor protection, not a broken registration."
-note "Client secrets expire: the sync dies on the expiry date. Mint a new one"
-note "and re-run this wizard for production before it does."
+note "Credentials expire: the sync dies on the expiry date, client secret or"
+note "certificate alike. Mint a replacement and re-run this wizard for"
+note "production before it does — the certificate flow keeps the private key"
+note "local and re-uploads only the public cert."
 note "If you wrote branch-deploy for sandbox testing, clean up when done:"
 note "  netlify env:unset OUTLOOK_TENANT_ID --context branch-deploy  (and CLIENT_ID, CLIENT_SECRET, MAILBOX)"
 printf '\n'
