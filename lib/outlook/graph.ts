@@ -112,6 +112,22 @@ const TOKEN_SCOPE = "https://graph.microsoft.com/.default";
 
 // A Graph error body names a code and a message about the call, never about
 // the event content, so the code is safe for Sentry (docs/agents/stack.md).
+// The token endpoint answers OAuth2-shaped errors (flat error /
+// error_description), unlike the Graph calls' nested error object. Its
+// description carries the AADSTS code — the only way to tell a stale
+// certificate from a wrong tenant when Entra rejects the assertion.
+const tokenCode = async (response: Response): Promise<string> => {
+  try {
+    const body = (await response.json()) as {
+      error?: string;
+      error_description?: string;
+    };
+    return body.error_description ?? body.error ?? "";
+  } catch {
+    return "";
+  }
+};
+
 const graphCode = async (response: Response): Promise<string> => {
   try {
     const body = (await response.json()) as {
@@ -179,7 +195,7 @@ export function createGraphClient(config: GraphClientConfig): GraphClient {
     if (!response.ok) {
       throw new GraphError(
         response.status,
-        `Outlook token request failed with ${response.status}`
+        `Outlook token request failed with ${response.status}: ${await tokenCode(response)}`
       );
     }
     const data = (await response.json()) as {
