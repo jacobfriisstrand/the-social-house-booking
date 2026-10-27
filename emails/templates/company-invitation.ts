@@ -1,8 +1,9 @@
 // Bilag 2, Mail 1 — copy verbatim from docs/spec/bilag-2-mailtekster.md.
 // Sent by the Auth Send Email Hook (supabase/functions/send-email) on
-// `invite`; `npm run email:sync` publishes it to Resend under this alias.
-// Variables are Resend placeholders ({{{KEY}}}); the sender HTML-escapes the
-// values, and Resend derives the plain-text part from this HTML.
+// `invite`, and by the app's sendMail() on resend once the link is used;
+// `npm run email:sync` publishes it to Resend under this alias. Variables
+// are Resend placeholders ({{{KEY}}}); the sender HTML-escapes the values,
+// and Resend derives the plain-text part from this HTML.
 import { z } from "zod";
 import type { EmailTemplate } from "./registry";
 

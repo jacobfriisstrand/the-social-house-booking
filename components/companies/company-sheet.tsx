@@ -61,7 +61,7 @@ export function CompanySheet({
         <div className="flex flex-col gap-6 px-4 pb-8">
           {/* Before the master data is complete the company may still be
               locked out: resendInvitation sends a fresh invite for an unused
-              link and a password-reset mail once the link is used. A
+              link and Mail 1 with a recovery token once the link is used. A
               completed company is active and manages its own login from
               /settings. */}
           {company.company_master_data_completed_at ? null : (

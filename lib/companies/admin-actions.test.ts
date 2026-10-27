@@ -1,11 +1,13 @@
-// resendInvitation's two open states: an unused link gets a fresh invite,
-// a used link (confirmed email, Auth refuses a second invite) gets the
-// password-reset mail, which drives the same /set-password flow.
+// resendInvitation's two open states: an unused link gets a fresh invite;
+// a used link (confirmed email, Auth refuses a second invite) gets Mail 1
+// with a minted recovery token, which verifies on the same /set-password
+// page.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { messages } from "@/messages/da";
 import { type ResendInvitationState, resendInvitation } from "./admin-actions";
 
 const companyId = "11111111-1111-1111-1111-111111111070";
+const TOKEN_HASH = "hashed-token";
 
 const errorOf = (state: ResendInvitationState): string => {
   if (state.status !== "error") {
@@ -15,19 +17,29 @@ const errorOf = (state: ResendInvitationState): string => {
 };
 
 const mocks = vi.hoisted(() => ({
+  generateLink: vi.fn(),
   inviteUserByEmail: vi.fn(),
   maybeSingle: vi.fn(),
   requireAdmin: vi.fn(),
-  resetPasswordForEmail: vi.fn(),
+  sendMail: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/require-admin", () => ({
   requireAdmin: mocks.requireAdmin,
 }));
 
+vi.mock("@/lib/email/send-mail", () => ({
+  sendMail: mocks.sendMail,
+}));
+
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    auth: { admin: { inviteUserByEmail: mocks.inviteUserByEmail } },
+    auth: {
+      admin: {
+        generateLink: mocks.generateLink,
+        inviteUserByEmail: mocks.inviteUserByEmail,
+      },
+    },
   }),
 }));
 
@@ -38,10 +50,7 @@ vi.mock("@/lib/supabase/server", () => ({
       maybeSingle: mocks.maybeSingle,
       select: () => builder,
     };
-    return {
-      auth: { resetPasswordForEmail: mocks.resetPasswordForEmail },
-      from: () => builder,
-    };
+    return { from: () => builder };
   },
 }));
 
@@ -53,10 +62,19 @@ describe("resendInvitation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.maybeSingle.mockResolvedValue({
-      data: { company_email: "company@tsh.test" },
+      data: {
+        company_display_name: "Rituals ApS",
+        company_email: "company@tsh.test",
+      },
       error: null,
     });
-    mocks.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+    mocks.generateLink.mockResolvedValue({
+      data: {
+        properties: { hashed_token: TOKEN_HASH },
+        user: { id: "user" },
+      },
+      error: null,
+    });
   });
 
   it("sends a fresh invite while the link is unused", async () => {
@@ -66,10 +84,11 @@ describe("resendInvitation", () => {
 
     expect(result).toEqual({ status: "success" });
     expect(mocks.inviteUserByEmail).toHaveBeenCalledWith("company@tsh.test");
-    expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
+    expect(mocks.generateLink).not.toHaveBeenCalled();
+    expect(mocks.sendMail).not.toHaveBeenCalled();
   });
 
-  it("sends the password-reset mail once the link is used", async () => {
+  it("sends Mail 1 with a recovery token once the link is used", async () => {
     mocks.inviteUserByEmail.mockResolvedValue({
       data: null,
       error: { code: "email_exists" },
@@ -78,29 +97,51 @@ describe("resendInvitation", () => {
     const result = await resendInvitation(companyId, { status: "idle" });
 
     expect(result).toEqual({ status: "success" });
-    expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith(
-      "company@tsh.test",
-      { redirectTo: "http://localhost:3000/set-password" }
-    );
+    expect(mocks.generateLink).toHaveBeenCalledWith({
+      email: "company@tsh.test",
+      type: "recovery",
+    });
+    expect(mocks.sendMail).toHaveBeenCalledWith({
+      companyId,
+      kind: "company-invitation",
+      to: "company@tsh.test",
+      variables: {
+        ACTION_URL:
+          "http://localhost:3000/set-password?token_hash=hashed-token&type=recovery",
+        COMPANY_DISPLAY_NAME: "Rituals ApS",
+      },
+    });
   });
 
-  it("fails when the password-reset mail cannot be sent", async () => {
+  it("fails when the recovery link cannot be minted", async () => {
     mocks.inviteUserByEmail.mockResolvedValue({
       data: null,
       error: { code: "email_exists" },
     });
-    mocks.resetPasswordForEmail.mockResolvedValue({
-      data: null,
+    mocks.generateLink.mockResolvedValue({
+      data: { properties: null, user: null },
       error: { message: "rate limited" },
     });
 
     const result = await resendInvitation(companyId, { status: "idle" });
 
     expect(errorOf(result)).toBe(messages.companies.errors.resendFailed);
-    expect(result.status).toBe("error");
+    expect(mocks.sendMail).not.toHaveBeenCalled();
   });
 
-  it("fails on other Auth errors without a reset fallback", async () => {
+  it("fails when the invitation mail cannot be sent", async () => {
+    mocks.inviteUserByEmail.mockResolvedValue({
+      data: null,
+      error: { code: "email_exists" },
+    });
+    mocks.sendMail.mockRejectedValue(new Error("Resend unavailable"));
+
+    const result = await resendInvitation(companyId, { status: "idle" });
+
+    expect(errorOf(result)).toBe(messages.companies.errors.resendFailed);
+  });
+
+  it("fails on other Auth errors without a link fallback", async () => {
     mocks.inviteUserByEmail.mockResolvedValue({
       data: null,
       error: { code: "unexpected" },
@@ -109,7 +150,7 @@ describe("resendInvitation", () => {
     const result = await resendInvitation(companyId, { status: "idle" });
 
     expect(errorOf(result)).toBe(messages.companies.errors.resendFailed);
-    expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
+    expect(mocks.generateLink).not.toHaveBeenCalled();
   });
 
   it("fails for a company that does not exist", async () => {

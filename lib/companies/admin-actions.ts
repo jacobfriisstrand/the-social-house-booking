@@ -11,6 +11,7 @@ import {
   adminValuesToUpdate,
   hasAllMasterData,
 } from "@/lib/domain/company-master-data";
+import { sendMail } from "@/lib/email/send-mail";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -125,10 +126,10 @@ export async function createCompany(
 }
 
 // Same call as the first invite; Auth issues a fresh single-use link. A used
-// link has confirmed the email, and Auth refuses a second invite for a
-// confirmed user ("email_exists") even though the password may not be set
-// yet. The password-reset mail drives the same /set-password flow, so that
-// is the resend then.
+// link has confirmed the email, and Auth refuses any second invite for a
+// confirmed user — even generateLink. The only token Auth still mints is a
+// recovery token, which verifies on the same /set-password page, so the app
+// sends Mail 1 itself with that link (the hook cannot, #11).
 export async function resendInvitation(
   companyId: string,
   _prevState: ResendInvitationState
@@ -141,7 +142,7 @@ export async function resendInvitation(
   const supabase = await createClient();
   const { data: company } = await supabase
     .from("companies")
-    .select("company_email")
+    .select("company_display_name, company_email")
     .eq("company_id", id.data)
     .maybeSingle();
   if (!company) {
@@ -156,13 +157,35 @@ export async function resendInvitation(
   if (invited.error.code !== AUTH_EMAIL_EXISTS) {
     return { error: errors.resendFailed, status: "error" };
   }
-  const reset = await supabase.auth.resetPasswordForEmail(
-    company.company_email,
-    { redirectTo: `${env.NEXT_PUBLIC_SITE_URL}/set-password` }
-  );
-  return reset.error
-    ? { error: errors.resendFailed, status: "error" }
-    : { status: "success" };
+  const link = await createAdminClient().auth.admin.generateLink({
+    email: company.company_email,
+    type: "recovery",
+  });
+  if (link.error) {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  const tokenHash = link.data.properties.hashed_token;
+  if (!tokenHash) {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  const query = new URLSearchParams({
+    token_hash: tokenHash,
+    type: "recovery",
+  });
+  try {
+    await sendMail({
+      companyId: id.data,
+      kind: "company-invitation",
+      to: company.company_email,
+      variables: {
+        ACTION_URL: `${env.NEXT_PUBLIC_SITE_URL}/set-password?${query.toString()}`,
+        COMPANY_DISPLAY_NAME: company.company_display_name,
+      },
+    });
+  } catch {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  return { status: "success" };
 }
 
 interface CurrentCompany {

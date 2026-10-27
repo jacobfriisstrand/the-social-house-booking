@@ -14,7 +14,7 @@ Read `docs/vendor/supabase/auth-custom-access-token-hook.md` and `auth-send-emai
 
 No public self-registration (ADR-0008): `enable_signup = false` in `supabase/config.toml`. Companies are created by admin, which calls `auth.admin.inviteUserByEmail`; the Send Email Hook delivers Mail 1 with a link to `app/(public)/set-password?token_hash=…&type=invite`, and that page verifies the token with `verifyOtp` and takes the password (#1). The link base is the hook payload's `redirect_to`, which Auth fills from `site_url`, set per cloud project under `[remotes.<name>.auth]` in `config.toml`. The payload's `site_url` field is Auth's own API URL and must not be used.
 
-Resending an invitation (`resendInvitation`) covers both open states: an unused link gets a fresh invite, while a used link has confirmed the email and Auth refuses a second invite (`email_exists`) — there the action sends the `recovery` mail instead, which drives the same `/set-password` flow. Once the master data is complete the company is active and manages its own login from `/settings`.
+Resending an invitation (`resendInvitation`) covers both open states: an unused link gets a fresh invite through the hook, while a used link has confirmed the email and Auth refuses a second invite (`email_exists`) — even `generateLink` with `type=invite`. There the action mints a `recovery` link (`auth.admin.generateLink`) and sends Mail 1 itself through `sendMail()` with the recovery token, which verifies on the same `/set-password` page. Once the master data is complete the company is active and manages its own login from `/settings`.
 
 ## Email login
 
