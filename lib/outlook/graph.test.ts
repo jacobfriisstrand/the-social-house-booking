@@ -56,6 +56,10 @@ Unu8vQvS+8jIF0b4kH0DOJkygylABFA=
 -----END CERTIFICATE-----`;
 const CERT_X5T = "Gdlm-1ws5trL8hdphdt1IYKtgX8";
 
+// The AADSTS code Entra stamps on a rejected client assertion — the signal
+// that separates a stale certificate from a wrong tenant.
+const AADSTS_ASSERTION_REJECTED = /AADSTS7000276/;
+
 const stubFetch = (...responses: Response[]): ReturnType<typeof vi.fn> => {
   const fetchMock = vi.fn(
     (..._args: Parameters<typeof fetch>): Promise<Response> =>
@@ -99,6 +103,21 @@ describe("createGraphClient", () => {
     expect(eventCall[1].method).toBe("POST");
     expect(eventCall[1].headers.authorization).toBe("Bearer tok-1");
     expect(eventCall[1].body).toBe(JSON.stringify(payload));
+  });
+
+  it("carries the token endpoint's error code in the failure message", async () => {
+    stubFetch(
+      jsonResponse(400, {
+        error: "invalid_client",
+        error_description:
+          "AADSTS7000276: The client assertion failed signature validation.",
+      })
+    );
+    const client = createGraphClient(config);
+
+    await expect(client.createEvent(payload)).rejects.toThrow(
+      AADSTS_ASSERTION_REJECTED
+    );
   });
 
   it("reuses the token across calls in the same client", async () => {
