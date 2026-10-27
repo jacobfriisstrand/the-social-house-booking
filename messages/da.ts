@@ -863,6 +863,10 @@ export const messages = {
     invalidEmail: "Indtast en gyldig email",
     missingPassword: "Indtast adgangskoden",
     password: "Adgangskode",
+    passwordChangedAlert:
+      "Din adgangskode er ændret. Log ind med den nye adgangskode.",
+    passwordCreatedAlert:
+      "Adgangskoden er oprettet. Log ind med den, og udfyld bagefter virksomhedens oplysninger.",
     seedAdminEmail: "admin@thesocialhouse.dk",
     seedAdminLabel: "Administrator",
     seedExternalEmail: "booking@nordicevents.dk",

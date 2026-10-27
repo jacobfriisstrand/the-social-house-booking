@@ -58,9 +58,12 @@ export type SetPasswordState = FormState<SetPasswordValues>;
 
 // Runs on the verified session; Auth rejects reusing the current password
 // (422 same_password), which gets its own message instead of a generic one.
+// After the password is set the session is dropped and the company lands on
+// the login page, whose notice says which password to use now.
 const updatePassword = async (
   supabase: Awaited<ReturnType<typeof createClient>>,
-  password: string
+  password: string,
+  linkType: "invite" | "recovery"
 ): Promise<SetPasswordState> => {
   const updated = await supabase.auth.updateUser({ password });
   if (updated.error) {
@@ -74,7 +77,11 @@ const updatePassword = async (
   }
 
   await supabase.auth.signOut({ scope: "global" });
-  redirect("/");
+  redirect(
+    linkType === "recovery"
+      ? "/login?password-changed=1"
+      : "/login?password-created=1"
+  );
 };
 
 // Invite (and later recovery) link → password (#1). verifyOtp consumes the
@@ -109,7 +116,7 @@ export async function setPassword(
     if (parsed.data.type === "recovery") {
       const { data: current } = await supabase.auth.getUser();
       if (current.user) {
-        return updatePassword(supabase, parsed.data.password);
+        return updatePassword(supabase, parsed.data.password, "recovery");
       }
     }
     return {
@@ -122,7 +129,7 @@ export async function setPassword(
     };
   }
 
-  return updatePassword(supabase, parsed.data.password);
+  return updatePassword(supabase, parsed.data.password, parsed.data.type);
 }
 
 export type ChangePasswordState = FormState<ChangePasswordValues>;

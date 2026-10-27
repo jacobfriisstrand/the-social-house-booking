@@ -47,7 +47,31 @@ describe("setPassword", () => {
     await setPassword({ status: "idle" }, values);
 
     expect(mocks.updateUser).toHaveBeenCalledWith({ password: "nytpassword" });
-    expect(mocks.redirect).toHaveBeenCalledWith("/");
+    expect(mocks.redirect).toHaveBeenCalledWith("/login?password-changed=1");
+  });
+
+  it("lands the invited company on the password-created notice", async () => {
+    mocks.verifyOtp.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+    mocks.updateUser.mockResolvedValue({ error: null });
+
+    await setPassword(
+      { status: "idle" },
+      {
+        password: "nytpassword",
+        passwordConfirm: "nytpassword",
+        tokenHash: "hashed-token",
+        type: "invite",
+      }
+    );
+
+    expect(mocks.verifyOtp).toHaveBeenCalledWith({
+      token_hash: "hashed-token",
+      type: "invite",
+    });
+    expect(mocks.redirect).toHaveBeenCalledWith("/login?password-created=1");
   });
 
   it("reports a dead recovery link only when no session is alive", async () => {

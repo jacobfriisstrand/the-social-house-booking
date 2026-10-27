@@ -178,6 +178,9 @@
   "duplicates": {
     // :root and .dark repeat the generated shadcn token values on purpose;
     // .dark exists only so components compile (DESIGN.md: no dark mode in v1).
-    "ignore": ["app/globals.css"]
+    // lib/outlook/graph.ts: scripts/outlook-cert-verify.mjs mirrors its JWT
+    // client-assertion signing on purpose — the script must verify a real
+    // certificate standalone under plain node, with no TS import.
+    "ignore": ["app/globals.css", "lib/outlook/graph.ts"]
   }
 }
