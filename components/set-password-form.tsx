@@ -18,7 +18,7 @@ import {
 import { FieldGroup } from "@/components/ui/field";
 import { setPassword } from "@/lib/auth/actions";
 import {
-  type SetPasswordLinkValues,
+  type SetPasswordRecoveryLinkValues,
   type SetPasswordValues,
   setPasswordSchema,
 } from "@/lib/validation/auth";
@@ -40,7 +40,11 @@ function RecoveryLinkInvalidAlert({ show }: { show: boolean }) {
   );
 }
 
-export function SetPasswordForm({ link }: { link: SetPasswordLinkValues }) {
+export function SetPasswordForm({
+  link,
+}: {
+  link: SetPasswordRecoveryLinkValues;
+}) {
   const form = useForm<SetPasswordValues>({
     defaultValues: {
       ...link,
@@ -62,11 +66,7 @@ export function SetPasswordForm({ link }: { link: SetPasswordLinkValues }) {
       </CardHeader>
       <CardContent>
         <RecoveryLinkInvalidAlert
-          show={
-            link.type === "recovery" &&
-            state.status === "error" &&
-            state.linkInvalid === true
-          }
+          show={state.status === "error" && state.linkInvalid === true}
         />
         <form id="set-password-form" onSubmit={submit}>
           <FieldGroup>

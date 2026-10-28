@@ -35,14 +35,31 @@ export function CompanySheet({
 }) {
   const [openState, setOpenState] = useState(false);
   const open = openProp ?? openState;
-  const onOpenChange = onOpenChangeProp ?? setOpenState;
-  const close = useCallback((): void => {
-    onOpenChange(false);
-    onClose?.();
-  }, [onClose, onOpenChange]);
+  // Every close request Base UI reports — the X button, the backdrop,
+  // Escape — arrives here. A parent that controls `open` without passing
+  // `onOpenChange` (the row-click wiring) only learns of a close through
+  // `onClose`, so close requests are routed there; without this the sheet
+  // freezes open once it has been opened from the row.
+  const handleOpenChange = useCallback(
+    (next: boolean): void => {
+      if (onOpenChangeProp) {
+        onOpenChangeProp(next);
+        return;
+      }
+      setOpenState(next);
+      if (!next) {
+        onClose?.();
+      }
+    },
+    [onClose, onOpenChangeProp]
+  );
+  const close = useCallback(
+    (): void => handleOpenChange(false),
+    [handleOpenChange]
+  );
 
   return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
+    <Sheet onOpenChange={handleOpenChange} open={open}>
       <SheetTrigger
         render={
           <Button
@@ -61,7 +78,7 @@ export function CompanySheet({
         <div className="flex flex-col gap-6 px-4 pb-8">
           {/* Before the master data is complete the company may still be
               locked out: resendInvitation sends a fresh invite for an unused
-              link and Mail 1 with a recovery token once the link is used. A
+              link and Mail 1 with a magiclink token once the link is used. A
               completed company is active and manages its own login from
               /settings. */}
           {company.company_master_data_completed_at ? null : (

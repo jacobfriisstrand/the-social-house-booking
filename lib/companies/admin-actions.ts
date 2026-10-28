@@ -127,9 +127,11 @@ export async function createCompany(
 
 // Same call as the first invite; Auth issues a fresh single-use link. A used
 // link has confirmed the email, and Auth refuses any second invite for a
-// confirmed user — even generateLink. The only token Auth still mints is a
-// recovery token, which verifies on the same /set-password page, so the app
-// sends Mail 1 itself with that link (the hook cannot, #11).
+// confirmed user — even generateLink. The one token a confirmed user can
+// still get is a magiclink token: verifyOtp starts the session with it, and
+// the link opens the same one-page setup form as the first invite, so the
+// resent mail gives the company the identical single submit. The app sends
+// Mail 1 itself with that link (the hook cannot, #11).
 export async function resendInvitation(
   companyId: string,
   _prevState: ResendInvitationState
@@ -159,7 +161,7 @@ export async function resendInvitation(
   }
   const link = await createAdminClient().auth.admin.generateLink({
     email: company.company_email,
-    type: "recovery",
+    type: "magiclink",
   });
   if (link.error) {
     return { error: errors.resendFailed, status: "error" };
@@ -170,7 +172,7 @@ export async function resendInvitation(
   }
   const query = new URLSearchParams({
     token_hash: tokenHash,
-    type: "recovery",
+    type: "magiclink",
   });
   try {
     await sendMail({

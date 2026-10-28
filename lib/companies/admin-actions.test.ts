@@ -1,7 +1,7 @@
 // resendInvitation's two open states: an unused link gets a fresh invite;
 // a used link (confirmed email, Auth refuses a second invite) gets Mail 1
-// with a minted recovery token, which verifies on the same /set-password
-// page.
+// with a minted magiclink token, which opens the same one-page setup form
+// as the first invitation.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { messages } from "@/messages/da";
 import { type ResendInvitationState, resendInvitation } from "./admin-actions";
@@ -88,7 +88,7 @@ describe("resendInvitation", () => {
     expect(mocks.sendMail).not.toHaveBeenCalled();
   });
 
-  it("sends Mail 1 with a recovery token once the link is used", async () => {
+  it("sends Mail 1 with a magiclink token once the link is used", async () => {
     mocks.inviteUserByEmail.mockResolvedValue({
       data: null,
       error: { code: "email_exists" },
@@ -99,7 +99,7 @@ describe("resendInvitation", () => {
     expect(result).toEqual({ status: "success" });
     expect(mocks.generateLink).toHaveBeenCalledWith({
       email: "company@tsh.test",
-      type: "recovery",
+      type: "magiclink",
     });
     expect(mocks.sendMail).toHaveBeenCalledWith({
       companyId,
@@ -107,13 +107,13 @@ describe("resendInvitation", () => {
       to: "company@tsh.test",
       variables: {
         ACTION_URL:
-          "http://localhost:3000/set-password?token_hash=hashed-token&type=recovery",
+          "http://localhost:3000/set-password?token_hash=hashed-token&type=magiclink",
         COMPANY_DISPLAY_NAME: "Rituals ApS",
       },
     });
   });
 
-  it("fails when the recovery link cannot be minted", async () => {
+  it("fails when the magiclink token cannot be minted", async () => {
     mocks.inviteUserByEmail.mockResolvedValue({
       data: null,
       error: { code: "email_exists" },
