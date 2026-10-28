@@ -9,7 +9,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { type DefaultValues, useForm, useWatch } from "react-hook-form";
 import { TextField } from "@/components/forms/text-field";
 import { useActionError } from "@/components/forms/use-form-action";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,11 @@ import { idleFormState } from "@/lib/validation/form-state";
 import { messages } from "@/messages/da";
 import { MembershipField } from "./membership-field";
 
-const defaultValues: CreateCompanyValues = {
-  discountPercent: 0,
+// The discount starts empty: "none" is not 0. A member without a discount
+// gets 0 typed in on purpose, an external company gets it on the external
+// choice, and leaving it empty fails the required check instead of silently
+// booking the company in at full price.
+const defaultValues: DefaultValues<CreateCompanyValues> = {
   displayName: "",
   email: "",
   legalName: "",

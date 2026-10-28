@@ -780,6 +780,11 @@ export const messages = {
       time: "Tid",
       title: "Titel",
     },
+    // The signed-up company lands here from the invitation flow; the shell
+    // header and the notice board stay untouched. Sober copy, like the
+    // password-changed notice: what happened, what is now possible.
+    signupDescription: "Din virksomhed er klar til at booke lokaler.",
+    signupTitle: "Tilmelding gennemført",
     slotLabel: (room: string, time: string) => `Book ${room} kl. ${time}`,
     status: {
       closedToday: "Lukket for i dag",
@@ -863,6 +868,8 @@ export const messages = {
     invalidEmail: "Indtast en gyldig email",
     missingPassword: "Indtast adgangskoden",
     password: "Adgangskode",
+    passwordChangedAlert:
+      "Din adgangskode er ændret. Log ind med den nye adgangskode.",
     seedAdminEmail: "admin@thesocialhouse.dk",
     seedAdminLabel: "Administrator",
     seedExternalEmail: "booking@nordicevents.dk",
@@ -1089,20 +1096,40 @@ export const messages = {
     yourPrice: "Din pris",
   },
   setPassword: {
+    consentPrivacy: {
+      link: "privatlivspolitikken",
+      start: "Jeg har læst ",
+    },
+    // Two separate boxes at signup: the trade terms are accepted, the
+    // privacy policy is confirmed as read. The linked texts are the current
+    // published versions; the links open /terms/<versionId> in a new tab
+    // (components/terms/terms-link.tsx).
+    consentTerms: {
+      link: "handelsbetingelserne",
+      start: "Jeg accepterer ",
+    },
     description: "Vælg den adgangskode, virksomheden logger ind med.",
     errors: {
       linkInvalid:
         "Linket er ugyldigt eller udløbet. Bed The Social House om et nyt link.",
       mismatch: "De to adgangskoder er ikke ens.",
       passwordMin: "Adgangskoden skal være mindst 8 tegn.",
+      privacyRequired: "Du skal bekræfte, at du har læst privatlivspolitikken.",
       recoveryLinkInvalid:
         "Linket er udløbet. Prøv igen fra siden Glemt adgangskode.",
       samePassword: "Den nye adgangskode skal være forskellig fra den gamle.",
       saveFailed: "Adgangskoden kunne ikke gemmes. Prøv igen.",
+      termsRequired: "Du skal acceptere handelsbetingelserne.",
     },
+    // The invitation form saves the password and the master data in one
+    // submit and lands the company logged in.
+    inviteSubmit: "Gem og log ind",
     password: "Adgangskode",
     passwordConfirm: "Gentag adgangskode",
     recoveryLink: "Gå til Glemt adgangskode",
+    // The invite flow's tab title: the page is the company's signup, not a
+    // password form. Recovery keeps the password title.
+    signupTitle: "Opret virksomhed",
     submit: "Gem adgangskode",
     submitting: "Gemmer …",
     title: "Vælg adgangskode",
@@ -1298,6 +1325,7 @@ export const messages = {
       "Booking terms": "Bookingbetingelser",
       "GDPR overview": "Persondata",
       "Privacy policy": "Privatlivspolitik",
+      "Terms of trade": "Handelsbetingelser",
     },
     member: {
       title: "Betingelser og persondata",

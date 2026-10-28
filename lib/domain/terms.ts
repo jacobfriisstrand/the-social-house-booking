@@ -3,11 +3,14 @@
 // edited: each save publishes the next one, so an acceptance always
 // points at the exact text the booker was shown.
 
-// terms_versions.terms_version_name, one per text.
+// terms_versions.terms_version_name, one per text. "Terms of trade" is
+// the consent a company accepts at signup (#1); the other two ride the
+// booking dialog (#15).
 export const TERMS_DOCUMENTS = [
   "Booking terms",
   "Privacy policy",
   "GDPR overview",
+  "Terms of trade",
 ] as const;
 
 export type TermsDocument = (typeof TERMS_DOCUMENTS)[number];

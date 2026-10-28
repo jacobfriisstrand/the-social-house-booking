@@ -23,10 +23,12 @@ export async function GET(request: Request): Promise<Response> {
   }
   const supabase = await createClient();
   const companies = await listAdminCompanies(supabase);
+  // The wide page: nine columns, like the bookings table's PDF.
   return exportResponse(companiesTable(companies), {
     base: "virksomheder",
     format:
       new URL(request.url).searchParams.get("format") === "pdf" ? "pdf" : "csv",
+    landscape: true,
     title: messages.companies.title,
     today: cphDate(new Date()),
   });
@@ -52,6 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   return exportResponse(companiesTable(ordered), {
     base: "virksomheder",
     format: selection.format,
+    landscape: true,
     title: messages.companies.title,
     today: cphDate(new Date()),
   });

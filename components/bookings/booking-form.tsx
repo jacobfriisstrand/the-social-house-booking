@@ -7,7 +7,6 @@
 // company's submit creates the hold (#2); an admin's creates the confirmed
 // booking for the chosen company (#14, ADR-0023).
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import {
   type ChangeEvent,
   type FormEvent,
@@ -34,6 +33,7 @@ import { ChoiceSelect } from "@/components/forms/choice-select";
 import { PendingButton } from "@/components/forms/pending-button";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { useActionError } from "@/components/forms/use-form-action";
+import { TermsLink } from "@/components/terms/terms-link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -323,31 +323,6 @@ function CompanyField({
       />
       {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
     </Field>
-  );
-}
-
-// A text the booker accepts, opened in a new tab so the dialog keeps its
-// values. Unlinked while the text has no published version; the server
-// then refuses the booking.
-function TermsLink({
-  children,
-  versionId,
-}: {
-  children: string;
-  versionId: string | undefined;
-}) {
-  if (!versionId) {
-    return children;
-  }
-  return (
-    <Link
-      className="underline underline-offset-4"
-      href={`/terms/${versionId}`}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      {children}
-    </Link>
   );
 }
 

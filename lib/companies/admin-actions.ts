@@ -11,6 +11,8 @@ import {
   adminValuesToUpdate,
   hasAllMasterData,
 } from "@/lib/domain/company-master-data";
+import { sendMail } from "@/lib/email/send-mail";
+import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -123,8 +125,13 @@ export async function createCompany(
   return { inviteFailed, status: "created" };
 }
 
-// Same call as the first invite; Auth issues a fresh single-use link. Fails
-// once the company has set its password (then it is a password reset, #11).
+// Same call as the first invite; Auth issues a fresh single-use link. A used
+// link has confirmed the email, and Auth refuses any second invite for a
+// confirmed user — even generateLink. The one token a confirmed user can
+// still get is a magiclink token: verifyOtp starts the session with it, and
+// the link opens the same one-page setup form as the first invite, so the
+// resent mail gives the company the identical single submit. The app sends
+// Mail 1 itself with that link (the hook cannot, #11).
 export async function resendInvitation(
   companyId: string,
   _prevState: ResendInvitationState
@@ -137,7 +144,7 @@ export async function resendInvitation(
   const supabase = await createClient();
   const { data: company } = await supabase
     .from("companies")
-    .select("company_email")
+    .select("company_display_name, company_email")
     .eq("company_id", id.data)
     .maybeSingle();
   if (!company) {
@@ -146,7 +153,38 @@ export async function resendInvitation(
   const invited = await createAdminClient().auth.admin.inviteUserByEmail(
     company.company_email
   );
-  if (invited.error) {
+  if (!invited.error) {
+    return { status: "success" };
+  }
+  if (invited.error.code !== AUTH_EMAIL_EXISTS) {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  const link = await createAdminClient().auth.admin.generateLink({
+    email: company.company_email,
+    type: "magiclink",
+  });
+  if (link.error) {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  const tokenHash = link.data.properties.hashed_token;
+  if (!tokenHash) {
+    return { error: errors.resendFailed, status: "error" };
+  }
+  const query = new URLSearchParams({
+    token_hash: tokenHash,
+    type: "magiclink",
+  });
+  try {
+    await sendMail({
+      companyId: id.data,
+      kind: "company-invitation",
+      to: company.company_email,
+      variables: {
+        ACTION_URL: `${env.NEXT_PUBLIC_SITE_URL}/set-password?${query.toString()}`,
+        COMPANY_DISPLAY_NAME: company.company_display_name,
+      },
+    });
+  } catch {
     return { error: errors.resendFailed, status: "error" };
   }
   return { status: "success" };

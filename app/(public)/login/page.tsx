@@ -10,24 +10,44 @@ export const metadata: Metadata = {
   title: messages.login.title,
 };
 
-// A link that carries `next` (the booking link in Mail 4, 5 and 6, #88)
-// passes a visitor who is already logged in straight on; everyone else logs
-// in first and lands there afterwards.
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ "email-changed"?: string; next?: string }>;
-}) {
-  const { "email-changed": emailChanged, next } = await searchParams;
-  const nextPath = safeNextPath(next);
+// A `next` link takes a signed-in visitor straight on (#88); everyone else
+// logs in first and lands there afterwards.
+const redirectIfLoggedIn = async (nextPath: string | null): Promise<void> => {
   if (nextPath && (await getSession())) {
     redirect(nextPath);
   }
+};
+
+// A link that carries `next` (the booking link in Mail 4, 5 and 6, #88)
+// passes a visitor who is already logged in straight on; everyone else logs
+// in first and lands there afterwards. The recovery flow's set-password
+// action lands here after the password change: the notice tells the user
+// which password to use now. An invitation never lands here — its page
+// completes the account in one step and goes straight into the app.
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    "email-changed"?: string;
+    next?: string;
+    "password-changed"?: string;
+  }>;
+}) {
+  const {
+    "email-changed": emailChanged,
+    next,
+    "password-changed": passwordChanged,
+  } = await searchParams;
+  const nextPath = safeNextPath(next);
+  await redirectIfLoggedIn(nextPath);
   return (
     <LoginForm
       emailChanged={emailChanged}
       isDevelopment={isDevelopment}
       next={nextPath ?? undefined}
+      passwordNotice={
+        passwordChanged ? messages.login.passwordChangedAlert : undefined
+      }
     />
   );
 }

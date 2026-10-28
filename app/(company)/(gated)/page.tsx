@@ -6,6 +6,7 @@ import { NotAuthorizedAlert } from "@/components/not-authorized-alert";
 import { NoticeStrip } from "@/components/notice-board/notice-strip";
 import { RoomCarousel } from "@/components/rooms/room-carousel";
 import { PageHeader, PagePanel } from "@/components/shell/page";
+import { SignupCompleteAlert } from "@/components/signup-complete-alert";
 import {
   Card,
   CardAction,
@@ -37,7 +38,11 @@ export const metadata: Metadata = {
   title: messages.shell.home,
 };
 
-type SearchParams = Promise<{ date?: string; unauthorized?: string }>;
+type SearchParams = Promise<{
+  date?: string;
+  "signed-up"?: string;
+  unauthorized?: string;
+}>;
 
 // The day to show: ?date=yyyy-mm-dd, or today in Copenhagen (ADR-0021).
 const dayParam = z.iso.date();
@@ -49,6 +54,8 @@ const pageDate = (date: string | undefined, today: string): string =>
 // home for everyone; the shell (#55) owns the sidebar, the title, the
 // panel and the footer line. Every read runs in one round trip; the grid
 // is assembled here and only rendered on the client.
+// ?signed-up=1 comes from the invitation flow: the company user sees the
+// welcome alert once, admins and every later visit see nothing.
 export default async function HomePage({
   searchParams,
 }: {
@@ -81,9 +88,12 @@ export default async function HomePage({
 
   return (
     <>
-      {params.unauthorized ? <NotAuthorizedAlert /> : null}
       <PageHeader title={messages.shell.home} />
       <PagePanel>
+        {/* The one-visit alerts lead the panel's content, under the title
+            row — the shell's title line never moves for them. */}
+        {params.unauthorized ? <NotAuthorizedAlert /> : null}
+        {params["signed-up"] && !isAdmin ? <SignupCompleteAlert /> : null}
         <NoticeStrip
           events={events}
           isAdmin={isAdmin}

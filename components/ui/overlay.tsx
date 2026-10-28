@@ -12,6 +12,11 @@ function Overlay({ className, ...props }: OverlayPrimitive.Backdrop.Props) {
         className
       )}
       data-slot="overlay"
+      // Interaction boundary, same reason as the sheet and dialog popups:
+      // the backdrop sits beside the popup in the portal, so a click that
+      // closes the sheet from outside would otherwise bubble through the
+      // React tree to a clickable row and reopen what just closed.
+      onClick={(event) => event.stopPropagation()}
       {...props}
     />
   );

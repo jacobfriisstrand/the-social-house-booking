@@ -110,21 +110,28 @@ function PasswordField({ field, fieldState }: FieldRender<"password">) {
   );
 }
 
+function InfoNotice({ text }: { text: string }) {
+  return (
+    <Alert variant="info">
+      <AlertDescription>{text}</AlertDescription>
+    </Alert>
+  );
+}
+
 function LoginNotices({
   emailChanged,
   error,
+  passwordNotice,
 }: {
   emailChanged?: string;
   error?: string;
+  passwordNotice?: string;
 }) {
   return (
     <>
+      {passwordNotice ? <InfoNotice text={passwordNotice} /> : null}
       {emailChanged ? (
-        <Alert variant="info">
-          <AlertDescription>
-            {messages.login.emailChangedAlert(emailChanged)}
-          </AlertDescription>
-        </Alert>
+        <InfoNotice text={messages.login.emailChangedAlert(emailChanged)} />
       ) : null}
       {error ? (
         <Alert variant="destructive">
@@ -171,12 +178,14 @@ export function LoginForm({
   emailChanged,
   isDevelopment,
   next,
+  passwordNotice,
 }: {
   emailChanged?: string;
   isDevelopment: boolean;
   // A same-site path to land on after login (#88), already checked by the
   // page; the action checks it again.
   next?: string;
+  passwordNotice?: string;
 }) {
   const [state, formAction, pending] = useActionState(logIn, initialState);
   const form = useForm<LoginValues>({
@@ -200,6 +209,7 @@ export function LoginForm({
       <LoginNotices
         emailChanged={emailChanged}
         error={state.status === "error" ? state.error : undefined}
+        passwordNotice={passwordNotice}
       />
       <Card className="w-full">
         <CardContent>
