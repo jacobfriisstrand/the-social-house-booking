@@ -28,10 +28,14 @@ import { GET, POST } from "./route";
 
 const company = (overrides: Partial<CompanyRow>): CompanyRow =>
   ({
+    company_contact_name: "Anna Jensen",
+    company_contact_phone: "+45 20 12 34 56",
+    company_cvr_number: "12345678",
     company_discount_percent: 15,
     company_display_name: "Ærø ApS",
     company_email: "kontakt@aeroe.dk",
     company_id: "c1",
+    company_invoice_email: "faktura@aeroe.dk",
     company_master_data_completed_at: "2026-09-01T10:00:00Z",
     company_membership_status: "member",
     ...overrides,
@@ -68,7 +72,7 @@ describe("companies export route", () => {
     const body = new Uint8Array(await response.arrayBuffer());
     expect([...body.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(new TextDecoder().decode(body.slice(3))).toBe(
-      "Visningsnavn;Email;Medlemsstatus;Rabat (%);Stamdata\r\nÆrø ApS;kontakt@aeroe.dk;Medlem;15;Udfyldt\r\n"
+      "Visningsnavn;Email;Medlemsstatus;Rabat (%);CVR;Kontaktperson;Mobilnummer;Faktura-email;Stamdata\r\nÆrø ApS;kontakt@aeroe.dk;Medlem;15;12345678;Anna Jensen;'+45 20 12 34 56;faktura@aeroe.dk;Udfyldt\r\n"
     );
   });
 

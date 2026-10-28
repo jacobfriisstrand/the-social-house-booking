@@ -20,15 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { COMPANY_COLUMNS, NO_VALUE } from "@/lib/companies/admin-columns";
 import type { CompanyRow } from "@/lib/domain/company-master-data";
 import { slicePage } from "@/lib/pagination";
 import { messages } from "@/messages/da";
 
 const copy = messages.companies;
-
-// Cells without a value show an em dash, not an empty cell — a blank cell
-// reads as "forgotten to render", a dash as "no data".
-const NO_VALUE = "—";
 
 // One row's cells: the tick, the contact data and the master-data badge.
 // Extracted from the map so the table's own body stays readable — fallow
@@ -121,26 +118,22 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
           (col = the widest value seen so far + the 14px cell padding), so
           the swap between the column titles and the bulk actions cannot
           shift the columns, and short-content columns stay as narrow as
-          their content. The floor is the cols' sum — wider cards keep the
-          table at exactly these widths; narrower cards scroll sideways.
-          The truncate cell class is the graceful degradation when real
-          data outgrows a measured width. Headers keep the primitive's
-          h-10; labels wrap to a second line inside it. */}
+          their content. The cols derive from COMPANY_COLUMNS so the widths
+          cannot desync from the columns (the bookings table's move). The
+          floor is the cols' sum — wider cards keep the table at exactly
+          these widths; narrower cards scroll sideways. The truncate cell
+          class is the graceful degradation when real data outgrows a
+          measured width. Headers keep the primitive's h-10; labels wrap to
+          a second line inside it. */}
       <Table
         className="min-w-[77rem] table-fixed [&_thead_th]:whitespace-normal"
         sticky
       >
         <colgroup>
           <col className="w-10" />
-          <col className="w-[137px]" />
-          <col className="w-[187px]" />
-          <col className="w-[112px]" />
-          <col className="w-16" />
-          <col className="w-[80px]" />
-          <col className="w-[114px]" />
-          <col className="w-[109px]" />
-          <col className="w-[196px]" />
-          <col className="w-56" />
+          {COMPANY_COLUMNS.map((column) => (
+            <col className={column.width} key={column.key} />
+          ))}
         </colgroup>
         <TableHeader>
           <TableRow>
@@ -158,9 +151,8 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
             {selectionCount > 0 ? (
               // The bulk header: the export stands where the column titles
               // were, and swaps back when the selection clears. The span is
-              // the data column count — every column addition updates it
-              // with the header list below.
-              <TableHead colSpan={9}>
+              // COMPANY_COLUMNS.length — the data column count.
+              <TableHead colSpan={COMPANY_COLUMNS.length}>
                 <div className="flex items-center gap-2">
                   <p className="whitespace-nowrap text-sm">
                     {copy.selection.selected(selectionCount)}
@@ -185,19 +177,16 @@ export function CompanyTable({ companies }: { companies: CompanyRow[] }) {
                 </div>
               </TableHead>
             ) : (
-              <>
-                <TableHead>{copy.columns.displayName}</TableHead>
-                <TableHead>{copy.columns.email}</TableHead>
-                <TableHead>{copy.columns.status}</TableHead>
-                <TableHead>{copy.columns.discount}</TableHead>
-                <TableHead>{copy.columns.cvrNumber}</TableHead>
-                <TableHead>{copy.columns.contactName}</TableHead>
-                <TableHead>{copy.columns.contactPhone}</TableHead>
-                <TableHead>{copy.columns.invoiceEmail}</TableHead>
-                <TableHead className="text-right">
-                  {copy.columns.masterData}
+              COMPANY_COLUMNS.map((column) => (
+                <TableHead
+                  className={
+                    column.align === "right" ? "text-right" : undefined
+                  }
+                  key={column.key}
+                >
+                  {column.label}
                 </TableHead>
-              </>
+              ))
             )}
           </TableRow>
         </TableHeader>
