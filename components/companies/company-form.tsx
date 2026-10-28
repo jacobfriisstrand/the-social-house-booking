@@ -21,7 +21,7 @@ import {
   adminCompanySchema,
 } from "@/lib/validation/company";
 import { messages } from "@/messages/da";
-import { masterDataTextFields } from "./company-field-list";
+import { MasterDataFields } from "./master-data-fields";
 import { MembershipField } from "./membership-field";
 
 const labels = messages.companyFields;
@@ -94,15 +94,7 @@ export function CompanyForm({
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            {masterDataTextFields.map((spec) => (
-              <TextField control={form.control} key={spec.name} {...spec} />
-            ))}
-            <TextareaField
-              control={form.control}
-              label={labels.billingNotes}
-              name="billingNotes"
-              required={false}
-            />
+            <MasterDataFields control={form.control} />
           </FieldGroup>
         </CardContent>
       </Card>

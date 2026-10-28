@@ -2,9 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type Control, useController, useForm } from "react-hook-form";
-import { masterDataTextFields } from "@/components/companies/company-field-list";
+import { MasterDataFields } from "@/components/companies/master-data-fields";
 import { TextField } from "@/components/forms/text-field";
-import { TextareaField } from "@/components/forms/textarea-field";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { TermsDialogLink } from "@/components/terms/terms-dialog-link";
 import { Button } from "@/components/ui/button";
@@ -162,15 +161,7 @@ export function InviteSetupForm({
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            {masterDataTextFields.map((spec) => (
-              <TextField control={form.control} key={spec.name} {...spec} />
-            ))}
-            <TextareaField
-              control={form.control}
-              label={labels.billingNotes}
-              name="billingNotes"
-              required={false}
-            />
+            <MasterDataFields control={form.control} />
             <ConsentField
               control={form.control}
               copyText={copy.consentTerms}
