@@ -48,16 +48,37 @@ export const setPasswordLinkSchema = z.union([
   }),
 ]);
 
+// The password/confirm pair and its match check: the recovery form, the
+// invitation acceptance and the change-password form all repeat them, so
+// they live here once (A recovery form (#11) and change-password (#125)
+// share the strength and confirm rules).
+const passwordShape = {
+  password: z
+    .string()
+    .min(PASSWORD_MIN, messages.setPassword.errors.passwordMin),
+  passwordConfirm: z.string(),
+};
+
+const refinePasswordMatch = (
+  values: { password: string; passwordConfirm: string },
+  context: z.RefinementCtx
+): void => {
+  if (values.password !== values.passwordConfirm) {
+    context.addIssue({
+      code: "custom",
+      message: messages.setPassword.errors.mismatch,
+      path: ["passwordConfirm"],
+    });
+  }
+};
+
 // Recovery form (#11): the signed-out user picks a new password on the
 // session the link starts. The invite case has its own form and action
 // (acceptInvitationSchema) so onboarding never routes through the login page.
 export const setPasswordSchema = z
   .object({
     code: z.string().min(1).optional(),
-    password: z
-      .string()
-      .min(PASSWORD_MIN, messages.setPassword.errors.passwordMin),
-    passwordConfirm: z.string(),
+    ...passwordShape,
     tokenHash: z.string().min(1).optional(),
     type: z.literal("recovery"),
   })
@@ -69,13 +90,7 @@ export const setPasswordSchema = z
         path: ["tokenHash"],
       });
     }
-    if (values.password !== values.passwordConfirm) {
-      context.addIssue({
-        code: "custom",
-        message: messages.setPassword.errors.mismatch,
-        path: ["passwordConfirm"],
-      });
-    }
+    refinePasswordMatch(values, context);
   });
 
 // Invitation acceptance (#1): one submit sets the shared password and fills
@@ -89,10 +104,7 @@ export const setPasswordSchema = z
 // termsFields in lib/validation/booking.ts).
 export const acceptInvitationSchema = z
   .object({
-    password: z
-      .string()
-      .min(PASSWORD_MIN, messages.setPassword.errors.passwordMin),
-    passwordConfirm: z.string(),
+    ...passwordShape,
     privacyAccepted: z
       .boolean()
       .refine(
@@ -109,15 +121,7 @@ export const acceptInvitationSchema = z
     tokenType: z.enum(["invite", "magiclink"]),
     ...masterDataSchema.shape,
   })
-  .superRefine((values, context) => {
-    if (values.password !== values.passwordConfirm) {
-      context.addIssue({
-        code: "custom",
-        message: messages.setPassword.errors.mismatch,
-        path: ["passwordConfirm"],
-      });
-    }
-  });
+  .superRefine(refinePasswordMatch);
 
 export type SetPasswordValues = z.infer<typeof setPasswordSchema>;
 export type AcceptInvitationValues = z.infer<typeof acceptInvitationSchema>;
@@ -133,20 +137,7 @@ export type SetPasswordRecoveryLinkValues = Extract<
 // password on the active session — Supabase's default authorization, no
 // current-password re-entry. Same strength and confirm rules as set-password.
 export const changePasswordSchema = z
-  .object({
-    password: z
-      .string()
-      .min(PASSWORD_MIN, messages.setPassword.errors.passwordMin),
-    passwordConfirm: z.string(),
-  })
-  .superRefine((values, context) => {
-    if (values.password !== values.passwordConfirm) {
-      context.addIssue({
-        code: "custom",
-        message: messages.setPassword.errors.mismatch,
-        path: ["passwordConfirm"],
-      });
-    }
-  });
+  .object({ ...passwordShape })
+  .superRefine(refinePasswordMatch);
 
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
