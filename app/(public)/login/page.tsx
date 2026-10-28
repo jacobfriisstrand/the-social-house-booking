@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: messages.login.title,
 };
 
+// A `next` link takes a signed-in visitor straight on (#88); everyone else
+// logs in first and lands there afterwards.
+const redirectIfLoggedIn = async (nextPath: string | null): Promise<void> => {
+  if (nextPath && (await getSession())) {
+    redirect(nextPath);
+  }
+};
+
 // A link that carries `next` (the booking link in Mail 4, 5 and 6, #88)
 // passes a visitor who is already logged in straight on; everyone else logs
 // in first and lands there afterwards. The recovery flow's set-password
@@ -31,9 +39,7 @@ export default async function LoginPage({
     "password-changed": passwordChanged,
   } = await searchParams;
   const nextPath = safeNextPath(next);
-  if (nextPath && (await getSession())) {
-    redirect(nextPath);
-  }
+  await redirectIfLoggedIn(nextPath);
   return (
     <LoginForm
       emailChanged={emailChanged}

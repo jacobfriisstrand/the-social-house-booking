@@ -3,7 +3,11 @@ import { InviteSetupForm } from "@/components/invite-setup-form";
 import { SetPasswordForm } from "@/components/set-password-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTerms, getTermsVersion } from "@/lib/terms/data";
+import {
+  getCurrentTerms,
+  getTermsVersion,
+  type TermsVersion,
+} from "@/lib/terms/data";
 import { setPasswordLinkSchema } from "@/lib/validation/auth";
 import { messages } from "@/messages/da";
 
@@ -26,6 +30,26 @@ const parseLink = (params: {
     tokenHash: params.token_hash,
     type: params.type ?? (params.code ? "recovery" : undefined),
   });
+
+// The published versions the signup consents open in a dialog: a text
+// without a published version stays null (the booking dialog rule), and the
+// schema still refuses the signup without the consent.
+const loadConsentVersions = async (): Promise<{
+  "Privacy policy": TermsVersion | null;
+  "Terms of trade": TermsVersion | null;
+}> => {
+  const supabase = await createClient();
+  const terms = await getCurrentTerms();
+  const [tradeVersion, privacyVersion] = await Promise.all([
+    terms["Terms of trade"]
+      ? getTermsVersion(supabase, terms["Terms of trade"])
+      : null,
+    terms["Privacy policy"]
+      ? getTermsVersion(supabase, terms["Privacy policy"])
+      : null,
+  ]);
+  return { "Privacy policy": privacyVersion, "Terms of trade": tradeVersion };
+};
 
 // An invitation is the company signup and titles as one; a recovery link
 // keeps the password title. The parse ignores an invalid link — the page
@@ -75,26 +99,12 @@ export default async function SetPasswordPage({
   if (linkData.type !== "recovery") {
     // The consents open the current published versions in a dialog, so the
     // reader sees exactly the text the checkbox names and keeps the form
-    // state while reading. A text without a published version renders its
-    // link as plain text (the booking dialog rule) and the schema still
-    // refuses the signup without the consent.
-    const supabase = await createClient();
-    const terms = await getCurrentTerms();
-    const [tradeVersion, privacyVersion] = await Promise.all([
-      terms["Terms of trade"]
-        ? getTermsVersion(supabase, terms["Terms of trade"])
-        : null,
-      terms["Privacy policy"]
-        ? getTermsVersion(supabase, terms["Privacy policy"])
-        : null,
-    ]);
+    // state while reading.
+    const terms = await loadConsentVersions();
     return (
       <div className="w-full max-w-2xl">
         <InviteSetupForm
-          terms={{
-            "Privacy policy": privacyVersion,
-            "Terms of trade": tradeVersion,
-          }}
+          terms={terms}
           tokenHash={linkData.tokenHash}
           tokenType={linkData.type}
         />
