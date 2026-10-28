@@ -122,7 +122,7 @@ Public pages without the sidebar (login, forgot password, set password, company 
 
 ## Page patterns
 
-**Page header.** Title left, at most one primary action right. Below it, when needed, a filter row (date, room, status) on one line that wraps on phone.
+**Page header.** Title left, at most one primary action right, and the signed-in chip at the very far right, past the action (2026-10-28): who the viewer is logged in as — a muted user icon, the account's display name, and from tablet up the login email after a separator, all truncating — from `lib/auth/identity` (the company's visningsnavn, or the admins registry row for an admin). It is not a control and carries no styling of its own beyond the text. Below it, when needed, a filter row (date, room, status) on one line that wraps on phone.
 
 **Surfaces.** The page is white, the content panel is muted, cards on the panel are white with a 1px border. Never nest a card in a card, except the framed sections on Hjem.
 

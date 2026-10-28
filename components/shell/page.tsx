@@ -6,9 +6,21 @@
 // icon's own viewBox inset is what the small negative margin cancels), so
 // it lines up with whatever sits under the title.
 import type { ReactNode } from "react";
+import { SignedInAs } from "@/components/shell/identity";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { messages } from "@/messages/da";
+
+// The signed-in chip renders last, so it is the very far right of the row
+// whatever actions a page passes (DESIGN.md, "Shell", 2026-10-28).
+function HeaderEnd({ children }: { children?: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      {children}
+      <SignedInAs />
+    </div>
+  );
+}
 
 function SidebarToggle() {
   return (
@@ -42,7 +54,7 @@ export function PageHeader({
           <span className="ml-2 text-muted-foreground text-sm">{meta}</span>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">{children}</div>
+      <HeaderEnd>{children}</HeaderEnd>
     </div>
   );
 }
