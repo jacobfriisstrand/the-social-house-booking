@@ -1,7 +1,8 @@
 // The export tables' PDF (#123): the same headers and cells the CSV
 // carries (one ExportTable, one source of truth). pdfkit's built-in
-// Helvetica covers æøå (WinAnsi) and fetches nothing; the landscape
-// default fits the bookings table's nine columns. Equal columns, like the
+// Helvetica covers æøå (WinAnsi) and fetches nothing; landscape fits
+// the admin tables' nine columns (bookings, companies). Equal columns,
+// like the
 // HTML tables' table-fixed: the columns share the width evenly.
 import {
   Document,
@@ -89,8 +90,7 @@ const styles = StyleSheet.create({
 });
 
 export interface TablePdfOptions {
-  // The bookings table's nine columns need the wide page; the companies
-  // table's five fit the portrait one.
+  // Both admin tables' nine columns need the wide page.
   landscape?: boolean;
   note?: string;
   // The covered period, "Periode: …" — the first booking's start through
