@@ -61,7 +61,7 @@
     "fallow": "^3.24.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
-    "netlify-cli": "^27.8.0",
+    "netlify-cli": "^27.15.0",
     "react-dom": "19.2.8",
     "supabase": "^2.116.0",
     "tailwindcss": "^4",
