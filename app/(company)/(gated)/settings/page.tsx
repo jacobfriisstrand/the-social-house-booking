@@ -18,7 +18,12 @@ export default async function CompanySettingsPage() {
       <PageHeader title={messages.companySettings.title} />
       <PagePanel>
         <div className="grid items-start gap-6 lg:grid-cols-2">
-          <MasterDataForm defaultValues={companyToMemberValues(company)} />
+          <MasterDataForm
+            defaultValues={companyToMemberValues(company)}
+            masterDataComplete={
+              company.company_master_data_completed_at !== null
+            }
+          />
           <CompanySecuritySection />
         </div>
       </PagePanel>

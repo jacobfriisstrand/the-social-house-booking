@@ -30,7 +30,8 @@ interface UseFormActionOptions<Values extends FieldValues> {
 // non-error statuses.
 type ActionState<Values> =
   | FormError<Values>
-  | { status: "created" | "held" | "idle" | "success" };
+  | { status: "created" | "held" | "idle" | "saved" | "success" }
+  | { email: string; status: "awaiting_new_email" };
 
 export function useActionError<Values extends FieldValues>(
   state: ActionState<Values>,
