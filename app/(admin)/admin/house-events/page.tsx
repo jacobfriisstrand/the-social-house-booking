@@ -29,12 +29,11 @@ export default async function AdminHouseEventsPage() {
 
   return (
     <>
-      {/* The create button rides the shell header like the other admin
-          pages (2026-10-16, the rooms page's pattern). */}
-      <PageHeader title={copy.title}>
-        <HouseEventSheet initial={null} rooms={rooms} />
-      </PageHeader>
-      <PagePanel>
+      {/* The create button leads the panel's action row like the other
+          admin pages (2026-10-28, back from the shell header, which the
+          signed-in chip took over). */}
+      <PageHeader title={copy.title} />
+      <PagePanel actions={<HouseEventSheet initial={null} rooms={rooms} />}>
         <HouseEventTable events={events} rooms={rooms} />
       </PagePanel>
     </>

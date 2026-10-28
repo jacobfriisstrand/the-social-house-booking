@@ -26,18 +26,20 @@ export default async function AdminRoomsPage() {
 
   return (
     <>
-      <PageHeader title={messages.rooms.listTitle}>
-        <RoomSheet
-          addons={addons}
-          images={[]}
-          initial={null}
-          specialDays={[]}
-          triggerLabel={messages.rooms.createButton}
-          triggerSize="default"
-          triggerVariant="default"
-        />
-      </PageHeader>
-      <PagePanel>
+      <PageHeader title={messages.rooms.listTitle} />
+      <PagePanel
+        actions={
+          <RoomSheet
+            addons={addons}
+            images={[]}
+            initial={null}
+            specialDays={[]}
+            triggerLabel={messages.rooms.createButton}
+            triggerSize="default"
+            triggerVariant="default"
+          />
+        }
+      >
         {rooms.length === 0 ? (
           <Card className="py-16">
             <div className="flex flex-col items-center gap-2 text-center">

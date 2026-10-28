@@ -42,11 +42,15 @@ export default async function AdminCompaniesPage({
           <AlertDescription>{copy.errors.inviteFailed}</AlertDescription>
         </Alert>
       ) : null}
-      <PageHeader title={copy.title}>
-        <ExportMenu href="/admin/companies/export" />
-        <CreateCompanySheet />
-      </PageHeader>
-      <PagePanel>
+      <PageHeader title={copy.title} />
+      <PagePanel
+        actions={
+          <>
+            <ExportMenu href="/admin/companies/export" />
+            <CreateCompanySheet />
+          </>
+        }
+      >
         {companies.length ? (
           <CompanyTable companies={companies} />
         ) : (

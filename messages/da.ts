@@ -1183,6 +1183,7 @@ export const messages = {
     openMenu: "Åbn menu",
     rooms: "Lokaler",
     settings: "Indstillinger",
+    signedInAs: "Logget ind som",
     statistics: "Statistik",
     terms: "Betingelser",
     toggleSidebar: "Vis eller skjul sidepanel",
