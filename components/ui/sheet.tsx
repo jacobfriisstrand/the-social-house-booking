@@ -44,6 +44,13 @@ function SheetContent({
         )}
         data-side={side}
         data-slot="sheet-content"
+        // The sheet is an interaction boundary for the clickable row it may
+        // sit in (openRowWith): a portal keeps the React-tree path to the
+        // row alive, so a click or an Enter/Space keydown inside the sheet
+        // would bubble to the row's onClick/onKeyDown and reopen the sheet
+        // the moment it closes. Modal content keeps its events to itself.
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
         {...props}
       >
         {children}

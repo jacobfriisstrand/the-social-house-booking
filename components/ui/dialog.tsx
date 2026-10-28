@@ -42,6 +42,12 @@ function DialogContent({
           className
         )}
         data-slot="dialog-content"
+        // Same interaction boundary as the sheet: a dialog opened from a
+        // clickable row (openRowWith) stays in the row's React-tree path
+        // through its portal, so clicks and Enter/Space keydowns inside
+        // would reach the row's handlers and reopen what just closed.
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
         {...props}
       >
         {children}
