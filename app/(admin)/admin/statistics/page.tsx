@@ -68,10 +68,8 @@ export default async function AdminStatisticsPage({
 
   return (
     <div className="group/statistics contents">
-      <PageHeader title={messages.shell.statistics}>
-        <MonthControl month={month} />
-      </PageHeader>
-      <PagePanel>
+      <PageHeader title={messages.shell.statistics} />
+      <PagePanel actions={<MonthControl month={month} />}>
         <div className="flex flex-col gap-6 transition-opacity group-has-data-pending/statistics:opacity-50">
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard

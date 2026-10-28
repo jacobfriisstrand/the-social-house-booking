@@ -25,15 +25,17 @@ export default async function AdminAddonsPage() {
 
   return (
     <>
-      <PageHeader title={copy.title}>
-        <AddonSheet
-          initial={null}
-          triggerLabel={copy.createButton}
-          triggerSize="default"
-          triggerVariant="default"
-        />
-      </PageHeader>
-      <PagePanel>
+      <PageHeader title={copy.title} />
+      <PagePanel
+        actions={
+          <AddonSheet
+            initial={null}
+            triggerLabel={copy.createButton}
+            triggerSize="default"
+            triggerVariant="default"
+          />
+        }
+      >
         {addons.length === 0 ? (
           <Card className="py-16">
             <div className="flex flex-col items-center gap-2 text-center">

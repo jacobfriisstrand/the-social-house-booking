@@ -43,10 +43,8 @@ export default async function AdminNoticesPage() {
     <>
       {/* The create button rides the shell header like the other admin
           pages (2026-10-16, the rooms page's pattern). */}
-      <PageHeader title={copy.title}>
-        <NoticeSheet initial={null} />
-      </PageHeader>
-      <PagePanel>
+      <PageHeader title={copy.title} />
+      <PagePanel actions={<NoticeSheet initial={null} />}>
         <NoticeTable rows={notices.map((notice) => toRow(notice, now))} />
       </PagePanel>
     </>

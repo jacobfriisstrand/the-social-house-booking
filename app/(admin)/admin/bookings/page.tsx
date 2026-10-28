@@ -140,10 +140,8 @@ export default async function AdminBookingsPage({
       <PageHeader
         meta={formatDateRange(params.fromDate, params.toDate)}
         title={messages.shell.bookings}
-      >
-        <ExportMenu href={exportHref} />
-      </PageHeader>
-      <PagePanel>
+      />
+      <PagePanel actions={<ExportMenu href={exportHref} />}>
         <AdminBookingsView
           calendar={null}
           calendarRows={[]}
